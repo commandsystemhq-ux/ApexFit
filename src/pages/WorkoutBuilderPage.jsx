@@ -4,7 +4,7 @@ import ExerciseCard from '../components/ExerciseCard.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import { searchExercises } from '../services/exerciseService.js';
-import { getWorkoutProgram, listMyWorkoutPrograms, saveWorkoutProgram } from '../services/workoutProgramService.js';
+import { BUILDER_HANDOFF_KEY, getWorkoutProgram, listMyWorkoutPrograms, saveWorkoutProgram } from '../services/workoutProgramService.js';
 
 const PICKER_PAGE_SIZE = 8;
 
@@ -31,6 +31,7 @@ export default function WorkoutBuilderPage({ onNotify }) {
   const [selectedProgramId, setSelectedProgramId] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [isTemplate, setIsTemplate] = useState(false);
   const [days, setDays] = useState(() => [createDay(t('day'), 1)]);
   const [activeDayId, setActiveDayId] = useState(days[0].clientId);
   const [pickerSearch, setPickerSearch] = useState('');
@@ -46,6 +47,14 @@ export default function WorkoutBuilderPage({ onNotify }) {
   const draggedExerciseIndex = useRef(null);
   const activeDay = days.find((day) => day.clientId === activeDayId) || days[0];
   const pickerPageCount = Math.max(1, Math.ceil(pickerTotal / PICKER_PAGE_SIZE));
+
+  useEffect(() => {
+    const handoffId = window.sessionStorage.getItem(BUILDER_HANDOFF_KEY);
+    if (!handoffId) return;
+    window.sessionStorage.removeItem(BUILDER_HANDOFF_KEY);
+    setSelectedProgramId(handoffId);
+    loadProgram(handoffId);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -100,6 +109,7 @@ export default function WorkoutBuilderPage({ onNotify }) {
     setSelectedProgramId('');
     setTitle('');
     setDescription('');
+    setIsTemplate(false);
     setDays([newDay]);
     setActiveDayId(newDay.clientId);
     setPageError('');
@@ -162,12 +172,12 @@ export default function WorkoutBuilderPage({ onNotify }) {
     }));
   }
 
-  async function loadSelectedProgram() {
-    if (!selectedProgramId) return;
+  async function loadProgram(id) {
+    if (!id) return;
     setLoadingProgram(true);
     setPageError('');
     try {
-      const program = await getWorkoutProgram(selectedProgramId);
+      const program = await getWorkoutProgram(id);
       const loadedDays = program.days.map((day) => ({
         clientId: crypto.randomUUID(),
         name: day.name,
@@ -184,6 +194,7 @@ export default function WorkoutBuilderPage({ onNotify }) {
       setProgramId(program.id);
       setTitle(program.title);
       setDescription(program.description);
+      setIsTemplate(Boolean(program.is_template));
       setDays(loadedDays);
       setActiveDayId(loadedDays[0].clientId);
     } catch (error) {
@@ -192,6 +203,8 @@ export default function WorkoutBuilderPage({ onNotify }) {
       setLoadingProgram(false);
     }
   }
+
+  const loadSelectedProgram = () => loadProgram(selectedProgramId);
 
   async function handleSave(event) {
     event.preventDefault();
@@ -206,6 +219,7 @@ export default function WorkoutBuilderPage({ onNotify }) {
         id: programId,
         title: title.trim(),
         description: description.trim(),
+        isTemplate,
         days: days.map((day) => ({
           name: day.name.trim(),
           exercises: day.exercises.map((exercise) => ({
@@ -220,7 +234,7 @@ export default function WorkoutBuilderPage({ onNotify }) {
       setProgramId(savedId);
       setSelectedProgramId(savedId);
       setPrograms((current) => [
-        { id: savedId, title: title.trim(), description: description.trim(), status: 'draft', updated_at: new Date().toISOString() },
+        { id: savedId, title: title.trim(), description: description.trim(), status: 'draft', is_template: isTemplate, updated_at: new Date().toISOString() },
         ...current.filter((program) => program.id !== savedId),
       ]);
       onNotify(t('programSaved'));
@@ -252,7 +266,7 @@ export default function WorkoutBuilderPage({ onNotify }) {
                 {t('savedPrograms')}
                 <select className="field" value={selectedProgramId} onChange={(event) => setSelectedProgramId(event.target.value)}>
                   <option value="">{t('selectProgram')}</option>
-                  {programs.map((program) => <option key={program.id} value={program.id}>{program.title}</option>)}
+                  {programs.map((program) => <option key={program.id} value={program.id}>{program.is_template ? '★ ' : ''}{program.title}</option>)}
                 </select>
               </label>
               <Button variant="secondary" size="small" type="button" disabled={!selectedProgramId || loadingProgram} onClick={loadSelectedProgram}>
@@ -263,6 +277,7 @@ export default function WorkoutBuilderPage({ onNotify }) {
           {programsError && <div className="notice notice-error" role="alert">{t('programLoadError')} {programsError}</div>}
           <label className="form-label">{t('programTitle')}<input className="field" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={160} required /></label>
           <label className="form-label">{t('programDescription')}<textarea className="field workout-description" value={description} onChange={(event) => setDescription(event.target.value)} maxLength={2000} /></label>
+          <label className="checkbox-row"><input type="checkbox" checked={isTemplate} onChange={(event) => setIsTemplate(event.target.checked)} />{t('saveAsTemplate')}</label>
           <div className="builder-days-heading">
             <strong>{t('trainingDays')}</strong>
             <Button variant="secondary" size="small" type="button" disabled={days.length >= 14} onClick={addDay}>{t('addDay')}</Button>

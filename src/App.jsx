@@ -9,6 +9,7 @@ import ExerciseLibraryPage from './pages/ExerciseLibraryPage.jsx';
 import GeneratorPage from './pages/GeneratorPage.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import MessagesPage from './pages/MessagesPage.jsx';
+import ProgramTemplatesPage from './pages/ProgramTemplatesPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import TrialExpiredPage from './pages/TrialExpiredPage.jsx';
 import WorkoutBuilderPage from './pages/WorkoutBuilderPage.jsx';
@@ -21,6 +22,7 @@ const pageTitleKeys = {
   generator: 'generator',
   exerciseLibrary: 'exerciseLibrary',
   workoutBuilder: 'workoutBuilder',
+  programTemplates: 'programTemplates',
   messages: 'messages',
   portal: 'portal',
   billing: 'billing',
@@ -149,7 +151,7 @@ export default function App() {
     && !['billing', 'settings'].includes(page);
   const restrictedByRole = profile?.role === 'client'
     && !['portal', 'settings'].includes(page);
-  const requiresCoachAccess = ['dashboard', 'generator', 'exerciseLibrary', 'workoutBuilder', 'messages', 'billing'].includes(page)
+  const requiresCoachAccess = ['dashboard', 'generator', 'exerciseLibrary', 'workoutBuilder', 'programTemplates', 'messages', 'billing'].includes(page)
     && profile?.role !== 'coach';
 
   let content;
@@ -176,6 +178,9 @@ export default function App() {
         break;
       case 'workoutBuilder':
         content = <WorkoutBuilderPage onNotify={showToast} />;
+        break;
+      case 'programTemplates':
+        content = <ProgramTemplatesPage onNavigate={navigate} onNotify={showToast} />;
         break;
       case 'messages':
         content = <MessagesPage />;

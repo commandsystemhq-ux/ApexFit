@@ -1,3 +1,5 @@
+import { priority2Translations } from './priority2Translations.js';
+
 export const supportedLocales = ['en', 'ar', 'de', 'fr', 'es'];
 
 export const localeNames = {
@@ -558,4 +560,8 @@ const clientTrackingTranslations = {
 
 for (const locale of supportedLocales) {
   Object.assign(translations[locale], clientTrackingTranslations[locale]);
+}
+
+for (const locale of supportedLocales) {
+  Object.assign(translations[locale], priority2Translations[locale]);
 }

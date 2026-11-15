@@ -5,7 +5,7 @@ import LanguageToggle from './LanguageToggle.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 
 const navigation = [
-  { group: 'main', items: [{ id: 'dashboard', icon: '⚡' }, { id: 'generator', icon: '✦' }, { id: 'workoutBuilder', icon: '↕' }, { id: 'exerciseLibrary', icon: '⌕' }, { id: 'messages', icon: '◌' }] },
+  { group: 'main', items: [{ id: 'dashboard', icon: '⚡' }, { id: 'generator', icon: '✦' }, { id: 'workoutBuilder', icon: '↕' }, { id: 'programTemplates', icon: '❖' }, { id: 'exerciseLibrary', icon: '⌕' }, { id: 'messages', icon: '◌' }] },
   { group: 'clients', items: [{ id: 'portal', icon: '▣' }, { id: 'billing', icon: '◈' }] },
   { group: 'account', items: [{ id: 'settings', icon: '⚙' }] },
 ];

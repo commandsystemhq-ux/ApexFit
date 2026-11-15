@@ -49,3 +49,12 @@ Coach-owned program tables enforce owner, coach role, and active-trial/subscript
 - `public/apexfit-logo.png` — supplied ApexFit logo used throughout the app
 
 Client workout logs, body measurements/photos, and habit logs are private to each authenticated client. Client roster, billing, and message screens use empty states until their real APIs are connected. The exercise catalog remains empty in Supabase until the prepared data is imported; no sample records or fabricated business metrics are included.
+
+## Priority 2 features
+
+- **Program templates:** coaches mark programs as templates (is_template) and use them to create an editable copy through the duplicate_training_program RPC. Only the owning, active coach can copy or flag a program.
+- **Onboarding form:** a client completes one private client_intake_forms record (goal, experience, schedule, equipment, height, injuries, health, diet). Coach-side viewing and coach-defined custom questions need a coach-client relationship (invites/roster), which is not built yet.
+- **1RM tracking:** get_my_one_rep_max_history() derives the best Epley estimate per exercise and day from the client's logged weighted sets of 1-12 reps. No separate data entry is required.
+- **Food logger:** clients log meals, calories, optional macros, and ingredients in client_food_logs; there is no bundled food database, so values are entered manually.
+
+Apply supabase/migrations/20261115000400_priority2_templates_intake_strength_food.sql (or re-run supabase/manual-setup.sql, which is idempotent) after the earlier migrations. The migration also relaxes the client date checks to allow the client's local date to be one day ahead of UTC.
