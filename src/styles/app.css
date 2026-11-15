@@ -76,9 +76,17 @@
 /* Application shell */
 .app-shell { min-height: 100vh; }
 .sidebar { position: fixed; z-index: 12; inset: 0 auto 0 0; display: flex; width: var(--sidebar-width); flex-direction: column; padding: 18px 13px 15px; border-right: 1px solid var(--line); background: #080a0f; transition: transform .22s ease; }
-.sidebar-brand { display: flex; height: 58px; align-items: center; padding: 0 9px 10px; border-bottom: 1px solid var(--line); }
+.sidebar-brand { display: flex; flex: none; height: 58px; align-items: center; padding: 0 9px 10px; border-bottom: 1px solid var(--line); }
 .sidebar .brand-logo { width: 88px; height: 58px; }
-.side-nav { display: grid; gap: 23px; padding-top: 23px; }
+.side-nav { display: grid; flex: 1 1 auto; min-height: 0; align-content: start; gap: 23px; padding: 23px 4px 18px 0; overflow-y: auto; overscroll-behavior: contain; }
+@supports not selector(::-webkit-scrollbar) { .side-nav { scrollbar-width: thin; scrollbar-color: rgba(112, 175, 255, .28) transparent; } }
+.side-nav::-webkit-scrollbar { width: 6px; }
+.side-nav::-webkit-scrollbar-track { background: transparent; }
+.side-nav::-webkit-scrollbar-button { width: 0; height: 0; display: none; -webkit-appearance: none; }
+.side-nav::-webkit-scrollbar-button:vertical:start:decrement, .side-nav::-webkit-scrollbar-button:vertical:end:increment { display: none; width: 0; height: 0; }
+.side-nav::-webkit-scrollbar-thumb { border-radius: 999px; background: rgba(112, 175, 255, .22); }
+.side-nav::-webkit-scrollbar-thumb:hover { background: rgba(112, 175, 255, .45); }
+[dir='rtl'] .side-nav { padding: 23px 0 18px 4px; }
 .nav-section { display: grid; gap: 4px; }
 .nav-heading { padding: 0 11px 6px; color: #5e6a7c; font-size: 9px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 .nav-link { display: flex; min-height: 39px; align-items: center; gap: 11px; padding: 0 11px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #909bae; cursor: pointer; text-align: start; font-size: 12px; transition: .15s ease; }
@@ -87,7 +95,7 @@
 .nav-icon { display: grid; width: 18px; place-items: center; font-size: 15px; }
 .nav-badge, .nav-count { margin-inline-start: auto; padding: 3px 6px; border-radius: 7px; background: rgba(49, 135, 255, .15); color: #6cb0ff; font-size: 9px; font-weight: 700; }
 .nav-count { background: rgba(255, 255, 255, .07); color: #bac5d2; }
-.sidebar-profile { display: flex; align-items: center; gap: 10px; margin-top: auto; padding: 13px 5px 0; border-top: 1px solid var(--line); }
+.sidebar-profile { display: flex; flex: none; align-items: center; gap: 10px; margin-top: auto; padding: 13px 5px 0; border-top: 1px solid var(--line); }
 .profile-copy { display: grid; min-width: 0; gap: 4px; }
 .profile-copy strong { font-size: 11px; font-weight: 600; }
 .profile-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
