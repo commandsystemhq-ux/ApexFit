@@ -1,3 +1,4 @@
+import { businessTranslations } from './businessTranslations.js';
 import { priority2Translations } from './priority2Translations.js';
 
 export const supportedLocales = ['en', 'ar', 'de', 'fr', 'es'];
@@ -37,7 +38,7 @@ export const translations = {
     preparing: 'Preparing…', generatorUnavailable: 'Plan generation is not connected to a secure backend yet.', planGenerated: 'Plan request submitted.',
     planOutputTitle: 'Your plan will appear here',
     planOutputDescription: 'Submit a plan request after the secure generation service is configured.',
-    messagesTitle: 'Client conversations', messagesDescription: 'Messages will appear when client messaging is connected.',
+    messagesTitle: 'Client messages', messagesDescription: 'Send short notes and videos to one client or all of them at once.',
     emptyMessages: 'No conversations yet.', noConversationSelected: 'Select a client conversation to view messages.',
     portalTitle: 'Client portal', portalDescription: 'Your coach’s shared plans and check-ins will appear here.',
     portalSignIn: 'Sign in as a client to view your portal.', portalEmpty: 'No plans have been shared with this account yet.',
@@ -85,7 +86,7 @@ export const translations = {
     preparing: 'جارٍ الإعداد…', generatorUnavailable: 'لم يتم ربط إنشاء الخطط بخادم آمن بعد.', planGenerated: 'تم إرسال طلب الخطة.',
     planOutputTitle: 'ستظهر خطتك هنا',
     planOutputDescription: 'أرسل طلب الخطة بعد إعداد خدمة الإنشاء الآمنة.',
-    messagesTitle: 'محادثات العملاء', messagesDescription: 'ستظهر الرسائل عند ربط نظام مراسلة العملاء.',
+    messagesTitle: 'رسائل العملاء', messagesDescription: 'أرسل ملاحظات قصيرة ومقاطع فيديو لعميل واحد أو لكل عملائك دفعة واحدة.',
     emptyMessages: 'لا توجد محادثات بعد.', noConversationSelected: 'اختر محادثة عميل لعرض الرسائل.',
     portalTitle: 'بوابة العميل', portalDescription: 'ستظهر الخطط والتحديثات التي يشاركها مدربك هنا.',
     portalSignIn: 'سجل الدخول كعميل لعرض بوابتك.', portalEmpty: 'لم تتم مشاركة أي خطط مع هذا الحساب بعد.',
@@ -133,7 +134,7 @@ export const translations = {
     preparing: 'Wird vorbereitet…', generatorUnavailable: 'Die Planerstellung ist noch nicht mit einem sicheren Backend verbunden.', planGenerated: 'Plananfrage gesendet.',
     planOutputTitle: 'Dein Plan erscheint hier',
     planOutputDescription: 'Sende eine Plananfrage, sobald der sichere Generierungsdienst eingerichtet ist.',
-    messagesTitle: 'Kundengespräche', messagesDescription: 'Nachrichten werden angezeigt, sobald das Nachrichtensystem verbunden ist.',
+    messagesTitle: 'Kundennachrichten', messagesDescription: 'Sende kurze Notizen und Videos an einen oder alle Kunden gleichzeitig.',
     emptyMessages: 'Noch keine Gespräche.', noConversationSelected: 'Wähle ein Kundengespräch aus, um Nachrichten zu sehen.',
     portalTitle: 'Kundenportal', portalDescription: 'Geteilte Pläne und Check-ins deines Trainers erscheinen hier.',
     portalSignIn: 'Melde dich als Kunde an, um dein Portal zu öffnen.', portalEmpty: 'Für dieses Konto wurden noch keine Pläne freigegeben.',
@@ -181,7 +182,7 @@ export const translations = {
     preparing: 'Préparation…', generatorUnavailable: 'La génération de plans n’est pas encore reliée à un serveur sécurisé.', planGenerated: 'Demande de plan envoyée.',
     planOutputTitle: 'Votre plan apparaîtra ici',
     planOutputDescription: 'Envoyez une demande lorsque le service sécurisé de génération sera configuré.',
-    messagesTitle: 'Conversations clients', messagesDescription: 'Les messages apparaîtront lorsque la messagerie client sera connectée.',
+    messagesTitle: 'Messages clients', messagesDescription: 'Envoyez de courtes notes et vidéos à un client ou à tous en une fois.',
     emptyMessages: 'Aucune conversation pour le moment.', noConversationSelected: 'Sélectionnez une conversation client pour afficher les messages.',
     portalTitle: 'Portail client', portalDescription: 'Les plans et suivis partagés par votre coach apparaîtront ici.',
     portalSignIn: 'Connectez-vous comme client pour accéder à votre portail.', portalEmpty: 'Aucun plan n’a encore été partagé avec ce compte.',
@@ -229,7 +230,7 @@ export const translations = {
     preparing: 'Preparando…', generatorUnavailable: 'La generación de planes aún no está conectada a un servidor seguro.', planGenerated: 'Solicitud del plan enviada.',
     planOutputTitle: 'Tu plan aparecerá aquí',
     planOutputDescription: 'Envía una solicitud cuando el servicio seguro de generación esté configurado.',
-    messagesTitle: 'Conversaciones con clientes', messagesDescription: 'Los mensajes aparecerán cuando se conecte la mensajería.',
+    messagesTitle: 'Mensajes a clientes', messagesDescription: 'Envía notas breves y vídeos a un cliente o a todos a la vez.',
     emptyMessages: 'Aún no hay conversaciones.', noConversationSelected: 'Selecciona una conversación para ver los mensajes.',
     portalTitle: 'Portal del cliente', portalDescription: 'Aquí aparecerán los planes y seguimientos compartidos por tu entrenador.',
     portalSignIn: 'Inicia sesión como cliente para ver tu portal.', portalEmpty: 'Aún no se han compartido planes con esta cuenta.',
@@ -564,4 +565,8 @@ for (const locale of supportedLocales) {
 
 for (const locale of supportedLocales) {
   Object.assign(translations[locale], priority2Translations[locale]);
+}
+
+for (const locale of supportedLocales) {
+  Object.assign(translations[locale], businessTranslations[locale]);
 }

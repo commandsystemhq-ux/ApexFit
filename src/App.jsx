@@ -3,13 +3,17 @@ import AppShell from './components/AppShell.jsx';
 import Toast from './components/Toast.jsx';
 import BillingPage from './pages/BillingPage.jsx';
 import ClientPortalPage from './pages/ClientPortalPage.jsx';
+import ClientsPage from './pages/ClientsPage.jsx';
+import CoachHubPage from './pages/CoachHubPage.jsx';
 import CoachSignInPage from './pages/CoachSignInPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
 import ExerciseLibraryPage from './pages/ExerciseLibraryPage.jsx';
 import GeneratorPage from './pages/GeneratorPage.jsx';
+import InvoicingPage from './pages/InvoicingPage.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import MessagesPage from './pages/MessagesPage.jsx';
 import ProgramTemplatesPage from './pages/ProgramTemplatesPage.jsx';
+import SchedulePage from './pages/SchedulePage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import TrialExpiredPage from './pages/TrialExpiredPage.jsx';
 import WorkoutBuilderPage from './pages/WorkoutBuilderPage.jsx';
@@ -23,6 +27,10 @@ const pageTitleKeys = {
   exerciseLibrary: 'exerciseLibrary',
   workoutBuilder: 'workoutBuilder',
   programTemplates: 'programTemplates',
+  clients: 'clients',
+  schedule: 'schedule',
+  invoicing: 'invoicing',
+  coachHub: 'coachHub',
   messages: 'messages',
   portal: 'portal',
   billing: 'billing',
@@ -150,8 +158,8 @@ export default function App() {
     && profile.access_state === 'expired'
     && !['billing', 'settings'].includes(page);
   const restrictedByRole = profile?.role === 'client'
-    && !['portal', 'settings'].includes(page);
-  const requiresCoachAccess = ['dashboard', 'generator', 'exerciseLibrary', 'workoutBuilder', 'programTemplates', 'messages', 'billing'].includes(page)
+    && !['portal', 'coachHub', 'settings'].includes(page);
+  const requiresCoachAccess = ['dashboard', 'generator', 'exerciseLibrary', 'workoutBuilder', 'programTemplates', 'clients', 'schedule', 'invoicing', 'messages', 'billing'].includes(page)
     && profile?.role !== 'coach';
 
   let content;
@@ -183,7 +191,19 @@ export default function App() {
         content = <ProgramTemplatesPage onNavigate={navigate} onNotify={showToast} />;
         break;
       case 'messages':
-        content = <MessagesPage />;
+        content = <MessagesPage onNavigate={navigate} />;
+        break;
+      case 'clients':
+        content = <ClientsPage onNavigate={navigate} onNotify={showToast} />;
+        break;
+      case 'schedule':
+        content = <SchedulePage onNavigate={navigate} onNotify={showToast} />;
+        break;
+      case 'invoicing':
+        content = <InvoicingPage onNavigate={navigate} onNotify={showToast} />;
+        break;
+      case 'coachHub':
+        content = <CoachHubPage user={user} profile={profile} onSignIn={handleSignIn} />;
         break;
       case 'portal':
         content = <ClientPortalPage user={user} profile={profile} onSignIn={handleSignIn} />;

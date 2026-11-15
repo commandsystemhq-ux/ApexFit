@@ -58,3 +58,26 @@ Client workout logs, body measurements/photos, and habit logs are private to eac
 - **Food logger:** clients log meals, calories, optional macros, and ingredients in client_food_logs; there is no bundled food database, so values are entered manually.
 
 Apply supabase/migrations/20261115000400_priority2_templates_intake_strength_food.sql (or re-run supabase/manual-setup.sql, which is idempotent) after the earlier migrations. The migration also relaxes the client date checks to allow the client's local date to be one day ahead of UTC.
+
+## Coaching business features
+
+Migration `20261115000500_coaching_business.sql` (also in `supabase/manual-setup.sql`) adds the coach-client link and everything that depends on it. Server-side work lives in `api/` as Vercel Functions; the browser never sees a secret.
+
+- **Coach-client link:** a coach creates a single-use invite code (valid 7 days) and the client enters it under *My coach -> Coach*. Coaches then see their roster and each client's onboarding answers. Row-level security scopes all data to the linked pair.
+- **Messaging:** coaches send notes and videos (MP4/WebM/MOV, 50 MB) to one, some, or all active clients (`send_coach_message`). Videos live in the private `apexfit-coach-videos` bucket and are served to recipients through short-lived signed URLs. Messages are one-way; clients cannot reply yet.
+- **Packages and invoices:** coaches define packages (for example 10 sessions) and issue invoices; clients can also buy an active package. Amounts and currency come from the database, never the browser. Stripe Checkout uses destination charges to the coach's Stripe Connect Express account; `STRIPE_PLATFORM_FEE_PERCENT` optionally keeps a platform fee. The webhook (`/api/stripe-webhook`) verifies Stripe's signature and calls the service-role-only `mark_invoice_paid`, which is idempotent, checks the amount, and grants session credits.
+- **Sessions:** coaches schedule sessions; completing one consumes a credit from the client's oldest paid package, and reopening or canceling it restores the credit.
+- **Google Calendar:** one-way sync from ApexFit to the coach's primary calendar through OAuth with offline access. The refresh token is AES-256-GCM encrypted with `TOKEN_ENCRYPTION_KEY` and is never readable from the browser. Events use a deterministic ID, so re-syncing updates instead of duplicating.
+- **Push notifications:** Web Push (VAPID) through `public/sw.js`. Clients opt in under *My coach -> Coach*. Delivery is best effort and runs when a coach sends a message, schedules or cancels a session, or issues an invoice. On iPhone, ApexFit must first be added to the Home Screen.
+
+### Environment and third-party setup
+
+Set the server variables from `.env.example` in Vercel. Then:
+
+1. **Supabase:** run `supabase/manual-setup.sql`. Copy the service-role key into `SUPABASE_SERVICE_ROLE_KEY` (server only).
+2. **Secrets:** `TOKEN_ENCRYPTION_KEY` = `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`. VAPID keys = `npx web-push generate-vapid-keys`.
+3. **Stripe:** enable Connect (Express) on your platform account, set `STRIPE_SECRET_KEY`, and add a webhook to `https://<app>/api/stripe-webhook` for `checkout.session.completed`, `checkout.session.async_payment_succeeded`, and `account.updated` (with Connect events enabled). Put its signing secret in `STRIPE_WEBHOOK_SECRET`.
+4. **Google:** create an OAuth web client, enable the Google Calendar API, add the redirect URI `https://<app>/api/google?action=callback`, and set `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`. The `calendar.events` scope needs Google's OAuth verification before use outside test users.
+5. **APP_URL** must be the public origin, for example `https://apexfit.vercel.app`.
+
+`npm run dev` serves only the front end; use `vercel dev` to exercise the `/api` functions locally. The $39 coach subscription checkout is still not implemented.

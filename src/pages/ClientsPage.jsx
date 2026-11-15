@@ -1,0 +1,166 @@
+import { useEffect, useState } from 'react';
+import Button from '../components/Button.jsx';
+import PageHeader from '../components/PageHeader.jsx';
+import { useLocale } from '../contexts/LocaleContext.jsx';
+import {
+  createClientInvite,
+  getClientIntake,
+  listMyClients,
+  listOpenInvites,
+  setClientStatus,
+} from '../services/coachClientService.js';
+import { clientLabel } from '../services/coachingUtils.js';
+
+const GOAL_LABELS = {
+  fat_loss: 'goalFatLoss', muscle_gain: 'goalMuscleGain', strength: 'goalStrength',
+  endurance: 'goalEndurance', general_fitness: 'goalGeneralFitness',
+};
+const EQUIPMENT_LABELS = { full_gym: 'fullGym', home_gym: 'equipHomeGym', bodyweight_only: 'equipBodyweight' };
+
+export default function ClientsPage({ onNavigate, onNotify }) {
+  const { locale, t } = useLocale();
+  const [clients, setClients] = useState([]);
+  const [invites, setInvites] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [expandedId, setExpandedId] = useState('');
+  const [intake, setIntake] = useState({ state: 'idle', data: null, error: '' });
+
+  async function refresh() {
+    try {
+      const [clientRows, inviteRows] = await Promise.all([listMyClients(), listOpenInvites()]);
+      setClients(clientRows);
+      setInvites(inviteRows);
+      setError('');
+    } catch (loadError) {
+      setError(loadError.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    refresh();
+  }, []);
+
+  async function handleCreateInvite() {
+    setCreating(true);
+    try {
+      await createClientInvite();
+      await refresh();
+    } catch (createError) {
+      onNotify(`${t('inviteCreateError')} ${createError.message}`);
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function copyCode(code) {
+    try {
+      await navigator.clipboard.writeText(code);
+      onNotify(t('inviteCopied'));
+    } catch {
+      onNotify(code);
+    }
+  }
+
+  async function toggleStatus(client) {
+    try {
+      await setClientStatus(client.client_id, client.status === 'active' ? 'archived' : 'active');
+      await refresh();
+    } catch (statusError) {
+      onNotify(statusError.message);
+    }
+  }
+
+  async function toggleIntake(clientId) {
+    if (expandedId === clientId) {
+      setExpandedId('');
+      return;
+    }
+    setExpandedId(clientId);
+    setIntake({ state: 'loading', data: null, error: '' });
+    try {
+      setIntake({ state: 'ready', data: await getClientIntake(clientId), error: '' });
+    } catch (intakeError) {
+      setIntake({ state: 'error', data: null, error: intakeError.message });
+    }
+  }
+
+  const activeCount = clients.filter((client) => client.status === 'active').length;
+
+  return (
+    <>
+      <PageHeader eyebrow="APEXFIT" title={t('clientsTitle')} description={t('clientsDescription')} />
+      <div className="client-feature-grid">
+        <section className="panel clients-roster">
+          <div className="panel-heading">
+            <div><span className="eyebrow">{t('clientRoster')}</span><h3>{t('clients')}</h3></div>
+            <span className="soft-badge badge-muted">{activeCount} {t('activeClients')}</span>
+          </div>
+          {error && <div className="notice notice-error" role="alert">{t('clientsLoadError')} {error}</div>}
+          {loading && <div className="empty-state" role="status">{t('loadingProgress')}</div>}
+          {!loading && !error && clients.length === 0 && (
+            <div className="dashboard-empty"><h3>{t('emptyClients')}</h3><p>{t('clientsEmptyHelp')}</p></div>
+          )}
+          <div className="clients-list">
+            {clients.map((client) => (
+              <article className="client-row" key={client.client_id}>
+                <div className="client-row-main">
+                  <div className="avatar avatar-blue" aria-hidden="true">{clientLabel(client).slice(0, 1).toUpperCase()}</div>
+                  <div className="client-row-copy">
+                    <strong>{clientLabel(client)}</strong>
+                    <small>{client.client_email} · {t('joinedOn')} {new Date(client.created_at).toLocaleDateString(locale)}</small>
+                  </div>
+                  <span className={`soft-badge ${client.status === 'active' ? 'badge-blue' : 'badge-muted'}`}>{t(client.status === 'active' ? 'active' : 'archivedStatus')}</span>
+                </div>
+                <div className="client-row-actions">
+                  <button className="text-action" type="button" aria-expanded={expandedId === client.client_id} onClick={() => toggleIntake(client.client_id)}>{t('viewOnboarding')}</button>
+                  <button className="text-action" type="button" onClick={() => onNavigate('messages')}>{t('messages')}</button>
+                  <button className="text-action" type="button" onClick={() => toggleStatus(client)}>{client.status === 'active' ? t('archiveClient') : t('restoreClient')}</button>
+                </div>
+                {expandedId === client.client_id && (
+                  <div className="client-intake-summary">
+                    {intake.state === 'loading' && <p className="muted-copy" role="status">{t('loadingProgress')}</p>}
+                    {intake.state === 'error' && <div className="notice notice-error" role="alert">{t('intakeLoadError')} {intake.error}</div>}
+                    {intake.state === 'ready' && !intake.data && <p className="muted-copy">{t('intakeNotSubmitted')}</p>}
+                    {intake.state === 'ready' && intake.data && (
+                      <dl className="intake-summary-list">
+                        <div><dt>{t('intakeGoal')}</dt><dd>{t(GOAL_LABELS[intake.data.primary_goal])}</dd></div>
+                        <div><dt>{t('intakeExperience')}</dt><dd>{t(`difficulty_${intake.data.experience_level}`)}</dd></div>
+                        <div><dt>{t('intakeTrainingDays')}</dt><dd>{intake.data.training_days_per_week}</dd></div>
+                        <div><dt>{t('intakeEquipment')}</dt><dd>{t(EQUIPMENT_LABELS[intake.data.equipment_access])}</dd></div>
+                        {intake.data.height_cm !== null && <div><dt>{t('intakeHeight')}</dt><dd>{intake.data.height_cm}</dd></div>}
+                        {intake.data.injuries && <div><dt>{t('intakeInjuries')}</dt><dd>{intake.data.injuries}</dd></div>}
+                        {intake.data.medical_conditions && <div><dt>{t('intakeMedical')}</dt><dd>{intake.data.medical_conditions}</dd></div>}
+                        {intake.data.dietary_preferences && <div><dt>{t('intakeDiet')}</dt><dd>{intake.data.dietary_preferences}</dd></div>}
+                        {intake.data.additional_notes && <div><dt>{t('intakeNotes')}</dt><dd>{intake.data.additional_notes}</dd></div>}
+                      </dl>
+                    )}
+                  </div>
+                )}
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="panel clients-invites">
+          <div className="panel-heading"><div><span className="eyebrow">{t('inviteClient')}</span><h3>{t('inviteCodes')}</h3></div></div>
+          <p className="muted-copy">{t('inviteHelp')}</p>
+          <Button variant="primary" onClick={handleCreateInvite} disabled={creating}>{creating ? t('inviteCreating') : t('inviteCreate')}</Button>
+          {invites.length === 0 && <div className="empty-state">{t('noOpenInvites')}</div>}
+          <div className="invite-list">
+            {invites.map((invite) => (
+              <div className="invite-row" key={invite.code}>
+                <code>{invite.code}</code>
+                <small>{t('inviteExpires')} {new Date(invite.expires_at).toLocaleDateString(locale)}</small>
+                <button className="text-action" type="button" onClick={() => copyCode(invite.code)}>{t('inviteCopy')}</button>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+    </>
+  );
+}
