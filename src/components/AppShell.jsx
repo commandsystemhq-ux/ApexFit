@@ -5,7 +5,7 @@ import LanguageToggle from './LanguageToggle.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 
 const navigation = [
-  { group: 'main', items: [{ id: 'dashboard', icon: '⚡' }, { id: 'generator', icon: '✦' }, { id: 'messages', icon: '◌' }] },
+  { group: 'main', items: [{ id: 'dashboard', icon: '⚡' }, { id: 'generator', icon: '✦' }, { id: 'workoutBuilder', icon: '↕' }, { id: 'exerciseLibrary', icon: '⌕' }, { id: 'messages', icon: '◌' }] },
   { group: 'clients', items: [{ id: 'portal', icon: '▣' }, { id: 'billing', icon: '◈' }] },
   { group: 'account', items: [{ id: 'settings', icon: '⚙' }] },
 ];
@@ -13,6 +13,12 @@ const navigation = [
 export default function AppShell({ page, title, onNavigate, onSignIn, onSignOut, user, profile, children }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const { t } = useLocale();
+  const sections = profile?.role === 'client'
+    ? [
+      { group: 'clients', items: [{ id: 'portal', icon: '▣' }] },
+      { group: 'account', items: [{ id: 'settings', icon: '⚙' }] },
+    ]
+    : navigation;
 
   function go(id) {
     setMenuOpen(false);
@@ -25,7 +31,7 @@ export default function AppShell({ page, title, onNavigate, onSignIn, onSignOut,
       <aside className={`sidebar ${menuOpen ? 'is-open' : ''}`}>
         <button className="sidebar-brand" onClick={() => go('home')} aria-label={`ApexFit ${t('home')}`}><BrandMark /></button>
         <nav className="side-nav" aria-label={t('main')}>
-          {navigation.map((section) => (
+          {sections.map((section) => (
             <div className="nav-section" key={section.group}>
               <span className="nav-heading">{t(section.group)}</span>
               {section.items.map(({ id, icon, badge, count }) => (

@@ -5,11 +5,13 @@ import BillingPage from './pages/BillingPage.jsx';
 import ClientPortalPage from './pages/ClientPortalPage.jsx';
 import CoachSignInPage from './pages/CoachSignInPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
+import ExerciseLibraryPage from './pages/ExerciseLibraryPage.jsx';
 import GeneratorPage from './pages/GeneratorPage.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import MessagesPage from './pages/MessagesPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import TrialExpiredPage from './pages/TrialExpiredPage.jsx';
+import WorkoutBuilderPage from './pages/WorkoutBuilderPage.jsx';
 import { getMyAccessStatus, provisionMyProfile, signInWithGoogle, signOut, updateMyLocale } from './services/authService.js';
 import { useLocale } from './contexts/LocaleContext.jsx';
 import { supabase } from './services/supabaseClient.js';
@@ -17,6 +19,8 @@ import { supabase } from './services/supabaseClient.js';
 const pageTitleKeys = {
   dashboard: 'dashboard',
   generator: 'generator',
+  exerciseLibrary: 'exerciseLibrary',
+  workoutBuilder: 'workoutBuilder',
   messages: 'messages',
   portal: 'portal',
   billing: 'billing',
@@ -145,7 +149,7 @@ export default function App() {
     && !['billing', 'settings'].includes(page);
   const restrictedByRole = profile?.role === 'client'
     && !['portal', 'settings'].includes(page);
-  const requiresCoachAccess = ['dashboard', 'generator', 'messages', 'billing'].includes(page)
+  const requiresCoachAccess = ['dashboard', 'generator', 'exerciseLibrary', 'workoutBuilder', 'messages', 'billing'].includes(page)
     && profile?.role !== 'coach';
 
   let content;
@@ -166,6 +170,12 @@ export default function App() {
         break;
       case 'generator':
         content = <GeneratorPage onNotify={showToast} />;
+        break;
+      case 'exerciseLibrary':
+        content = <ExerciseLibraryPage />;
+        break;
+      case 'workoutBuilder':
+        content = <WorkoutBuilderPage onNotify={showToast} />;
         break;
       case 'messages':
         content = <MessagesPage />;

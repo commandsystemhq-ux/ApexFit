@@ -19,19 +19,33 @@ In Supabase:
 
 1. Enable Google under **Authentication → Providers** and configure the Google OAuth client credentials.
 2. Add the local and production app URLs to the Supabase redirect URL allow-list and Google OAuth authorized redirect URIs.
-3. Apply `supabase/migrations/20261115000100_core_accounts.sql` using the Supabase CLI (`supabase db push`) or the SQL editor.
+3. Apply the migrations in `supabase/migrations/` using the Supabase CLI (`supabase db push`) or the SQL editor, in filename order. For a one-time SQL Editor setup, copy and run `supabase/manual-setup.sql`.
 
 Google sign-in records whether the user is entering as a coach or client before redirecting. On the first authenticated return, `provision_my_profile` creates the account profile. New coach accounts receive a database-generated 72-hour trial; the role and trial dates cannot be edited by the browser. `get_my_access_status` calculates access using database time and an active subscription record, and the app refreshes status on focus and at trial expiration.
 
-When adding coach-owned data tables, enforce coach access in database RLS policies using `get_my_access_status()`; UI route checks are not a security boundary. For example, combine the row owner check with `public.get_my_access_status()->>'access_state' in ('trialing', 'active')` in both `USING` and `WITH CHECK` policies. Subscription rows are read-only to authenticated users and should only be written by a trusted billing webhook/service role. Configure a payment provider and webhook before enabling paid checkout; the $39/month plan is displayed, but checkout is intentionally not simulated.
+The exercise catalog is not seeded with fabricated entries. The prepared `data/free-exercise-db-apexfit.json` is transformed from the public-domain [free-exercise-db](https://github.com/yuhonas/free-exercise-db) dataset (876 records at the pinned upstream revision); its source has exercise instructions and image thumbnails, but no demo videos. Categories are `strength`, `cardio`, `mobility`, `plyometrics`, or `warmup`; difficulty is `beginner`, `intermediate`, or `advanced`. Equipment and muscle tags use lowercase snake case and the supported localized filters. Regenerate the file with `npm run prepare:exercise-catalog`; import it locally after applying the migrations:
+
+```powershell
+$env:SUPABASE_URL = "https://your-project.supabase.co"
+$env:SUPABASE_SERVICE_ROLE_KEY = "your-service-role-key"
+npm run import:exercises -- .\data\free-exercise-db-apexfit.json
+```
+
+The source contains 876 records, not 1,000; a second verified source is required to meet the earlier 1,000-exercise target. The importer validates every record, upserts by slug, and publishes the imported rows. Keep the service-role key only in the local environment or a trusted server; never put it in a `VITE_` variable, source file, or browser. The exercise library uses exact-count, server-side pagination and search/filters. Demo videos are only embedded from HTTPS YouTube/Vimeo URLs or played as HTTPS MP4/WebM files.
+
+Coach-owned program tables enforce owner, coach role, and active-trial/subscription access with RLS; program saves use a transactional RPC. UI route checks are not a security boundary. Subscription rows are read-only to authenticated users and should only be written by a trusted billing webhook/service role. Configure a payment provider and webhook before enabling paid checkout; the $39/month plan is displayed, but checkout is intentionally not simulated.
 
 ## Project structure
 
 - `src/components/` — app shell, language selector, brand, and reusable UI
 - `src/contexts/` and `src/i18n/` — persisted English, Arabic, German, French, and Spanish preferences with automatic RTL for Arabic
-- `src/pages/` — landing, coach workspace, client portal, settings, and subscription/trial screens
-- `src/services/` — Supabase client, Google OAuth/account provisioning, trial helpers, and AI backend boundary
-- `supabase/migrations/` — PostgreSQL account, role, locale, and trial schema with RLS and access functions
+- `src/pages/` — landing, coach workspace, manual workout builder, exercise library, client portal, settings, and subscription/trial screens
+- `src/services/` — Supabase client, Google OAuth/account provisioning, exercise search, program persistence, client workout/progress/habit data, trial helpers, and AI backend boundary
+- `supabase/migrations/` — PostgreSQL accounts, trials, exercise/program tables, client tracking tables, storage bucket, and RLS
+- `supabase/manual-setup.sql` — combined SQL for the Supabase SQL Editor
+- `data/` — prepared exercise JSON and its source/license notes
+- `scripts/import-exercise-catalog.mjs` — local, service-role-only import for a verified exercise catalog JSON file
+- `scripts/prepare-free-exercise-db.mjs` — downloads the pinned public-domain source and prepares the normalized catalog
 - `public/apexfit-logo.png` — supplied ApexFit logo used throughout the app
 
-Client roster, workout, billing, and message screens use empty states until real APIs and data tables are connected; no sample client records or fabricated business metrics are included.
+Client workout logs, body measurements/photos, and habit logs are private to each authenticated client. Client roster, billing, and message screens use empty states until their real APIs are connected. The exercise catalog remains empty in Supabase until the prepared data is imported; no sample records or fabricated business metrics are included.
