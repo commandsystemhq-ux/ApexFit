@@ -92,7 +92,7 @@ export default function App() {
     updateMyLocale(locale).catch((error) => {
       showToast(`${t('saveError')} ${error.message}`);
     });
-  }, [locale, profile]);
+  }, [locale, profile?.id]);
 
   useEffect(() => {
     if (!profile || profile.role !== 'coach') return undefined;

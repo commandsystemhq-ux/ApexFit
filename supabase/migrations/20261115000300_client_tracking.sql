@@ -1,7 +1,7 @@
 create table if not exists public.client_workout_sessions (
   id uuid primary key default gen_random_uuid(),
   client_id uuid not null references public.profiles (id) on delete cascade,
-  workout_date date not null default current_date check (workout_date <= current_date),
+  workout_date date not null default current_date check (workout_date <= current_date + 1),
   title text not null check (length(btrim(title)) between 1 and 160),
   created_at timestamptz not null default now()
 );
@@ -27,7 +27,7 @@ create index if not exists client_workout_set_logs_session_idx
 create table if not exists public.client_body_metrics (
   id uuid primary key default gen_random_uuid(),
   client_id uuid not null references public.profiles (id) on delete cascade,
-  measured_on date not null default current_date check (measured_on <= current_date),
+  measured_on date not null default current_date check (measured_on <= current_date + 1),
   weight_kg numeric(6, 2) check (weight_kg between 0.1 and 500),
   body_fat_percentage numeric(5, 2) check (body_fat_percentage between 0 and 100),
   notes text not null default '' check (length(notes) <= 500),
@@ -43,7 +43,7 @@ create index if not exists client_body_metrics_client_date_idx
 create table if not exists public.client_habit_logs (
   id uuid primary key default gen_random_uuid(),
   client_id uuid not null references public.profiles (id) on delete cascade,
-  habit_date date not null default current_date check (habit_date <= current_date),
+  habit_date date not null default current_date check (habit_date <= current_date + 1),
   sleep_hours numeric(4, 2) check (sleep_hours between 0 and 24),
   water_liters numeric(5, 2) check (water_liters between 0 and 50),
   steps integer check (steps between 0 and 200000),
@@ -147,7 +147,7 @@ begin
   if v_access ->> 'role' <> 'client' then
     raise exception 'A client account is required to save workout logs';
   end if;
-  if p_workout_date is null or p_workout_date > current_date then
+  if p_workout_date is null or p_workout_date > current_date + 1 then
     raise exception 'Workout date cannot be in the future';
   end if;
   if p_title is null or length(btrim(p_title)) not between 1 and 160 then
