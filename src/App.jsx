@@ -10,6 +10,7 @@ import { useToast } from './contexts/ToastContext.jsx';
 import { AUTH_PATHS, PAGES, legacyHashPath, pathFor } from './routes.js';
 
 const BillingPage = lazy(() => import('./pages/BillingPage.jsx'));
+const WorkflowsPage = lazy(() => import('./pages/WorkflowsPage.jsx'));
 const ClientPortalPage = lazy(() => import('./pages/ClientPortalPage.jsx'));
 const ClientsPage = lazy(() => import('./pages/ClientsPage.jsx'));
 const CoachHubPage = lazy(() => import('./pages/CoachHubPage.jsx'));
@@ -61,6 +62,7 @@ export default function App() {
               <Route path={PAGES.workoutBuilder.path} element={<WorkoutBuilderPage onNotify={showToast} />} />
               <Route path={PAGES.programTemplates.path} element={<ProgramTemplatesPage onNavigate={go} onNotify={showToast} />} />
               <Route path={PAGES.messages.path} element={<MessagesPage onNavigate={go} />} />
+              <Route path={PAGES.workflows.path} element={<WorkflowsPage onNotify={showToast} />} />
               <Route path={PAGES.clients.path} element={<ClientsPage onNavigate={go} onNotify={showToast} />} />
               <Route path={PAGES.schedule.path} element={<SchedulePage onNavigate={go} onNotify={showToast} />} />
               <Route path={PAGES.invoicing.path} element={<InvoicingPage onNavigate={go} onNotify={showToast} />} />

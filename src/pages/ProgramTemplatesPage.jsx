@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import Button from '../components/Button.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
+import { listMyClients } from '../services/coachClientService.js';
+import { clientLabel } from '../services/coachingUtils.js';
+import { assignProgramToClient } from '../services/workflowService.js';
 import {
   BUILDER_HANDOFF_KEY,
   duplicateWorkoutProgram,
@@ -16,6 +19,8 @@ export default function ProgramTemplatesPage({ onNavigate, onNotify }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState('');
+  const [clients, setClients] = useState([]);
+  const [assignTo, setAssignTo] = useState({});
 
   useEffect(() => {
     let active = true;
@@ -29,6 +34,11 @@ export default function ProgramTemplatesPage({ onNavigate, onNotify }) {
       .finally(() => {
         if (active) setLoading(false);
       });
+    listMyClients()
+      .then((rows) => {
+        if (active) setClients(rows.filter((client) => client.status === 'active'));
+      })
+      .catch(() => {});
     return () => { active = false; };
   }, []);
 
@@ -49,6 +59,21 @@ export default function ProgramTemplatesPage({ onNavigate, onNotify }) {
       onNotify(t('templateUpdated'));
     } catch (updateError) {
       onNotify(`${t('templateUpdateError')} ${updateError.message}`);
+    } finally {
+      setBusyId('');
+    }
+  }
+
+  async function assignProgram(program) {
+    const clientId = assignTo[program.id];
+    if (!clientId) return;
+    setBusyId(program.id);
+    try {
+      await assignProgramToClient(clientId, program.id);
+      setAssignTo((current) => ({ ...current, [program.id]: '' }));
+      onNotify(t('wfAssigned'));
+    } catch (assignError) {
+      onNotify(`${t('wfAssignError')} ${assignError.message}`);
     } finally {
       setBusyId('');
     }
@@ -106,6 +131,13 @@ export default function ProgramTemplatesPage({ onNavigate, onNotify }) {
                 <button className="text-action" type="button" disabled={busyId === program.id} onClick={() => toggleTemplate(program)}>
                   {program.is_template ? t('removeFromTemplates') : t('saveAsTemplateAction')}
                 </button>
+              </div>
+              <div className="wf-assign">
+                <select className="field" aria-label={t('wfAssignProgram')} value={assignTo[program.id] || ''} disabled={clients.length === 0 || busyId === program.id} onChange={(event) => setAssignTo((current) => ({ ...current, [program.id]: event.target.value }))}>
+                  <option value="">{clients.length === 0 ? t('wfNoClients') : t('wfChooseClient')}</option>
+                  {clients.map((client) => <option key={client.client_id} value={client.client_id}>{clientLabel(client)}</option>)}
+                </select>
+                <Button variant="secondary" size="small" disabled={!assignTo[program.id] || busyId === program.id} onClick={() => assignProgram(program)}>{t('wfAssign')}</Button>
               </div>
             </article>
           ))}

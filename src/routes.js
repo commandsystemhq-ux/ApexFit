@@ -5,6 +5,7 @@ export const PAGES = {
   workoutBuilder: { path: '/workout-builder', titleKey: 'workoutBuilder', icon: '↕', access: 'coach' },
   programTemplates: { path: '/templates', titleKey: 'programTemplates', icon: '❖', access: 'coach' },
   exerciseLibrary: { path: '/exercises', titleKey: 'exerciseLibrary', icon: '⌕', access: 'coach' },
+  workflows: { path: '/workflows', titleKey: 'workflows', icon: '↻', access: 'coach' },
   messages: { path: '/messages', titleKey: 'messages', icon: '◌', access: 'coach' },
   clients: { path: '/clients', titleKey: 'clients', icon: '☺', access: 'coach' },
   schedule: { path: '/schedule', titleKey: 'schedule', icon: '◷', access: 'coach' },
@@ -25,7 +26,7 @@ export const PAGES = {
 export const AUTH_PATHS = { home: '/', login: '/login', signup: '/signup' };
 
 const COACH_NAVIGATION = [
-  { group: 'main', items: ['dashboard', 'generator', 'workoutBuilder', 'programTemplates', 'exerciseLibrary', 'messages'] },
+  { group: 'main', items: ['dashboard', 'generator', 'workoutBuilder', 'programTemplates', 'exerciseLibrary', 'messages', 'workflows'] },
   { group: 'clients', items: ['clients', 'schedule', 'invoicing', 'community', 'leaderboard', 'billing'] },
   { group: 'account', items: ['settings'] },
 ];
