@@ -64,7 +64,7 @@ test('checkout uses the stored invoice amount and routes funds to the coach acco
   assert.equal(params.payment_intent_data.transfer_data.destination, 'acct_1');
   assert.equal(params.payment_intent_data.application_fee_amount, 5000);
   assert.equal(params.metadata.invoice_id, 'inv-1');
-  assert.equal(params.success_url, 'https://app.example/?checkout=success#coachHub');
+  assert.equal(params.success_url, 'https://app.example/coach-hub?checkout=success');
   assert.equal('application_fee_amount' in buildCheckoutParams({ invoice, destinationAccount: 'acct_1', appUrl: 'https://a' }).payment_intent_data, false);
   assert.equal(computeApplicationFee(333, 2.5), 8);
 });

@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import Button from '../components/Button.jsx';
 import ClientBilling from '../components/ClientBilling.jsx';
 import ClientCoachLink from '../components/ClientCoachLink.jsx';
 import ClientInbox from '../components/ClientInbox.jsx';
 import ClientSessions from '../components/ClientSessions.jsx';
 import PageHeader from '../components/PageHeader.jsx';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import { listMyCoaches } from '../services/coachClientService.js';
 
@@ -15,8 +15,9 @@ const SECTIONS = [
   { id: 'coach', label: 'coachTab', icon: '☺' },
 ];
 
-export default function CoachHubPage({ user, profile, onSignIn }) {
+export default function CoachHubPage() {
   const { t } = useLocale();
+  const { user, profile } = useAuth();
   const hasCheckoutResult = new URLSearchParams(window.location.search).has('checkout');
   const [active, setActive] = useState(hasCheckoutResult ? 'billing' : 'inbox');
   const [linked, setLinked] = useState(null);
@@ -38,16 +39,6 @@ export default function CoachHubPage({ user, profile, onSignIn }) {
   return (
     <>
       <PageHeader eyebrow="APEXFIT" title={t('coachHub')} description={t('coachHubDescription')} />
-      {!user && (
-        <section className="panel client-portal-gate">
-          <div className="dashboard-empty">
-            <h3>{t('portalSignIn')}</h3>
-            <Button variant="primary" onClick={() => onSignIn('client')}>{t('clientSignIn')}</Button>
-          </div>
-        </section>
-      )}
-      {user && !profile && <div className="notice notice-info" role="status">{t('accountLoading')}</div>}
-      {user && profile && !isClient && <div className="notice notice-info" role="status">{t('clientAccountRequired')}</div>}
       {isClient && (
         <>
           {linked === false && <div className="notice notice-info" role="status">{t('noCoachYet')}</div>}

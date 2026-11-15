@@ -1,25 +1,28 @@
 import { useEffect, useState } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
 import Button from '../components/Button.jsx';
 import CommunityAchievements from '../components/CommunityAchievements.jsx';
 import CommunityFeed from '../components/CommunityFeed.jsx';
 import CommunityLeaderboard from '../components/CommunityLeaderboard.jsx';
 import CommunityProfileForm from '../components/CommunityProfileForm.jsx';
 import PageHeader from '../components/PageHeader.jsx';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import { listMyCoaches } from '../services/coachClientService.js';
 import { getMyCommunityProfile } from '../services/communityService.js';
 import { suggestDisplayName } from '../services/communityUtils.js';
+import { PAGES } from '../routes.js';
 
-export default function CommunityPage({ user, profile, onSignIn, onNavigate }) {
+export default function CommunityPage({ view = 'feed' }) {
   const { t } = useLocale();
+  const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const isCoach = profile?.role === 'coach';
   const isClient = profile?.role === 'client';
   const [coaches, setCoaches] = useState(null);
   const [communityId, setCommunityId] = useState('');
   const [member, setMember] = useState(undefined);
   const [editing, setEditing] = useState(false);
-  const [tab, setTab] = useState('feed');
-  const [feedVersion, setFeedVersion] = useState(0);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -50,23 +53,13 @@ export default function CommunityPage({ user, profile, onSignIn, onNavigate }) {
   }, [user?.id, profile?.role]);
 
   const tabs = [
-    { id: 'feed', label: 'communityFeedTab', icon: '💬' },
+    { id: 'community', label: 'communityFeedTab', icon: '💬' },
     { id: 'leaderboard', label: 'communityLeaderboardTab', icon: '🏆' },
-    ...(isClient ? [{ id: 'progress', label: 'communityProgressTab', icon: '⭐' }] : []),
   ];
 
   let body = null;
   if (error) {
     body = <div className="notice notice-error" role="alert">{t('communityLoadError')} {error}</div>;
-  } else if (!user) {
-    body = (
-      <section className="panel client-portal-gate">
-        <div className="dashboard-empty">
-          <h3>{t('portalSignIn')}</h3>
-          <Button variant="primary" onClick={() => onSignIn('client')}>{t('clientSignIn')}</Button>
-        </div>
-      </section>
-    );
   } else if (!profile || member === undefined || (isClient && coaches === null)) {
     body = <div className="notice notice-info" role="status">{t('accountLoading')}</div>;
   } else if (isClient && coaches.length === 0) {
@@ -74,7 +67,7 @@ export default function CommunityPage({ user, profile, onSignIn, onNavigate }) {
       <section className="panel">
         <div className="dashboard-empty">
           <p>{t('communityNoCoach')}</p>
-          <Button variant="primary" onClick={() => onNavigate('coachHub')}>{t('coachHub')}</Button>
+          <Button variant="primary" onClick={() => navigate(PAGES.coachHub.path)}>{t('coachHub')}</Button>
         </div>
       </section>
     );
@@ -104,23 +97,19 @@ export default function CommunityPage({ user, profile, onSignIn, onNavigate }) {
         <div className="community-toolbar">
           <nav className="client-feature-tabs" aria-label={t('community')}>
             {tabs.map(({ id, label, icon }) => (
-              <button key={id} className={`client-feature-tab ${tab === id ? 'is-active' : ''}`} type="button" aria-pressed={tab === id} onClick={() => setTab(id)}>
+              <NavLink key={id} to={PAGES[id].path} className={({ isActive }) => `client-feature-tab ${isActive ? 'is-active' : ''}`}>
                 <span aria-hidden="true">{icon}</span>{t(label)}
-              </button>
+              </NavLink>
             ))}
           </nav>
           <button className="text-action" type="button" onClick={() => setEditing(true)}>{member.display_name} · {t('communityEditProfile')}</button>
         </div>
-        {tab === 'feed' && <CommunityFeed communityId={communityId} isCoach={isCoach} refreshKey={feedVersion} />}
-        {tab === 'leaderboard' && <CommunityLeaderboard communityId={communityId} leaderboardOptIn={isClient ? member.leaderboard_opt_in : true} />}
-        {tab === 'progress' && isClient && (
-          <CommunityAchievements
-            communityId={communityId}
-            onShared={() => {
-              setFeedVersion((version) => version + 1);
-              setTab('feed');
-            }}
-          />
+        {view === 'feed' && <CommunityFeed communityId={communityId} isCoach={isCoach} />}
+        {view === 'leaderboard' && (
+          <>
+            <CommunityLeaderboard communityId={communityId} leaderboardOptIn={isClient ? member.leaderboard_opt_in : true} />
+            {isClient && <CommunityAchievements communityId={communityId} onShared={() => navigate(PAGES.community.path)} />}
+          </>
         )}
       </>
     );
@@ -128,7 +117,7 @@ export default function CommunityPage({ user, profile, onSignIn, onNavigate }) {
 
   return (
     <>
-      <PageHeader eyebrow="APEXFIT" title={t('community')} description={t('communityDescription')} />
+      <PageHeader eyebrow="APEXFIT" title={view === 'leaderboard' ? t('leaderboardPage') : t('community')} description={view === 'leaderboard' ? t('leaderboardDescription') : t('communityDescription')} />
       {body}
     </>
   );

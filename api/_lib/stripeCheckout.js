@@ -23,7 +23,7 @@ export function buildCheckoutParams({ invoice, destinationAccount, appUrl, custo
       metadata: { invoice_id: invoice.id },
     },
     metadata: { invoice_id: invoice.id },
-    success_url: `${appUrl}/?checkout=success#coachHub`,
-    cancel_url: `${appUrl}/?checkout=canceled#coachHub`,
+    success_url: `${appUrl}/coach-hub?checkout=success`,
+    cancel_url: `${appUrl}/coach-hub?checkout=canceled`,
   };
 }

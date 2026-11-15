@@ -14,13 +14,13 @@ self.addEventListener('push', (event) => {
     icon: '/icon-192.png',
     badge: '/icon-192.png',
     tag: data.tag || 'apexfit',
-    data: { url: data.url || '/#coachHub' },
+    data: { url: data.url || '/coach-hub' },
   }));
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const target = new URL(event.notification.data?.url || '/#coachHub', self.location.origin).href;
+  const target = new URL(event.notification.data?.url || '/coach-hub', self.location.origin).href;
 
   event.waitUntil((async () => {
     const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });

@@ -46,8 +46,8 @@ async function connectOnboard({ user, userClient }) {
 
   const link = await stripe.accountLinks.create({
     account: accountId,
-    refresh_url: `${appUrl()}/#invoicing`,
-    return_url: `${appUrl()}/?stripe=return#invoicing`,
+    refresh_url: `${appUrl()}/invoicing`,
+    return_url: `${appUrl()}/invoicing?stripe=return`,
     type: 'account_onboarding',
   });
   return { url: link.url };

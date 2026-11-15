@@ -1,70 +1,71 @@
-import { useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import BrandMark from './BrandMark.jsx';
 import Button from './Button.jsx';
 import LanguageToggle from './LanguageToggle.jsx';
+import UserAvatar from './UserAvatar.jsx';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
+import { displayNameFor } from '../services/profileUtils.js';
+import { PAGES, homePathFor, navigationFor, pageForPath } from '../routes.js';
 
-const navigation = [
-  { group: 'main', items: [{ id: 'dashboard', icon: '⚡' }, { id: 'generator', icon: '✦' }, { id: 'workoutBuilder', icon: '↕' }, { id: 'programTemplates', icon: '❖' }, { id: 'exerciseLibrary', icon: '⌕' }, { id: 'messages', icon: '◌' }] },
-  { group: 'clients', items: [{ id: 'clients', icon: '☺' }, { id: 'schedule', icon: '◷' }, { id: 'invoicing', icon: '$' }, { id: 'community', icon: '★' }, { id: 'portal', icon: '▣' }, { id: 'billing', icon: '◈' }] },
-  { group: 'account', items: [{ id: 'settings', icon: '⚙' }] },
-];
-
-export default function AppShell({ page, title, onNavigate, onSignIn, onSignOut, user, profile, children }) {
+export default function AppShell() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { t } = useLocale();
-  const sections = profile?.role === 'client'
-    ? [
-      { group: 'clients', items: [{ id: 'portal', icon: '▣' }, { id: 'coachHub', icon: '✉' }, { id: 'community', icon: '★' }] },
-      { group: 'account', items: [{ id: 'settings', icon: '⚙' }] },
-    ]
-    : navigation;
+  const { user, profile, signOut } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const sections = navigationFor(profile?.role);
+  const page = pageForPath(location.pathname);
 
-  function go(id) {
+  useEffect(() => {
     setMenuOpen(false);
-    onNavigate(id);
-  }
+    window.scrollTo({ top: 0 });
+  }, [location.pathname]);
 
   return (
     <div className="app-shell">
       <div className={`sidebar-backdrop ${menuOpen ? 'is-visible' : ''}`} onClick={() => setMenuOpen(false)} />
       <aside className={`sidebar ${menuOpen ? 'is-open' : ''}`}>
-        <button className="sidebar-brand" onClick={() => go('home')} aria-label={`ApexFit ${t('home')}`}><BrandMark /></button>
+        <button className="sidebar-brand" onClick={() => navigate(homePathFor(profile?.role))} aria-label={`ApexFit ${t('home')}`}><BrandMark /></button>
         <nav className="side-nav" aria-label={t('main')}>
           {sections.map((section) => (
             <div className="nav-section" key={section.group}>
               <span className="nav-heading">{t(section.group)}</span>
-              {section.items.map(({ id, icon, badge, count }) => (
-                <button key={id} className={`nav-link ${page === id ? 'is-active' : ''}`} onClick={() => go(id)}>
-                  <span className="nav-icon" aria-hidden="true">{icon}</span>
-                  <span>{t(id)}</span>
-                  {badge && <span className="nav-badge">{badge}</span>}
-                  {count && <span className="nav-count">{count}</span>}
-                </button>
+              {section.items.map((id) => (
+                <NavLink key={id} to={PAGES[id].path} className={({ isActive }) => `nav-link ${isActive ? 'is-active' : ''}`}>
+                  <span className="nav-icon" aria-hidden="true">{PAGES[id].icon}</span>
+                  <span>{t(PAGES[id].titleKey)}</span>
+                </NavLink>
               ))}
             </div>
           ))}
         </nav>
-        <div className="sidebar-profile">
-          <div className="avatar avatar-blue">{user?.email?.slice(0, 1).toUpperCase() || '?'}</div>
-          <div className="profile-copy"><strong>{user?.email || t('signedOut')}</strong><span>{profile ? t(profile.role) : t('account')}</span></div>
-        </div>
+        <NavLink className="sidebar-profile" to={PAGES.settings.path} aria-label={t('settings')}>
+          <UserAvatar user={user} profile={profile} />
+          <div className="profile-copy">
+            <strong>{displayNameFor(profile, user) || t('signedOut')}</strong>
+            <span>{profile ? t(profile.role) : t('account')}</span>
+          </div>
+        </NavLink>
       </aside>
       <main className="main-area">
         <header className="topbar">
           <div className="topbar-title-wrap">
             <button className="menu-toggle" onClick={() => setMenuOpen(true)} aria-label={t('openNavigation')}>☰</button>
-            <h1 className="topbar-title">{title}</h1>
+            <h1 className="topbar-title">{t(page?.titleKey || 'dashboard')}</h1>
           </div>
           <div className="topbar-actions">
             <LanguageToggle />
-            {user
-              ? <Button variant="secondary" size="small" onClick={onSignOut}>{t('signOut')}</Button>
-              : <Button variant="secondary" size="small" onClick={() => onSignIn('coach')}>{t('coachSignIn')}</Button>}
-            {profile?.role === 'coach' && <Button variant="primary" size="small" onClick={() => go('generator')}>{t('createPlan')}</Button>}
+            <Button variant="secondary" size="small" onClick={signOut}>{t('signOut')}</Button>
+            {profile?.role === 'coach' && <Button variant="primary" size="small" onClick={() => navigate(PAGES.generator.path)}>{t('createPlan')}</Button>}
           </div>
         </header>
-        <div className={`page-content page-${page}`}>{children}</div>
+        <div className="page-content">
+          <Suspense fallback={<div className="empty-state" role="status">{t('loadingProgress')}</div>}>
+            <Outlet />
+          </Suspense>
+        </div>
       </main>
     </div>
   );

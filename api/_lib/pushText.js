@@ -32,5 +32,5 @@ export function buildPushMessage(type, locale) {
   const language = TEXT[locale] ? locale : 'en';
   const entry = TEXT[language][type];
   if (!entry) throw new RangeError(`Unsupported notification type: ${type}`);
-  return { title: entry[0], body: entry[1], url: '/#coachHub', tag: `apexfit-${type}` };
+  return { title: entry[0], body: entry[1], url: '/coach-hub', tag: `apexfit-${type}` };
 }

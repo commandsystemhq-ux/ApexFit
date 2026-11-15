@@ -1,22 +1,22 @@
+import { Link } from 'react-router-dom';
 import BrandMark from '../components/BrandMark.jsx';
-import Button from '../components/Button.jsx';
 import LanguageToggle from '../components/LanguageToggle.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 
-export default function LandingPage({ onNavigate, onSignIn }) {
+export default function LandingPage() {
   const { t } = useLocale();
 
   return (
     <div className="landing">
       <header className="landing-nav">
-        <button className="landing-brand" onClick={() => onNavigate('home')} aria-label={`ApexFit ${t('home')}`}><BrandMark /></button>
+        <Link className="landing-brand" to="/" aria-label={`ApexFit ${t('home')}`}><BrandMark /></Link>
         <nav className="landing-links" aria-label={t('landingPlatform')}>
           <a href="#features">{t('landingPlatform')}</a><a href="#pricing">{t('landingPricing')}</a>
         </nav>
         <div className="landing-actions">
           <LanguageToggle />
-          <Button variant="secondary" size="small" onClick={() => onSignIn('client')}>{t('clientSignIn')}</Button>
-          <Button variant="primary" size="small" onClick={() => onSignIn('coach')}>{t('coachSignIn')}</Button>
+          <Link className="button button-secondary button-small" to="/login">{t('loginLink')}</Link>
+          <Link className="button button-primary button-small" to="/signup">{t('signupLink')}</Link>
         </div>
       </header>
 
@@ -27,8 +27,8 @@ export default function LandingPage({ onNavigate, onSignIn }) {
           <h1>{t('landingHeadlineOne')}<br /><span className="gradient-text">{t('landingHeadlineTwo')}</span></h1>
           <p>{t('landingDescription')}</p>
           <div className="hero-actions">
-            <Button variant="primary" size="large" onClick={() => onSignIn('coach')}>{t('trial')} <span aria-hidden="true">→</span></Button>
-            <Button variant="secondary" size="large" onClick={() => onSignIn('client')}>{t('clientSignIn')}</Button>
+            <Link className="button button-primary button-large" to="/signup">{t('trial')} <span aria-hidden="true">→</span></Link>
+            <Link className="button button-secondary button-large" to="/login">{t('loginLink')}</Link>
           </div>
         </div>
         <div className="hero-brand-art">
@@ -55,7 +55,7 @@ export default function LandingPage({ onNavigate, onSignIn }) {
           <span className="pricing-tag">{t('pricingDetails')}</span>
           <div className="price"><strong>$39</strong><span>/ {t('month')}</span></div>
           <ul><li>{t('pricingFeature1')}</li><li>{t('pricingFeature2')}</li><li>{t('pricingFeature3')}</li></ul>
-          <Button variant="primary" size="large" onClick={() => onSignIn('coach')}>{t('trial')} <span aria-hidden="true">→</span></Button>
+          <Link className="button button-primary button-large" to="/signup">{t('trial')} <span aria-hidden="true">→</span></Link>
         </article>
       </section>
       <footer className="landing-footer"><BrandMark /><span>© {new Date().getFullYear()} ApexFit</span></footer>

@@ -3,12 +3,14 @@ import { requireSupabase } from './supabaseClient.js';
 const SIGNUP_ROLE_KEY = 'apexfit.signup-role';
 
 export async function signInWithGoogle(role) {
-  if (role !== 'coach' && role !== 'client') {
+  if (role && role !== 'coach' && role !== 'client') {
     throw new TypeError('Choose whether to sign in as a coach or client.');
   }
 
   const client = requireSupabase();
-  window.sessionStorage.setItem(SIGNUP_ROLE_KEY, role);
+  // Without a role this is a login; the server rejects it unless the account already exists.
+  if (role) window.sessionStorage.setItem(SIGNUP_ROLE_KEY, role);
+  else window.sessionStorage.removeItem(SIGNUP_ROLE_KEY);
   const { error } = await client.auth.signInWithOAuth({
     provider: 'google',
     options: { redirectTo: window.location.origin },
@@ -46,4 +48,33 @@ export async function signOut() {
   const client = requireSupabase();
   const { error } = await client.auth.signOut();
   if (error) throw error;
+}
+
+export async function signInWithPassword(email, password) {
+  const client = requireSupabase();
+  window.sessionStorage.removeItem(SIGNUP_ROLE_KEY);
+  const { error } = await client.auth.signInWithPassword({ email: email.trim(), password });
+  if (error) throw error;
+}
+
+// Returns true when the account is signed in immediately, false when the email must be confirmed first.
+export async function signUpWithPassword({ email, password, fullName, role }) {
+  if (role !== 'coach' && role !== 'client') {
+    throw new TypeError('Choose whether to sign up as a coach or client.');
+  }
+  const client = requireSupabase();
+  window.sessionStorage.setItem(SIGNUP_ROLE_KEY, role);
+  const { data, error } = await client.auth.signUp({
+    email: email.trim(),
+    password,
+    options: {
+      emailRedirectTo: `${window.location.origin}/login`,
+      data: { full_name: fullName.trim(), signup_role: role },
+    },
+  });
+  if (error) {
+    window.sessionStorage.removeItem(SIGNUP_ROLE_KEY);
+    throw error;
+  }
+  return Boolean(data.session);
 }

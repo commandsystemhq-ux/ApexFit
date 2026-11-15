@@ -35,7 +35,7 @@ async function accessTokenFor(admin, connection) {
 
 async function handleCallback(req, res) {
   const { code, state, error } = req.query;
-  const target = (result) => `${appUrl()}/?google=${result}#schedule`;
+  const target = (result) => `${appUrl()}/schedule?google=${result}`;
   const redirect = (result) => {
     res.setHeader('Location', target(result));
     res.status(302).end();

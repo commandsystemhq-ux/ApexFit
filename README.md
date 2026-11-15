@@ -35,11 +35,27 @@ The source contains 876 records, not 1,000; a second verified source is required
 
 Coach-owned program tables enforce owner, coach role, and active-trial/subscription access with RLS; program saves use a transactional RPC. UI route checks are not a security boundary. Subscription rows are read-only to authenticated users and should only be written by a trusted billing webhook/service role. Configure a payment provider and webhook before enabling paid checkout; the $39/month plan is displayed, but checkout is intentionally not simulated.
 
+## Routing, auth pages, and profile settings
+
+The app uses path routing (`react-router-dom`). `src/routes.js` is the single source for paths, navigation, and role access:
+
+- Public: `/` (landing), `/login`, `/signup`. Signed-in users are redirected away from these to their workspace.
+- Coach: `/dashboard`, `/generator`, `/workout-builder`, `/templates`, `/exercises`, `/messages`, `/clients`, `/schedule`, `/invoicing`, `/billing`.
+- Client: `/workouts`, `/progress`, `/strength`, `/food`, `/habits`, `/intake`, `/coach-hub`.
+- Shared: `/community`, `/leaderboard`, `/settings`.
+
+Unauthenticated visits to any protected path redirect to `/login` and return to the requested page after login. Coaches opening client pages (and clients opening coach pages) are redirected to their own home; a coach whose trial has ended can only open billing and settings. Old `/#coachHub`-style links are redirected. Static hosting must serve `index.html` for unknown paths; `vercel.json` does this for Vercel, and Vite's dev/preview servers do it by default.
+
+`/login` and `/signup` support email + password and Google. In Supabase, enable **Authentication → Providers → Email** (turn on "Confirm email" if you want confirmation) and add `<app-url>/login` and `<app-url>` to the redirect allow-list. The chosen role is stored in the sign-up metadata, so `provision_my_profile` can create the profile even after confirming in another browser. Google login for an email with no profile asks the user to sign up first.
+
+Settings includes a profile section (all roles: photo, name, email; coaches also get a brand name). Migration `20261115000700_profile_settings_avatars.sql` (also in `supabase/manual-setup.sql`) adds `full_name`, `brand_name`, and `avatar_path` to `profiles`, the `update_my_profile` RPC, and a public `avatars` bucket (JPG/PNG/WebP, 2 MB) where each user can only write to their own `<user-id>/` folder. Saving a coach's name or brand also updates the coach name shown on their client links and invites. Changing the email sends a Supabase confirmation message and takes effect once confirmed.
+
 ## Project structure
 
 - `src/components/` — app shell, language selector, brand, and reusable UI
 - `src/contexts/` and `src/i18n/` — persisted English, Arabic, German, French, and Spanish preferences with automatic RTL for Arabic
-- `src/pages/` — landing, coach workspace, manual workout builder, exercise library, client portal, settings, and subscription/trial screens
+- `src/routes.js` — route table, navigation, and role access
+- `src/pages/` — landing, login/signup, coach workspace, manual workout builder, exercise library, client portal, settings, and subscription/trial screens
 - `src/services/` — Supabase client, Google OAuth/account provisioning, exercise search, program persistence, client workout/progress/habit data, trial helpers, and AI backend boundary
 - `supabase/migrations/` — PostgreSQL accounts, trials, exercise/program tables, client tracking tables, storage bucket, and RLS
 - `supabase/manual-setup.sql` — combined SQL for the Supabase SQL Editor
