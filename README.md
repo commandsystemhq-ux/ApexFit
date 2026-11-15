@@ -81,3 +81,13 @@ Set the server variables from `.env.example` in Vercel. Then:
 5. **APP_URL** must be the public origin, for example `https://apexfit.vercel.app`.
 
 `npm run dev` serves only the front end; use `vercel dev` to exercise the `/api` functions locally. The $39 coach subscription checkout is still not implemented.
+
+## Community and gamification
+
+Migration `20261115000600_community_gamification.sql` (included in `supabase/manual-setup.sql`) adds a community per coach: the coach and that coach's active clients.
+
+- **Privacy:** posts, comments, and reactions have no direct table access; everything goes through security definer functions that check community membership. Members pick a display name, and only that name is shown to others. Workouts, meals, and photos are never exposed. Clients can hide themselves from the leaderboard.
+- **Feed:** updates, coach announcements, and achievement posts with reactions (like, fire, clap), comments, paging, and optimistic reaction updates. Authors and the community's coach can delete content. There is no automated moderation, image upload, or report flow yet.
+- **Points:** database triggers award points for workouts (50), meals (5), daily habits (10), and body measurements (10). Points apply only to entries dated today or yesterday and each activity has a daily cap (2 workouts, 4 meals, 1 habit log, 1 measurement), which limits back-filling and spam. Clients cannot write points directly.
+- **Levels, streaks, badges:** 250 points per level; a streak counts consecutive days with any points. Badges are computed from real data, and a badge can be shared to the feed only after it is earned (verified by the database).
+- **Leaderboard:** ranks opted-in clients by points over 7 days, 30 days, or all time within one coach's community.

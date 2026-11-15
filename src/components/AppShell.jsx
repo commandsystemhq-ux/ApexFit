@@ -6,7 +6,7 @@ import { useLocale } from '../contexts/LocaleContext.jsx';
 
 const navigation = [
   { group: 'main', items: [{ id: 'dashboard', icon: '⚡' }, { id: 'generator', icon: '✦' }, { id: 'workoutBuilder', icon: '↕' }, { id: 'programTemplates', icon: '❖' }, { id: 'exerciseLibrary', icon: '⌕' }, { id: 'messages', icon: '◌' }] },
-  { group: 'clients', items: [{ id: 'clients', icon: '☺' }, { id: 'schedule', icon: '◷' }, { id: 'invoicing', icon: '$' }, { id: 'portal', icon: '▣' }, { id: 'billing', icon: '◈' }] },
+  { group: 'clients', items: [{ id: 'clients', icon: '☺' }, { id: 'schedule', icon: '◷' }, { id: 'invoicing', icon: '$' }, { id: 'community', icon: '★' }, { id: 'portal', icon: '▣' }, { id: 'billing', icon: '◈' }] },
   { group: 'account', items: [{ id: 'settings', icon: '⚙' }] },
 ];
 
@@ -15,7 +15,7 @@ export default function AppShell({ page, title, onNavigate, onSignIn, onSignOut,
   const { t } = useLocale();
   const sections = profile?.role === 'client'
     ? [
-      { group: 'clients', items: [{ id: 'portal', icon: '▣' }, { id: 'coachHub', icon: '✉' }] },
+      { group: 'clients', items: [{ id: 'portal', icon: '▣' }, { id: 'coachHub', icon: '✉' }, { id: 'community', icon: '★' }] },
       { group: 'account', items: [{ id: 'settings', icon: '⚙' }] },
     ]
     : navigation;

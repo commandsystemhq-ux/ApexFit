@@ -1,25 +1,27 @@
-import { useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import AppShell from './components/AppShell.jsx';
 import Toast from './components/Toast.jsx';
-import BillingPage from './pages/BillingPage.jsx';
-import ClientPortalPage from './pages/ClientPortalPage.jsx';
-import ClientsPage from './pages/ClientsPage.jsx';
-import CoachHubPage from './pages/CoachHubPage.jsx';
 import CoachSignInPage from './pages/CoachSignInPage.jsx';
-import DashboardPage from './pages/DashboardPage.jsx';
-import ExerciseLibraryPage from './pages/ExerciseLibraryPage.jsx';
-import GeneratorPage from './pages/GeneratorPage.jsx';
-import InvoicingPage from './pages/InvoicingPage.jsx';
 import LandingPage from './pages/LandingPage.jsx';
-import MessagesPage from './pages/MessagesPage.jsx';
-import ProgramTemplatesPage from './pages/ProgramTemplatesPage.jsx';
-import SchedulePage from './pages/SchedulePage.jsx';
-import SettingsPage from './pages/SettingsPage.jsx';
 import TrialExpiredPage from './pages/TrialExpiredPage.jsx';
-import WorkoutBuilderPage from './pages/WorkoutBuilderPage.jsx';
 import { getMyAccessStatus, provisionMyProfile, signInWithGoogle, signOut, updateMyLocale } from './services/authService.js';
 import { useLocale } from './contexts/LocaleContext.jsx';
 import { supabase } from './services/supabaseClient.js';
+
+const BillingPage = lazy(() => import('./pages/BillingPage.jsx'));
+const ClientPortalPage = lazy(() => import('./pages/ClientPortalPage.jsx'));
+const ClientsPage = lazy(() => import('./pages/ClientsPage.jsx'));
+const CoachHubPage = lazy(() => import('./pages/CoachHubPage.jsx'));
+const CommunityPage = lazy(() => import('./pages/CommunityPage.jsx'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage.jsx'));
+const ExerciseLibraryPage = lazy(() => import('./pages/ExerciseLibraryPage.jsx'));
+const GeneratorPage = lazy(() => import('./pages/GeneratorPage.jsx'));
+const InvoicingPage = lazy(() => import('./pages/InvoicingPage.jsx'));
+const MessagesPage = lazy(() => import('./pages/MessagesPage.jsx'));
+const ProgramTemplatesPage = lazy(() => import('./pages/ProgramTemplatesPage.jsx'));
+const SchedulePage = lazy(() => import('./pages/SchedulePage.jsx'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage.jsx'));
+const WorkoutBuilderPage = lazy(() => import('./pages/WorkoutBuilderPage.jsx'));
 
 const pageTitleKeys = {
   dashboard: 'dashboard',
@@ -31,6 +33,7 @@ const pageTitleKeys = {
   schedule: 'schedule',
   invoicing: 'invoicing',
   coachHub: 'coachHub',
+  community: 'community',
   messages: 'messages',
   portal: 'portal',
   billing: 'billing',
@@ -158,7 +161,7 @@ export default function App() {
     && profile.access_state === 'expired'
     && !['billing', 'settings'].includes(page);
   const restrictedByRole = profile?.role === 'client'
-    && !['portal', 'coachHub', 'settings'].includes(page);
+    && !['portal', 'coachHub', 'community', 'settings'].includes(page);
   const requiresCoachAccess = ['dashboard', 'generator', 'exerciseLibrary', 'workoutBuilder', 'programTemplates', 'clients', 'schedule', 'invoicing', 'messages', 'billing'].includes(page)
     && profile?.role !== 'coach';
 
@@ -202,6 +205,9 @@ export default function App() {
       case 'invoicing':
         content = <InvoicingPage onNavigate={navigate} onNotify={showToast} />;
         break;
+      case 'community':
+        content = <CommunityPage user={user} profile={profile} onSignIn={handleSignIn} onNavigate={navigate} />;
+        break;
       case 'coachHub':
         content = <CoachHubPage user={user} profile={profile} onSignIn={handleSignIn} />;
         break;
@@ -223,7 +229,7 @@ export default function App() {
     <>
       {page === 'home' ? content : (
         <AppShell page={page} title={t(pageTitleKeys[page] || 'dashboard')} onNavigate={navigate} onSignIn={handleSignIn} onSignOut={handleSignOut} user={user} profile={profile}>
-          {content}
+          <Suspense fallback={<div className="empty-state" role="status">{t('loadingProgress')}</div>}>{content}</Suspense>
         </AppShell>
       )}
       <Toast message={toast} />

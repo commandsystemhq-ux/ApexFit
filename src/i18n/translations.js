@@ -1,4 +1,5 @@
 import { businessTranslations } from './businessTranslations.js';
+import { communityTranslations } from './communityTranslations.js';
 import { priority2Translations } from './priority2Translations.js';
 
 export const supportedLocales = ['en', 'ar', 'de', 'fr', 'es'];
@@ -569,4 +570,8 @@ for (const locale of supportedLocales) {
 
 for (const locale of supportedLocales) {
   Object.assign(translations[locale], businessTranslations[locale]);
+}
+
+for (const locale of supportedLocales) {
+  Object.assign(translations[locale], communityTranslations[locale]);
 }
