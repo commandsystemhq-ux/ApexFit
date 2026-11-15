@@ -9,7 +9,13 @@ import {
   saveClientBodyMetric,
   uploadClientProgressPhoto,
 } from '../services/clientProgressService.js';
-import { getLocalDateString } from '../services/clientTrackingUtils.js';
+import { filterByDateRange, getLocalDateString } from '../services/clientTrackingUtils.js';
+
+const RANGE_OPTIONS = [
+  { days: 30, label: 'range30' },
+  { days: 90, label: 'range90' },
+  { days: 0, label: 'rangeAll' },
+];
 
 export default function ClientProgressTracking({ clientId }) {
   const { locale, t } = useLocale();
@@ -28,6 +34,8 @@ export default function ClientProgressTracking({ clientId }) {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [deletingPath, setDeletingPath] = useState('');
   const [form, setForm] = useState({ measuredOn: today, weight_kg: '', body_fat_percentage: '', notes: '' });
+  const [rangeDays, setRangeDays] = useState(90);
+  const visibleMetrics = filterByDateRange(metrics, 'measured_on', rangeDays, today);
 
   async function refreshMetrics() {
     setMetricLoading(true);
@@ -127,10 +135,17 @@ export default function ClientProgressTracking({ clientId }) {
         {metricLoading && <div className="empty-state" role="status">{t('loadingProgress')}</div>}
         {!metricLoading && metrics.length === 0 && <div className="empty-state">{t('noMeasurements')}</div>}
         {!metricLoading && metrics.length > 0 && (
-          <div className="progress-charts">
-            <ProgressLineChart data={metrics} field="weight_kg" title={t('weightProgress')} color="#64a8ff" unit=" kg" />
-            <ProgressLineChart data={metrics} field="body_fat_percentage" title={t('bodyFatProgress')} color="#51d2bd" unit="%" />
-          </div>
+          <>
+            <div className="range-switch" role="group" aria-label={t('timeRange')}>
+              {RANGE_OPTIONS.map(({ days, label }) => (
+                <button key={label} type="button" className={rangeDays === days ? 'is-active' : ''} aria-pressed={rangeDays === days} onClick={() => setRangeDays(days)}>{t(label)}</button>
+              ))}
+            </div>
+            <div className="progress-charts">
+              <ProgressLineChart data={visibleMetrics} field="weight_kg" title={t('weightProgress')} color="#64a8ff" unit=" kg" />
+              <ProgressLineChart data={visibleMetrics} field="body_fat_percentage" title={t('bodyFatProgress')} color="#51d2bd" unit="%" />
+            </div>
+          </>
         )}
       </section>
 

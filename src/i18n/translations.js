@@ -435,6 +435,7 @@ const clientTrackingTranslations = {
     saveHabits: 'Save today’s habits', savingHabits: 'Saving…', habitsSaved: 'Today’s habits saved.',
     habitSaveError: 'Could not save habits.', habitHistory: 'Last seven days',
     habitLoadError: 'Could not load habit history.', noHabitHistory: 'No habit entries for the last seven days.',
+    markSetComplete: 'Mark set complete', removeSet: 'Remove set', workoutProgress: 'Workout progress', setsCompleted: 'sets completed', totalVolume: 'Total volume', noCompletedSets: 'Mark at least one set as complete before saving.', timeRange: 'Time range', range30: '30 days', range90: '90 days', rangeAll: 'All', latestValue: 'Latest', changeValue: 'Change', lowestValue: 'Lowest', highestValue: 'Highest', averageValue: 'Average', dailyGoal: 'Daily goal', goalsReached: 'goals reached',
     hours: 'hours', liters: 'L',
   },
   ar: {
@@ -463,6 +464,7 @@ const clientTrackingTranslations = {
     saveHabits: 'حفظ عادات اليوم', savingHabits: 'جارٍ الحفظ…', habitsSaved: 'تم حفظ عادات اليوم.',
     habitSaveError: 'تعذر حفظ العادات.', habitHistory: 'آخر سبعة أيام',
     habitLoadError: 'تعذر تحميل سجل العادات.', noHabitHistory: 'لا توجد سجلات عادات في الأيام السبعة الماضية.',
+    markSetComplete: 'تحديد المجموعة كمكتملة', removeSet: 'حذف المجموعة', workoutProgress: 'تقدم التمرين', setsCompleted: 'مجموعات مكتملة', totalVolume: 'إجمالي الحجم', noCompletedSets: 'حدد مجموعة واحدة على الأقل كمكتملة قبل الحفظ.', timeRange: 'النطاق الزمني', range30: '٣٠ يوماً', range90: '٩٠ يوماً', rangeAll: 'الكل', latestValue: 'الأحدث', changeValue: 'التغير', lowestValue: 'الأدنى', highestValue: 'الأعلى', averageValue: 'المتوسط', dailyGoal: 'الهدف اليومي', goalsReached: 'أهداف محققة',
     hours: 'ساعة', liters: 'لتر',
   },
   de: {
@@ -491,6 +493,7 @@ const clientTrackingTranslations = {
     saveHabits: 'Heutige Gewohnheiten speichern', savingHabits: 'Wird gespeichert…', habitsSaved: 'Heutige Gewohnheiten gespeichert.',
     habitSaveError: 'Gewohnheiten konnten nicht gespeichert werden.', habitHistory: 'Letzte sieben Tage',
     habitLoadError: 'Gewohnheiten konnten nicht geladen werden.', noHabitHistory: 'Keine Einträge in den letzten sieben Tagen.',
+    markSetComplete: 'Satz als erledigt markieren', removeSet: 'Satz entfernen', workoutProgress: 'Workout-Fortschritt', setsCompleted: 'Sätze erledigt', totalVolume: 'Gesamtvolumen', noCompletedSets: 'Markiere vor dem Speichern mindestens einen Satz als erledigt.', timeRange: 'Zeitraum', range30: '30 Tage', range90: '90 Tage', rangeAll: 'Alle', latestValue: 'Aktuell', changeValue: 'Änderung', lowestValue: 'Minimum', highestValue: 'Maximum', averageValue: 'Durchschnitt', dailyGoal: 'Tagesziel', goalsReached: 'Ziele erreicht',
     hours: 'Stunden', liters: 'L',
   },
   fr: {
@@ -519,6 +522,7 @@ const clientTrackingTranslations = {
     saveHabits: 'Enregistrer les habitudes du jour', savingHabits: 'Enregistrement…', habitsSaved: 'Habitudes du jour enregistrées.',
     habitSaveError: 'Impossible d’enregistrer les habitudes.', habitHistory: 'Sept derniers jours',
     habitLoadError: 'Impossible de charger les habitudes.', noHabitHistory: 'Aucune habitude enregistrée ces sept derniers jours.',
+    markSetComplete: 'Marquer la série comme terminée', removeSet: 'Supprimer la série', workoutProgress: 'Progression de l’entraînement', setsCompleted: 'séries terminées', totalVolume: 'Volume total', noCompletedSets: 'Marquez au moins une série comme terminée avant d’enregistrer.', timeRange: 'Période', range30: '30 jours', range90: '90 jours', rangeAll: 'Tout', latestValue: 'Dernière', changeValue: 'Variation', lowestValue: 'Minimum', highestValue: 'Maximum', averageValue: 'Moyenne', dailyGoal: 'Objectif quotidien', goalsReached: 'objectifs atteints',
     hours: 'heures', liters: 'L',
   },
   es: {
@@ -547,6 +551,7 @@ const clientTrackingTranslations = {
     saveHabits: 'Guardar hábitos de hoy', savingHabits: 'Guardando…', habitsSaved: 'Hábitos de hoy guardados.',
     habitSaveError: 'No se pudieron guardar los hábitos.', habitHistory: 'Últimos siete días',
     habitLoadError: 'No se pudo cargar el historial de hábitos.', noHabitHistory: 'No hay registros de hábitos en los últimos siete días.',
+    markSetComplete: 'Marcar serie como completada', removeSet: 'Eliminar serie', workoutProgress: 'Progreso del entrenamiento', setsCompleted: 'series completadas', totalVolume: 'Volumen total', noCompletedSets: 'Marca al menos una serie como completada antes de guardar.', timeRange: 'Periodo', range30: '30 días', range90: '90 días', rangeAll: 'Todo', latestValue: 'Último', changeValue: 'Cambio', lowestValue: 'Mínimo', highestValue: 'Máximo', averageValue: 'Promedio', dailyGoal: 'Objetivo diario', goalsReached: 'objetivos logrados',
     hours: 'horas', liters: 'L',
   },
 };

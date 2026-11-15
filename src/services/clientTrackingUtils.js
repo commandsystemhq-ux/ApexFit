@@ -41,3 +41,57 @@ export function validateProgressPhoto(file) {
     throw new RangeError('Progress photos must be 10 MB or smaller.');
   }
 }
+
+export const HABIT_GOALS = Object.freeze({ sleepHours: 8, waterLiters: 2.5, steps: 10000 });
+
+export function calculateGoalPercent(value, goal) {
+  const amount = Number(value);
+  if (value === '' || value === null || value === undefined || !Number.isFinite(amount) || amount <= 0 || goal <= 0) return 0;
+  return Math.min(100, Math.round((amount / goal) * 100));
+}
+
+export function summarizeWorkoutSets(entries) {
+  let totalSets = 0;
+  let completedSets = 0;
+  let volumeKg = 0;
+  for (const entry of entries) {
+    for (const set of entry.sets) {
+      totalSets += 1;
+      if (!set.done) continue;
+      completedSets += 1;
+      const reps = Number(set.reps);
+      const weight = set.weight_kg === '' || set.weight_kg === null ? 0 : Number(set.weight_kg);
+      if (Number.isFinite(reps) && Number.isFinite(weight)) volumeKg += reps * weight;
+    }
+  }
+  return {
+    totalSets,
+    completedSets,
+    volumeKg: Math.round(volumeKg * 10) / 10,
+    percent: totalSets === 0 ? 0 : Math.round((completedSets / totalSets) * 100),
+  };
+}
+
+export function filterByDateRange(items, dateField, days, today = getLocalDateString()) {
+  if (!days) return items;
+  const start = shiftDate(today, -(days - 1));
+  return items.filter((item) => item[dateField] >= start);
+}
+
+export function summarizeSeries(items, field) {
+  const values = items
+    .filter((item) => item[field] !== null && item[field] !== undefined && item[field] !== '')
+    .map((item) => Number(item[field]))
+    .filter(Number.isFinite);
+  if (values.length === 0) return null;
+  const sum = values.reduce((total, value) => total + value, 0);
+  const round = (value) => Math.round(value * 100) / 100;
+  return {
+    count: values.length,
+    latest: values[values.length - 1],
+    change: round(values[values.length - 1] - values[0]),
+    min: Math.min(...values),
+    max: Math.max(...values),
+    average: round(sum / values.length),
+  };
+}

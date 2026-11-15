@@ -10,7 +10,7 @@ async function getCurrentClientId(client) {
   return data.user.id;
 }
 
-export async function listClientBodyMetrics(limit = 30) {
+export async function listClientBodyMetrics(limit = 365) {
   const { data, error } = await requireSupabase()
     .from('client_body_metrics')
     .select('id,measured_on,weight_kg,body_fat_percentage,notes')

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import Button from './Button.jsx';
 import ExerciseCard from './ExerciseCard.jsx';
+import ProgressBar from './ProgressBar.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import { searchExercises } from '../services/exerciseService.js';
 import { listClientWorkoutSessions, saveClientWorkout } from '../services/clientWorkoutService.js';
-import { getLocalDateString } from '../services/clientTrackingUtils.js';
+import { getLocalDateString, summarizeWorkoutSets } from '../services/clientTrackingUtils.js';
 
 const EXERCISE_PAGE_SIZE = 8;
 
@@ -12,7 +13,7 @@ function createExerciseEntry(exercise) {
   return {
     clientId: crypto.randomUUID(),
     exercise,
-    sets: Array.from({ length: 3 }, () => ({ reps: '10', weight_kg: '' })),
+    sets: Array.from({ length: 3 }, () => ({ reps: '10', weight_kg: '', done: false })),
   };
 }
 
@@ -45,6 +46,7 @@ export default function ClientWorkoutLogger() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [success, setSuccess] = useState('');
+  const summary = summarizeWorkoutSets(entries);
 
   useEffect(() => {
     let active = true;
@@ -109,7 +111,15 @@ export default function ClientWorkoutLogger() {
   function addSet(entryId) {
     setEntries((current) => current.map((entry) => (
       entry.clientId === entryId && entry.sets.length < 30
-        ? { ...entry, sets: [...entry.sets, { reps: '10', weight_kg: '' }] }
+        ? { ...entry, sets: [...entry.sets, { ...entry.sets[entry.sets.length - 1], done: false }] }
+        : entry
+    )));
+  }
+
+  function removeSet(entryId, setIndex) {
+    setEntries((current) => current.map((entry) => (
+      entry.clientId === entryId && entry.sets.length > 1
+        ? { ...entry, sets: entry.sets.filter((_, index) => index !== setIndex) }
         : entry
     )));
   }
@@ -126,19 +136,28 @@ export default function ClientWorkoutLogger() {
       setSaveError(t('addAtLeastOneExercise'));
       return;
     }
+    const completedExercises = entries
+      .map((entry) => ({
+        exercise_id: entry.exercise.id,
+        sets: entry.sets
+          .filter((set) => set.done)
+          .map((set) => ({
+            reps: Number(set.reps),
+            weight_kg: set.weight_kg === '' ? null : Number(set.weight_kg),
+          })),
+      }))
+      .filter((exercise) => exercise.sets.length > 0);
+    if (completedExercises.length === 0) {
+      setSaveError(t('noCompletedSets'));
+      return;
+    }
 
     setSaving(true);
     try {
       await saveClientWorkout({
         workoutDate,
         title: title.trim(),
-        exercises: entries.map((entry) => ({
-          exercise_id: entry.exercise.id,
-          sets: entry.sets.map((set) => ({
-            reps: Number(set.reps),
-            weight_kg: set.weight_kg === '' ? null : Number(set.weight_kg),
-          })),
-        })),
+        exercises: completedExercises,
       });
       setEntries([]);
       setTitle('');
@@ -166,6 +185,13 @@ export default function ClientWorkoutLogger() {
           <label className="form-label">{t('workoutDate')}<input className="field" type="date" value={workoutDate} max={today} onChange={(event) => setWorkoutDate(event.target.value)} required /></label>
           <label className="form-label">{t('workoutName')}<input className="field" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={160} placeholder={t('workoutNamePlaceholder')} required /></label>
         </div>
+        {entries.length > 0 && (
+          <div className="workout-summary" role="status">
+            <div><strong>{t('workoutProgress')}</strong><span>{summary.completedSets} / {summary.totalSets} {t('setsCompleted')}</span></div>
+            <ProgressBar value={summary.percent} color="green" />
+            <span>{t('totalVolume')}: {summary.volumeKg.toLocaleString()} kg</span>
+          </div>
+        )}
         <div className="client-workout-entries">
           {entries.length === 0 && <div className="dashboard-empty client-workout-empty"><p>{t('addExerciseHint')}</p></div>}
           {entries.map((entry, exerciseIndex) => (
@@ -177,10 +203,14 @@ export default function ClientWorkoutLogger() {
               </header>
               <div className="client-set-list">
                 {entry.sets.map((set, index) => (
-                  <div className="client-set-row" key={`${entry.clientId}-${index}`}>
-                    <span className="client-set-index">{t('set')} {index + 1}</span>
+                  <div className={`client-set-row ${set.done ? 'is-done' : ''}`} key={`${entry.clientId}-${index}`}>
+                    <label className="client-set-check">
+                      <input type="checkbox" checked={set.done} onChange={(event) => updateSet(entry.clientId, index, 'done', event.target.checked)} aria-label={`${t('markSetComplete')}: ${entry.exercise.name} ${t('set')} ${index + 1}`} />
+                      <span>{t('set')} {index + 1}</span>
+                    </label>
                     <label className="form-label">{t('actualReps')}<input className="field" type="number" min="1" max="200" value={set.reps} onChange={(event) => updateSet(entry.clientId, index, 'reps', event.target.value)} required /></label>
                     <label className="form-label">{t('actualWeight')}<input className="field" type="number" min="0" max="1000" step="0.1" value={set.weight_kg} onChange={(event) => updateSet(entry.clientId, index, 'weight_kg', event.target.value)} placeholder={t('bodyweight')} /></label>
+                                        <button className="icon-button" type="button" disabled={entry.sets.length <= 1} onClick={() => removeSet(entry.clientId, index)} aria-label={`${t('removeSet')} ${index + 1}`}>×</button>
                   </div>
                 ))}
               </div>
