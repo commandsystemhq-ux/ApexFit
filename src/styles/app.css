@@ -812,3 +812,73 @@ a.sidebar-profile:hover .profile-copy strong { color: #70afff; }
 @media (max-width: 560px) {
   .wf-form-grid { grid-template-columns: 1fr; }
 }
+/* Jack AI assistant */
+.jack-fab { position: fixed; z-index: 30; inset-block-end: 22px; inset-inline-end: 22px; display: grid; width: 58px; height: 58px; place-items: center; padding: 0; border: 1px solid rgba(80, 200, 255, .5); border-radius: 50%; background: radial-gradient(circle at 30% 25%, #14305f, #070b14 70%); box-shadow: 0 0 0 1px rgba(18, 224, 240, .12), 0 8px 28px rgba(28, 93, 255, .45), 0 0 24px rgba(18, 224, 240, .28); cursor: pointer; transition: transform .18s ease, opacity .18s ease, box-shadow .18s ease; }
+.jack-fab:hover { transform: translateY(-2px) scale(1.04); box-shadow: 0 0 0 1px rgba(18, 224, 240, .3), 0 10px 32px rgba(28, 93, 255, .6), 0 0 32px rgba(18, 224, 240, .45); }
+.jack-fab:focus-visible { outline: 2px solid #70d8ff; outline-offset: 3px; }
+.jack-fab.is-hidden { pointer-events: none; opacity: 0; transform: scale(.8); }
+.jack-fab-glow { position: absolute; inset: -6px; border-radius: 50%; background: conic-gradient(from 0deg, rgba(28, 93, 255, 0), rgba(18, 224, 240, .55), rgba(28, 93, 255, 0)); filter: blur(8px); opacity: .55; animation: jack-spin 6s linear infinite; z-index: -1; }
+@keyframes jack-spin { to { transform: rotate(360deg); } }
+
+.jack-drawer { position: fixed; z-index: 40; inset-block: 0; inset-inline-end: 0; display: flex; width: min(420px, 100vw); flex-direction: column; border-inline-start: 1px solid var(--line-strong); background: #090c13; box-shadow: -18px 0 48px rgba(0, 0, 0, .5); transform: translateX(105%); visibility: hidden; transition: transform .24s ease, visibility 0s linear .24s; }
+[dir='rtl'] .jack-drawer { box-shadow: 18px 0 48px rgba(0, 0, 0, .5); transform: translateX(-105%); }
+.jack-drawer.is-open, [dir='rtl'] .jack-drawer.is-open { transform: translateX(0); visibility: visible; transition-delay: 0s; }
+.jack-header { display: flex; flex: none; align-items: center; gap: 10px; padding: 14px 14px 12px; border-bottom: 1px solid var(--line); background: linear-gradient(180deg, rgba(28, 93, 255, .12), transparent); }
+.jack-header-copy { display: grid; min-width: 0; flex: 1; gap: 2px; }
+.jack-header-copy strong { overflow: hidden; font: 600 13px var(--font-display); text-overflow: ellipsis; white-space: nowrap; }
+.jack-header-copy small { color: var(--muted); font-size: 10px; }
+.jack-avatar { display: grid; flex: none; width: 36px; height: 36px; place-items: center; border: 1px solid rgba(80, 200, 255, .35); border-radius: 50%; background: radial-gradient(circle at 30% 25%, #14305f, #070b14 70%); box-shadow: 0 0 14px rgba(18, 224, 240, .22); }
+.jack-avatar-large { width: 58px; height: 58px; }
+.jack-icon-button { display: grid; width: 30px; height: 30px; place-items: center; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: #b4bfce; cursor: pointer; font-size: 13px; }
+.jack-icon-button:hover:not(:disabled) { background: rgba(255, 255, 255, .06); color: var(--text); }
+.jack-icon-button:disabled { cursor: not-allowed; opacity: .35; }
+
+.jack-messages { display: flex; min-height: 0; flex: 1; flex-direction: column; gap: 12px; padding: 16px 14px; overflow-y: auto; overscroll-behavior: contain; }
+.jack-welcome { display: grid; justify-items: center; gap: 12px; padding: 24px 8px; text-align: center; }
+.jack-welcome p { margin: 0; color: #c4cedb; font-size: 12px; line-height: 1.7; }
+.jack-message { display: grid; gap: 6px; max-width: 92%; }
+.jack-message-user { align-self: flex-end; justify-items: end; }
+.jack-message-assistant { align-self: flex-start; justify-items: start; }
+.jack-bubble { padding: 9px 12px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255, 255, 255, .05); font-size: 12px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+.jack-message-user .jack-bubble { border-color: transparent; border-end-end-radius: 4px; background: linear-gradient(135deg, #1c5dff, #0fa7d8); color: #fff; }
+.jack-message-assistant .jack-bubble { border-end-start-radius: 4px; }
+.jack-bubble-error { border-color: rgba(242, 106, 118, .3); background: rgba(242, 106, 118, .08); color: #ff9aa2; }
+.jack-typing { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); }
+.jack-dots { display: inline-flex; gap: 3px; }
+.jack-dots i { width: 5px; height: 5px; border-radius: 50%; background: #72b3ff; animation: jack-bounce 1s ease-in-out infinite; }
+.jack-dots i:nth-child(2) { animation-delay: .15s; }
+.jack-dots i:nth-child(3) { animation-delay: .3s; }
+@keyframes jack-bounce { 0%, 80%, 100% { opacity: .3; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
+
+.jack-steps { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.jack-step { display: flex; align-items: flex-start; gap: 8px; padding: 6px 10px; border: 1px solid rgba(54, 132, 246, .22); border-radius: 10px; background: rgba(47, 126, 239, .07); color: #9fc7f5; font-size: 11px; line-height: 1.5; }
+.jack-step.is-done { border-color: rgba(60, 200, 150, .28); background: rgba(60, 200, 150, .07); color: #7be3bc; }
+.jack-step.is-error { border-color: rgba(242, 106, 118, .28); background: rgba(242, 106, 118, .07); color: #ff9aa2; }
+.jack-step-icon { display: grid; flex: none; width: 15px; height: 15px; place-items: center; margin-top: 1px; border-radius: 50%; font-size: 10px; font-weight: 800; }
+.jack-step.is-running .jack-step-icon { border: 2px solid rgba(112, 175, 255, .3); border-top-color: #72b3ff; animation: jack-spin .8s linear infinite; }
+.jack-step.is-done .jack-step-icon { background: #2fc08e; color: #04130d; }
+.jack-step.is-error .jack-step-icon { background: #f26a76; color: #1d0508; }
+.jack-step-copy { display: grid; min-width: 0; gap: 2px; }
+.jack-step-copy small { color: inherit; opacity: .8; overflow-wrap: anywhere; }
+
+.jack-footer { display: grid; flex: none; gap: 10px; padding: 10px 14px 14px; border-top: 1px solid var(--line); background: #080a0f; }
+.jack-notice { margin: 0; }
+.jack-prompts { display: flex; flex-wrap: wrap; gap: 6px; max-height: 96px; overflow-y: auto; }
+.jack-chip { padding: 5px 10px; border: 1px solid rgba(54, 132, 246, .32); border-radius: 999px; background: rgba(47, 126, 239, .08); color: #9fc7f5; cursor: pointer; font: inherit; font-size: 11px; text-align: start; transition: background .15s ease; }
+.jack-chip:hover { background: rgba(47, 126, 239, .2); }
+.jack-form { display: flex; align-items: flex-end; gap: 8px; }
+.jack-input { min-height: 40px; max-height: 120px; flex: 1; padding: 10px 12px; resize: none; border: 1px solid var(--line-strong); border-radius: 12px; outline: none; background: rgba(255, 255, 255, .04); color: var(--text); font: inherit; font-size: 12px; line-height: 1.5; field-sizing: content; }
+.jack-input:focus { border-color: rgba(55, 142, 255, .6); box-shadow: 0 0 0 3px rgba(55, 142, 255, .1); }
+.jack-send { display: grid; flex: none; width: 40px; height: 40px; place-items: center; padding: 0; border: 0; border-radius: 12px; background: linear-gradient(135deg, #1c5dff, #12c2e0); color: #fff; cursor: pointer; font-size: 14px; }
+[dir='rtl'] .jack-send { transform: scaleX(-1); }
+.jack-send:disabled { cursor: not-allowed; opacity: .4; }
+
+@media (max-width: 720px) {
+  .jack-fab { inset-block-end: 16px; inset-inline-end: 16px; width: 52px; height: 52px; }
+  .jack-drawer { width: 100vw; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jack-fab-glow, .jack-dots i, .jack-step.is-running .jack-step-icon { animation: none; }
+  .jack-drawer, .jack-fab { transition: none; }
+}

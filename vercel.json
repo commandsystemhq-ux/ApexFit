@@ -2,6 +2,9 @@
   "rewrites": [
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
+  "functions": {
+    "api/jack.js": { "maxDuration": 60 }
+  },
   "crons": [
     { "path": "/api/workflows", "schedule": "0 6 * * *" }
   ]

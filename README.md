@@ -117,3 +117,14 @@ Migration `20261115000800_automated_workflows.sql` (included in `supabase/manual
 - **Scheduling:** opening the Workflows page (or pressing **Run now**) processes that coach's due steps. For unattended runs, either enable `pg_cron` before applying the migration (it schedules `run_workflow_engine()` hourly), or set `CRON_SECRET` in Vercel; `vercel.json` then calls `/api/workflows` daily.
 - **Not included:** push notifications for automated messages, and retroactive enrollment of existing clients.
 - **Tests:** `tests/workflowEngine.test.js` applies the real migration to an in-process Postgres (`@electric-sql/pglite`) and checks scheduling, variable substitution, de-duplication, trigger behavior, and RLS.
+## Jack, the AI assistant
+
+Jack is a floating assistant (bottom corner, every signed-in page) that opens a chat drawer. It answers questions about ApexFit and can perform actions for the signed-in user. Chat history is kept per browser tab in `sessionStorage`.
+
+- **Setup:** set `OPENAI_API_KEY` or `GEMINI_API_KEY` on the server (OpenAI wins when both exist; override with `JACK_PROVIDER` and `JACK_MODEL`, defaults `gpt-4o-mini` and `gemini-2.0-flash`). Without a key, Jack answers "not set up yet". Apply migration `20261115000900_jack_assistant.sql` (included in `manual-setup.sql`).
+- **Security:** `/api/jack` verifies the Supabase JWT and reads the role from `get_my_access_status`; the role, user id, and route the browser sends are not trusted. The model is only offered the verified role's tools, each tool re-checks the role, and every database call runs with the user's own JWT, so RLS and the role checks inside the SQL functions still apply. Only plain user/assistant text is accepted from the browser (no system or tool messages), history and message length are capped, and requests are rate limited to 20 per minute per user (per server instance).
+- **Coach tools:** `create_workflow`, `assign_program_to_client` (client by name or email, program by title), `create_community_post`, `get_coach_summary` (counts and names only, no emails or workout contents), `navigate_to`.
+- **Client tools:** `log_workout_completion` (done only, or with exercises, sets, and weights), `log_body_metrics`, `get_my_schedule`, `navigate_to`.
+- **Streaming:** the endpoint streams newline-delimited JSON events (`step`, `navigate`, `text`, `error`, `done`) so the drawer can show progress such as "Creating your automation workflow…". After a write action the current page reloads its data.
+- **Privacy:** the conversation, the tool results (for example client first names in the summary), and a short account snapshot are sent to the AI provider you configure.
+- **Tests:** `tests/jackTools.test.js` runs the tools against the real schema in an in-process Postgres with row-level security enforced; `tests/jackAgent.test.js` covers request sanitizing, the agent loop, and the OpenAI and Gemini adapters against mocked HTTP.

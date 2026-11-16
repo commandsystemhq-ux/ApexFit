@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState } from 'react';
+import { Fragment, Suspense, lazy, useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import BrandMark from './BrandMark.jsx';
 import Button from './Button.jsx';
@@ -9,8 +9,11 @@ import { useLocale } from '../contexts/LocaleContext.jsx';
 import { displayNameFor } from '../services/profileUtils.js';
 import { PAGES, homePathFor, navigationFor, pageForPath } from '../routes.js';
 
+const JackFloatingWidget = lazy(() => import('./JackFloatingWidget.jsx'));
+
 export default function AppShell() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [dataVersion, setDataVersion] = useState(0);
   const { t } = useLocale();
   const { user, profile, signOut } = useAuth();
   const location = useLocation();
@@ -63,10 +66,13 @@ export default function AppShell() {
         </header>
         <div className="page-content">
           <Suspense fallback={<div className="empty-state" role="status">{t('loadingProgress')}</div>}>
-            <Outlet />
+            <Fragment key={dataVersion}><Outlet /></Fragment>
           </Suspense>
         </div>
       </main>
+      <Suspense fallback={null}>
+        <JackFloatingWidget onDataChanged={() => setDataVersion((version) => version + 1)} />
+      </Suspense>
     </div>
   );
 }
