@@ -34,7 +34,10 @@ export function parseJackRequest(body, { fallbackLocale = 'en', serverDate = new
     const offset = Math.abs(Date.parse(`${context.today}T00:00:00Z`) - Date.parse(`${serverDay}T00:00:00Z`));
     if (offset <= 86_400_000) today = context.today;
   }
-  return { messages, locale, route, today };
+  // The browser's UTC offset in minutes (for example 120 for UTC+2), so "6 pm" means the user's 6 pm.
+  const offset = Number(context.utcOffset);
+  const utcOffsetMinutes = Number.isInteger(offset) && Math.abs(offset) <= 14 * 60 ? offset : 0;
+  return { messages, locale, route, today, utcOffsetMinutes };
 }
 
 export function createRateLimiter({ limit = 20, windowMs = 60_000, now = () => Date.now() } = {}) {
@@ -106,6 +109,7 @@ export async function runJack({ model, system, history, ctx, emit, execute = exe
 // A short, factual snapshot of the user's account for the system prompt. Failures simply omit it.
 export async function buildContextSummary(role, userClient) {
   try {
+    if (role === 'trainer') return '';
     if (role === 'coach') {
       const { data, error } = await userClient.rpc('get_coach_client_overview');
       if (error) return '';

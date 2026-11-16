@@ -17,13 +17,14 @@ import {
   toApiMessages,
 } from '../services/jackUtils.js';
 import { getLocalDateString } from '../services/clientTrackingUtils.js';
+import { roleOf } from '../routes.js';
 
 export default function JackFloatingWidget({ onDataChanged }) {
   const { t, locale } = useLocale();
   const { user, profile } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const role = profile?.role === 'client' ? 'client' : 'coach';
+  const role = roleOf(profile);
   const storageKey = `${JACK_STORAGE_PREFIX}${user?.id || 'anonymous'}`;
 
   const [open, setOpen] = useState(false);
@@ -66,7 +67,7 @@ export default function JackFloatingWidget({ onDataChanged }) {
     try {
       await streamJack({
         messages: toApiMessages(history),
-        context: { route: location.pathname, locale, role, userId: user?.id, today: getLocalDateString() },
+        context: { route: location.pathname, locale, role, userId: user?.id, today: getLocalDateString(), utcOffset: -new Date().getTimezoneOffset() },
         signal: controller.signal,
         onEvent: (event) => {
           if (event.type === 'navigate' && isAllowedNavigation(role, event.path)) {

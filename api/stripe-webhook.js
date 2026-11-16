@@ -8,7 +8,25 @@ export const config = { api: { bodyParser: false } };
 
 const PAID_EVENTS = new Set(['checkout.session.completed', 'checkout.session.async_payment_succeeded']);
 
+// Store purchases carry the order id; the database checks the amount and currency before delivering the program.
+async function completeStoreOrder(admin, session) {
+  const orderId = session.metadata?.store_order_id;
+  if (!orderId || session.payment_status !== 'paid') return false;
+
+  const { error } = await admin.rpc('complete_store_order', {
+    p_order_id: orderId,
+    p_session_id: session.id,
+    p_amount_cents: session.amount_total,
+    p_currency: session.currency,
+    p_payment_intent: typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id ?? null,
+    p_mode: 'stripe',
+  });
+  if (error) throw error;
+  return true;
+}
+
 async function markInvoicePaid(admin, session) {
+  if (await completeStoreOrder(admin, session)) return;
   const invoiceId = session.metadata?.invoice_id;
   if (!invoiceId || session.payment_status !== 'paid') return;
 

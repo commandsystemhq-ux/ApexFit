@@ -4,7 +4,7 @@ import Button from './Button.jsx';
 import TrialExpiredPage from '../pages/TrialExpiredPage.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
-import { AUTH_PATHS, PAGES, homePathFor, safeRedirectPath } from '../routes.js';
+import { AUTH_PATHS, PAGES, homePathFor, roleOf, safeRedirectPath } from '../routes.js';
 
 export function FullPageLoader() {
   const { t } = useLocale();
@@ -49,7 +49,7 @@ export function PublicOnly() {
   if (user && profileError) return <AccountError message={profileError} />;
   if (user && !profile) return <FullPageLoader />;
   if (user && profile) {
-    return <Navigate to={safeRedirectPath(location.state?.from) || homePathFor(profile.role)} replace />;
+    return <Navigate to={safeRedirectPath(location.state?.from) || homePathFor(roleOf(profile))} replace />;
   }
   return <Outlet />;
 }
@@ -58,6 +58,7 @@ export function PublicOnly() {
 export function TrialGate() {
   const { profile } = useAuth();
   const location = useLocation();
+  if (roleOf(profile) === 'trainer') return <Navigate to={homePathFor('trainer')} replace />;
   const trialExpired = profile.role === 'coach'
     && profile.access_state === 'expired'
     && location.pathname !== PAGES.billing.path;
@@ -66,19 +67,28 @@ export function TrialGate() {
 
 export function CoachOnly() {
   const { profile } = useAuth();
-  if (profile.role !== 'coach') return <Navigate to={homePathFor(profile.role)} replace />;
+  const role = roleOf(profile);
+  if (role !== 'coach') return <Navigate to={homePathFor(role)} replace />;
   return <TrialGate />;
+}
+
+// The assistant trainer workspace: only accounts with an active team membership.
+export function TrainerOnly() {
+  const { profile } = useAuth();
+  const role = roleOf(profile);
+  if (role !== 'trainer') return <Navigate to={homePathFor(role)} replace />;
+  return <Outlet />;
 }
 
 export function ClientOnly() {
   const { profile } = useAuth();
-  if (profile.role !== 'client') return <Navigate to={homePathFor(profile.role)} replace />;
+  if (profile.role !== 'client') return <Navigate to={homePathFor(roleOf(profile))} replace />;
   return <Outlet />;
 }
 
 // The landing page is public, but signed-in users are sent to their workspace.
 export function LandingGate({ children }) {
   const { user, profile } = useAuth();
-  if (user && profile) return <Navigate to={homePathFor(profile.role)} replace />;
+  if (user && profile) return <Navigate to={homePathFor(roleOf(profile))} replace />;
   return children;
 }

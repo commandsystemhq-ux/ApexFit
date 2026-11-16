@@ -13,6 +13,9 @@ export const WRITE_TOOLS = [
   'create_group',
   'assign_program_to_group',
   'create_contract',
+  'create_store_product',
+  'schedule_video_session',
+  'invite_trainer',
 ];
 
 const COACH_PROMPTS = {
@@ -26,11 +29,16 @@ const COACH_PROMPTS = {
   workflows: ['jackQ_coachWorkflow', 'jackQ_coachFollowUp', 'jackQ_coachAbsent', 'jackQ_coachTour'],
   messages: ['jackQ_coachAbsent', 'jackQ_coachSummary', 'jackQ_coachPost'],
   community: ['jackQ_coachPost', 'jackQ_coachSummary', 'jackQ_coachTour'],
+  store: ['jackQ_coachStore', 'jackQ_coachSales', 'jackQ_coachGroupProgram', 'jackQ_coachTour'],
+  sessions: ['jackQ_coachSession', 'jackQ_coachGroup', 'jackQ_coachSummary', 'jackQ_coachTour'],
+  team: ['jackQ_coachTeam', 'jackQ_coachAssign', 'jackQ_coachSummary', 'jackQ_coachTour'],
   leaderboard: ['jackQ_coachPost', 'jackQ_coachSummary', 'jackQ_coachTour'],
   schedule: ['jackQ_coachSchedule', 'jackQ_coachSummary', 'jackQ_coachTour'],
   invoicing: ['jackQ_coachBilling', 'jackQ_coachSummary', 'jackQ_coachTour'],
   billing: ['jackQ_coachBilling', 'jackQ_coachSummary', 'jackQ_coachTour'],
 };
+
+const TRAINER_PROMPTS = { default: ['jackQ_trainerHome'] };
 
 const CLIENT_PROMPTS = {
   default: ['jackQ_clientSchedule', 'jackQ_clientDone', 'jackQ_clientWeight', 'jackQ_clientTour'],
@@ -43,6 +51,8 @@ const CLIENT_PROMPTS = {
   assessments: ['jackQ_clientAssessment', 'jackQ_clientContracts', 'jackQ_clientSchedule'],
   myContracts: ['jackQ_clientContracts', 'jackQ_clientAssessment', 'jackQ_clientGroups'],
   myGroups: ['jackQ_clientGroups', 'jackQ_clientSchedule', 'jackQ_clientDone'],
+  myStore: ['jackQ_clientStore', 'jackQ_clientSessions', 'jackQ_clientGroups'],
+  mySessions: ['jackQ_clientSessions', 'jackQ_clientSchedule', 'jackQ_clientGroups'],
   coachHub: ['jackQ_clientJoin', 'jackQ_clientSchedule', 'jackQ_clientTour'],
   community: ['jackQ_clientPoints', 'jackQ_clientDone', 'jackQ_clientTour'],
   leaderboard: ['jackQ_clientPoints', 'jackQ_clientDone', 'jackQ_clientTour'],
@@ -55,7 +65,7 @@ export function pageIdForPath(pathname) {
 
 // Suggested prompts change with the signed-in role and the page that is open.
 export function quickPromptKeys(role, pathname) {
-  const table = role === 'client' ? CLIENT_PROMPTS : COACH_PROMPTS;
+  const table = role === 'client' ? CLIENT_PROMPTS : role === 'trainer' ? TRAINER_PROMPTS : COACH_PROMPTS;
   return table[pageIdForPath(pathname)] || table.default;
 }
 

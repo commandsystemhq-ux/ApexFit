@@ -64,7 +64,7 @@ export default function JackDrawer({ open, role, messages, busy, draft, onDraftC
         {messages.length === 0 && (
           <div className="jack-welcome">
             <span className="jack-avatar jack-avatar-large"><JackIcon size={34} /></span>
-            <p>{t(role === 'client' ? 'jackGreetingClient' : 'jackGreetingCoach')}</p>
+            <p>{t(role === 'client' ? 'jackGreetingClient' : role === 'trainer' ? 'jackGreetingTrainer' : 'jackGreetingCoach')}</p>
           </div>
         )}
         {messages.map((message) => (

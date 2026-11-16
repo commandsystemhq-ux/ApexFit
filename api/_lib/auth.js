@@ -27,10 +27,12 @@ export async function authenticate(req) {
   return { user: data.user, userClient };
 }
 
-export async function requireRole(userClient, expectedRole) {
+// Assistant trainers have role 'coach' but access_state 'trainer'; they pass only where `allowTrainer` is set.
+export async function requireRole(userClient, expectedRole, { allowTrainer = false } = {}) {
   const { data, error } = await userClient.rpc('get_my_access_status');
   if (error || !data) throw new HttpError(403, 'Account details are not available.');
   if (data.role !== expectedRole) throw new HttpError(403, `A ${expectedRole} account is required.`);
+  if (expectedRole === 'coach' && allowTrainer && data.access_state === 'trainer') return data;
   if (expectedRole === 'coach' && !['trialing', 'active'].includes(data.access_state)) {
     throw new HttpError(402, 'An active coach plan is required.');
   }

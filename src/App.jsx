@@ -1,7 +1,8 @@
 import { lazy, useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import AppShell from './components/AppShell.jsx';
-import { ClientOnly, CoachOnly, LandingGate, PublicOnly, RequireAuth, TrialGate } from './components/RouteGuards.jsx';
+import { ClientOnly, CoachOnly, LandingGate, PublicOnly, RequireAuth, TrainerOnly, TrialGate } from './components/RouteGuards.jsx';
+import PublicStorePage from './pages/PublicStorePage.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import SignupPage from './pages/SignupPage.jsx';
@@ -12,6 +13,12 @@ import { AUTH_PATHS, PAGES, legacyHashPath, pathFor } from './routes.js';
 const BillingPage = lazy(() => import('./pages/BillingPage.jsx'));
 const WorkflowsPage = lazy(() => import('./pages/WorkflowsPage.jsx'));
 const GroupsPage = lazy(() => import('./pages/GroupsPage.jsx'));
+const StorePage = lazy(() => import('./pages/StorePage.jsx'));
+const MyStorePage = lazy(() => import('./pages/MyStorePage.jsx'));
+const TeamPage = lazy(() => import('./pages/TeamPage.jsx'));
+const TeamClientsPage = lazy(() => import('./pages/TeamClientsPage.jsx'));
+const SessionsPage = lazy(() => import('./pages/SessionsPage.jsx'));
+const MySessionsPage = lazy(() => import('./pages/MySessionsPage.jsx'));
 const ContractsPage = lazy(() => import('./pages/ContractsPage.jsx'));
 const AssessmentPage = lazy(() => import('./pages/AssessmentPage.jsx'));
 const ClientContractsPage = lazy(() => import('./pages/ClientContractsPage.jsx'));
@@ -53,6 +60,8 @@ export default function App() {
       <Routes>
         <Route path={AUTH_PATHS.home} element={<LandingGate><LandingPage /></LandingGate>} />
 
+        <Route path="/shop/:coachId" element={<PublicStorePage />} />
+
         <Route element={<PublicOnly />}>
           <Route path={AUTH_PATHS.login} element={<LoginPage />} />
           <Route path={AUTH_PATHS.signup} element={<SignupPage />} />
@@ -69,6 +78,9 @@ export default function App() {
               <Route path={PAGES.messages.path} element={<MessagesPage onNavigate={go} />} />
               <Route path={PAGES.workflows.path} element={<WorkflowsPage onNotify={showToast} />} />
               <Route path={PAGES.groups.path} element={<GroupsPage />} />
+              <Route path={PAGES.team.path} element={<TeamPage />} />
+              <Route path={PAGES.store.path} element={<StorePage />} />
+              <Route path={PAGES.sessions.path} element={<SessionsPage />} />
               <Route path={PAGES.contracts.path} element={<ContractsPage />} />
               <Route path={PAGES.clients.path} element={<ClientsPage onNavigate={go} onNotify={showToast} />} />
               <Route path={PAGES.schedule.path} element={<SchedulePage onNavigate={go} onNotify={showToast} />} />
@@ -83,8 +95,14 @@ export default function App() {
               ))}
               <Route path={PAGES.coachHub.path} element={<CoachHubPage />} />
               <Route path={PAGES.assessments.path} element={<AssessmentPage />} />
+              <Route path={PAGES.myStore.path} element={<MyStorePage />} />
+              <Route path={PAGES.mySessions.path} element={<MySessionsPage />} />
               <Route path={PAGES.myContracts.path} element={<ClientContractsPage />} />
               <Route path={PAGES.myGroups.path} element={<ClientGroupsPage />} />
+            </Route>
+
+            <Route element={<TrainerOnly />}>
+              <Route path={PAGES.teamClients.path} element={<TeamClientsPage />} />
             </Route>
 
             <Route element={<TrialGate />}>

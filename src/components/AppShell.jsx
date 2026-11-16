@@ -4,11 +4,12 @@ import BrandMark from './BrandMark.jsx';
 import Button from './Button.jsx';
 import LanguageToggle from './LanguageToggle.jsx';
 import OnboardingNotice from './OnboardingNotice.jsx';
+import TeamInvitationNotice from './TeamInvitationNotice.jsx';
 import UserAvatar from './UserAvatar.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import { displayNameFor } from '../services/profileUtils.js';
-import { PAGES, homePathFor, navigationFor, pageForPath } from '../routes.js';
+import { PAGES, homePathFor, navigationFor, pageForPath, roleOf } from '../routes.js';
 
 const JackFloatingWidget = lazy(() => import('./JackFloatingWidget.jsx'));
 
@@ -19,7 +20,8 @@ export default function AppShell() {
   const { user, profile, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const sections = navigationFor(profile?.role);
+  const role = roleOf(profile);
+  const sections = navigationFor(role);
   const page = pageForPath(location.pathname);
 
   useEffect(() => {
@@ -31,7 +33,7 @@ export default function AppShell() {
     <div className="app-shell">
       <div className={`sidebar-backdrop ${menuOpen ? 'is-visible' : ''}`} onClick={() => setMenuOpen(false)} />
       <aside className={`sidebar ${menuOpen ? 'is-open' : ''}`}>
-        <button className="sidebar-brand" onClick={() => navigate(homePathFor(profile?.role))} aria-label={`ApexFit ${t('home')}`}><BrandMark /></button>
+        <button className="sidebar-brand" onClick={() => navigate(homePathFor(role))} aria-label={`ApexFit ${t('home')}`}><BrandMark /></button>
         <nav className="side-nav" aria-label={t('main')}>
           {sections.map((section) => (
             <div className="nav-section" key={section.group}>
@@ -62,11 +64,12 @@ export default function AppShell() {
           <div className="topbar-actions">
             <LanguageToggle />
             <Button variant="secondary" size="small" onClick={signOut}>{t('signOut')}</Button>
-            {profile?.role === 'coach' && <Button variant="primary" size="small" onClick={() => navigate(PAGES.generator.path)}>{t('createPlan')}</Button>}
+            {role === 'coach' && <Button variant="primary" size="small" onClick={() => navigate(PAGES.generator.path)}>{t('createPlan')}</Button>}
           </div>
         </header>
         <div className="page-content">
           <OnboardingNotice />
+          <TeamInvitationNotice />
           <Suspense fallback={<div className="empty-state" role="status">{t('loadingProgress')}</div>}>
             <Fragment key={dataVersion}><Outlet /></Fragment>
           </Suspense>

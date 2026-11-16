@@ -960,3 +960,49 @@ a.sidebar-profile:hover .profile-copy strong { color: #70afff; }
   .signed-view-meta { grid-template-columns: 1fr; }
 }
 .group-members + .group-subheading { margin-top: 16px; }
+
+/* Store, team, video sessions */
+.store-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.store-stat { display: grid; gap: 6px; }
+.store-stat strong { font: 600 22px var(--font-display); overflow-wrap: anywhere; }
+.store-share { display: grid; gap: 10px; margin-bottom: 14px; }
+.store-share p { margin: 4px 0 0; }
+.store-share-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.store-share-row .field { min-width: 0; flex: 1 1 240px; }
+.store-form { display: grid; gap: 12px; margin-bottom: 14px; }
+.store-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.store-card { display: grid; align-content: start; gap: 10px; min-width: 0; }
+.store-card.is-draft { opacity: .75; }
+.store-card h3 { margin: 0; overflow-wrap: anywhere; font: 600 14px var(--font-display); }
+.store-cover { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; background: rgba(255, 255, 255, .04); }
+.store-price { font: 700 16px var(--font-display); }
+.store-sales { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.store-sales li { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; font-size: 11px; }
+.store-sale-title { display: grid; flex: 1 1 160px; min-width: 0; gap: 2px; overflow-wrap: anywhere; font-size: 12px; font-weight: 600; }
+.store-sale-title small { color: var(--subtle); font-size: 10px; font-weight: 400; }
+.public-store { width: min(100%, 1000px); margin: 0 auto; padding: 8px 20px 56px; }
+.public-store-heading { display: grid; justify-items: start; gap: 8px; margin-bottom: 20px; }
+.public-store-heading h1 { margin: 0; font: 600 26px var(--font-display); }
+.public-store-heading p { margin: 0 0 6px; color: var(--muted); font-size: 12px; }
+
+.team-layout { display: grid; gap: 14px; }
+.team-invite { display: grid; gap: 12px; }
+.team-permissions { display: grid; gap: 8px; }
+.team-members, .team-assignments { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.team-members > li { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: rgba(255, 255, 255, .02); }
+.team-member-main { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.team-member-copy { display: grid; flex: 1 1 160px; min-width: 0; gap: 2px; overflow-wrap: anywhere; }
+.team-member-copy small { color: var(--subtle); font-size: 10px; }
+.team-editor { display: grid; gap: 10px; padding-top: 10px; border-top: 1px dashed var(--line-strong); }
+.team-assignments li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 12px; }
+.team-assignments .field { min-width: 0; flex: 0 1 240px; }
+.team-summary { display: flex; flex-wrap: wrap; gap: 28px; margin-bottom: 14px; }
+.team-summary > div { display: grid; gap: 4px; }
+.trainer-filter { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; color: var(--muted); font-size: 11px; }
+.trainer-filter .field { min-width: 0; flex: 0 1 220px; }
+
+.session-form { display: grid; gap: 12px; margin-bottom: 14px; }
+.session-card { display: grid; gap: 10px; }
+.session-card.is-live { border-color: rgba(60, 200, 150, .5); box-shadow: 0 0 0 1px rgba(60, 200, 150, .15), 0 0 24px rgba(60, 200, 150, .08); }
+.session-countdown { display: flex; align-items: baseline; gap: 10px; color: var(--muted); font-size: 11px; }
+.session-countdown strong { color: #72d6ff; font: 700 20px var(--font-display); font-variant-numeric: tabular-nums; }

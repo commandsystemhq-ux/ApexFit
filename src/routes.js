@@ -9,6 +9,10 @@ export const PAGES = {
   messages: { path: '/messages', titleKey: 'messages', icon: '◌', access: 'coach' },
   groups: { path: '/groups', titleKey: 'navGroups', icon: '\u25CE', access: 'coach' },
   contracts: { path: '/contracts', titleKey: 'navContracts', icon: '\u270E', access: 'coach' },
+  team: { path: '/team', titleKey: 'navTeam', icon: '\u2691', access: 'coach' },
+  store: { path: '/store', titleKey: 'navStore', icon: '\u25A3', access: 'coach' },
+  sessions: { path: '/sessions', titleKey: 'navSessions', icon: '\u25B6', access: 'coach' },
+  teamClients: { path: '/team-clients', titleKey: 'navTeamClients', icon: '\u2691', access: 'trainer' },
   clients: { path: '/clients', titleKey: 'clients', icon: '☺', access: 'coach' },
   schedule: { path: '/schedule', titleKey: 'schedule', icon: '◷', access: 'coach' },
   invoicing: { path: '/invoicing', titleKey: 'invoicing', icon: '$', access: 'coach' },
@@ -22,6 +26,8 @@ export const PAGES = {
   assessments: { path: '/assessments', titleKey: 'navAssessments', icon: '\u2665', access: 'client' },
   myContracts: { path: '/my-contracts', titleKey: 'navMyContracts', icon: '\u270E', access: 'client' },
   myGroups: { path: '/my-groups', titleKey: 'navMyGroups', icon: '\u25CE', access: 'client' },
+  mySessions: { path: '/my-sessions', titleKey: 'navMySessions', icon: '\u25B6', access: 'client' },
+  myStore: { path: '/my-store', titleKey: 'navMyStore', icon: '\u25A3', access: 'client' },
   coachHub: { path: '/coach-hub', titleKey: 'coachHub', icon: '✉', access: 'client' },
   community: { path: '/community', titleKey: 'community', icon: '★', access: 'any' },
   leaderboard: { path: '/leaderboard', titleKey: 'leaderboardPage', icon: '♛', access: 'any' },
@@ -32,21 +38,36 @@ export const AUTH_PATHS = { home: '/', login: '/login', signup: '/signup' };
 
 const COACH_NAVIGATION = [
   { group: 'main', items: ['dashboard', 'generator', 'workoutBuilder', 'programTemplates', 'exerciseLibrary', 'messages', 'workflows'] },
-  { group: 'clients', items: ['clients', 'groups', 'contracts', 'schedule', 'invoicing', 'community', 'leaderboard', 'billing'] },
+  { group: 'clients', items: ['clients', 'team', 'groups', 'contracts', 'sessions', 'schedule', 'store', 'invoicing', 'community', 'leaderboard', 'billing'] },
   { group: 'account', items: ['settings'] },
 ];
 
 const CLIENT_NAVIGATION = [
   { group: 'clients', items: ['workouts', 'progress', 'strength', 'food', 'habits', 'intake', 'assessments', 'myContracts'] },
-  { group: 'community', items: ['coachHub', 'myGroups', 'community', 'leaderboard'] },
+  { group: 'community', items: ['coachHub', 'mySessions', 'myGroups', 'myStore', 'community', 'leaderboard'] },
   { group: 'account', items: ['settings'] },
 ];
 
+// Assistant trainers work inside the head coach's team and only see their own workspace.
+const TRAINER_NAVIGATION = [
+  { group: 'main', items: ['teamClients'] },
+  { group: 'account', items: ['settings'] },
+];
+
+// 'trainer' is an assistant on a head coach's team (role 'coach' with access_state 'trainer').
+export function roleOf(profile) {
+  if (profile?.role === 'client') return 'client';
+  if (profile?.role === 'coach' && profile.access_state === 'trainer') return 'trainer';
+  return 'coach';
+}
+
 export function navigationFor(role) {
+  if (role === 'trainer') return TRAINER_NAVIGATION;
   return role === 'client' ? CLIENT_NAVIGATION : COACH_NAVIGATION;
 }
 
 export function homePathFor(role) {
+  if (role === 'trainer') return PAGES.teamClients.path;
   return role === 'client' ? PAGES.workouts.path : PAGES.dashboard.path;
 }
 

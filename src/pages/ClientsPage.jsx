@@ -12,6 +12,8 @@ import {
 } from '../services/coachClientService.js';
 import { listClearanceFlags } from '../services/assessmentService.js';
 import { clientLabel } from '../services/coachingUtils.js';
+import { getTeam, listAssignments } from '../services/teamService.js';
+import { TRAINER_FILTER_ALL, TRAINER_FILTER_NONE, assignmentIndex, filterClientsByTrainer, memberLabel } from '../services/teamUtils.js';
 
 const GOAL_LABELS = {
   fat_loss: 'goalFatLoss', muscle_gain: 'goalMuscleGain', strength: 'goalStrength',
@@ -23,6 +25,9 @@ export default function ClientsPage({ onNavigate, onNotify }) {
   const { locale, t } = useLocale();
   const [clients, setClients] = useState([]);
   const [invites, setInvites] = useState([]);
+  const [team, setTeam] = useState([]);
+  const [assignments, setAssignments] = useState([]);
+  const [trainerFilter, setTrainerFilter] = useState(TRAINER_FILTER_ALL);
   const [clearance, setClearance] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -32,7 +37,9 @@ export default function ClientsPage({ onNavigate, onNotify }) {
 
   async function refresh() {
     try {
-      const [clientRows, inviteRows, flagRows] = await Promise.all([listMyClients(), listOpenInvites(), listClearanceFlags().catch(() => [])]);
+      const [clientRows, inviteRows, flagRows, teamRows, assignmentRows] = await Promise.all([listMyClients(), listOpenInvites(), listClearanceFlags().catch(() => []), getTeam().catch(() => []), listAssignments().catch(() => [])]);
+      setTeam(teamRows);
+      setAssignments(assignmentRows);
       setClients(clientRows);
       setInvites(inviteRows);
       setClearance(Object.fromEntries(flagRows.filter((row) => row.medical_clearance_required).map((row) => [row.client_id, true])));
@@ -93,6 +100,8 @@ export default function ClientsPage({ onNavigate, onNotify }) {
   }
 
   const activeCount = clients.filter((client) => client.status === 'active').length;
+  const trainerIndex = assignmentIndex(assignments, team);
+  const visibleClients = filterClientsByTrainer(clients, trainerIndex, trainerFilter);
 
   return (
     <>
@@ -103,13 +112,23 @@ export default function ClientsPage({ onNavigate, onNotify }) {
             <div><span className="eyebrow">{t('clientRoster')}</span><h3>{t('clients')}</h3></div>
             <span className="soft-badge badge-muted">{activeCount} {t('activeClients')}</span>
           </div>
+          {team.length > 0 && (
+            <label className="trainer-filter">
+              <span>{t('tmFilterLabel')}</span>
+              <select className="field" value={trainerFilter} onChange={(event) => setTrainerFilter(event.target.value)}>
+                <option value={TRAINER_FILTER_ALL}>{t('tmFilterAll')}</option>
+                <option value={TRAINER_FILTER_NONE}>{t('tmFilterNone')}</option>
+                {team.filter((member) => member.status === 'active').map((member) => <option key={member.id} value={member.id}>{memberLabel(member)}</option>)}
+              </select>
+            </label>
+          )}
           {error && <div className="notice notice-error" role="alert">{t('clientsLoadError')} {error}</div>}
           {loading && <div className="empty-state" role="status">{t('loadingProgress')}</div>}
           {!loading && !error && clients.length === 0 && (
             <div className="dashboard-empty"><h3>{t('emptyClients')}</h3><p>{t('clientsEmptyHelp')}</p></div>
           )}
           <div className="clients-list">
-            {clients.map((client) => (
+            {visibleClients.map((client) => (
               <article className="client-row" key={client.client_id}>
                 <div className="client-row-main">
                   <div className="avatar avatar-blue" aria-hidden="true">{clientLabel(client).slice(0, 1).toUpperCase()}</div>
@@ -117,6 +136,7 @@ export default function ClientsPage({ onNavigate, onNotify }) {
                     <strong>{clientLabel(client)}</strong>
                     <small>{client.client_email} · {t('joinedOn')} {new Date(client.created_at).toLocaleDateString(locale)}</small>
                   </div>
+                  {trainerIndex.get(client.client_id) && <span className="soft-badge badge-cyan" title={t('tmTrainerBadge')}>{t('tmTrainerBadge')}: {memberLabel(trainerIndex.get(client.client_id))}</span>}
                   {clearance[client.client_id] && <span className="soft-badge badge-amber">{t('asmClearanceBadge')}</span>}
                   <span className={`soft-badge ${client.status === 'active' ? 'badge-blue' : 'badge-muted'}`}>{t(client.status === 'active' ? 'active' : 'archivedStatus')}</span>
                 </div>

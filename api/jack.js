@@ -12,7 +12,7 @@ async function loadAccess(userClient) {
   const { data, error } = await userClient.rpc('get_my_access_status');
   if (error || !data) throw new HttpError(403, 'Account details are not available.');
   if (!['coach', 'client'].includes(data.role)) throw new HttpError(403, 'Jack is available to coach and client accounts.');
-  if (data.role === 'coach' && !['trialing', 'active'].includes(data.access_state)) {
+  if (data.role === 'coach' && !['trialing', 'active', 'trainer'].includes(data.access_state)) {
     throw new HttpError(402, 'An active coach plan is required.');
   }
   return data;
@@ -35,16 +35,20 @@ export default handler(['POST'], async (req, res) => {
   // Fails with a 503 before any streaming starts when no AI key is configured.
   const model = createModelFromEnv();
 
+  // Assistant trainers are coach accounts working under a head coach; they get a much smaller toolbox.
+  const role = access.access_state === 'trainer' ? 'trainer' : access.role;
+
   const system = buildSystemPrompt({
-    role: access.role,
+    role,
     locale: request.locale,
     route: request.route,
     pageTitle: pageIdForRoute(request.route),
     name: access.brand_name || access.full_name || '',
-    summary: await buildContextSummary(access.role, userClient),
+    summary: await buildContextSummary(role, userClient),
     today: request.today,
+    utcOffsetMinutes: request.utcOffsetMinutes,
   });
-  const ctx = { user, userClient, access, role: access.role, today: request.today };
+  const ctx = { user, userClient, access, role, today: request.today, utcOffsetMinutes: request.utcOffsetMinutes };
 
   res.writeHead(200, {
     'Content-Type': 'application/x-ndjson; charset=utf-8',

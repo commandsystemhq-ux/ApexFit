@@ -1,5 +1,6 @@
 import { PAGES } from '../../src/routes.js';
 import { ENGAGEMENT_CLIENT_TOOLS, ENGAGEMENT_COACH_TOOLS } from './jackEngagementTools.js';
+import { GROWTH_CLIENT_TOOLS, GROWTH_COACH_TOOLS } from './jackGrowthTools.js';
 import { ToolError, matchOne, requireText } from './jackShared.js';
 import { normalizeBodyMetric } from '../../src/services/clientTrackingUtils.js';
 import {
@@ -18,8 +19,10 @@ const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const STALE_DAYS = 2;
 
 export function navigablePages(role) {
+  // Assistant trainers have their own workspace; the community pages are not part of it.
+  const shared = (id, page) => page.access === 'any' && (role !== 'trainer' || id === 'settings');
   return Object.entries(PAGES)
-    .filter(([, page]) => page.access === role || page.access === 'any')
+    .filter(([id, page]) => page.access === role || shared(id, page))
     .map(([id]) => id);
 }
 
@@ -88,7 +91,7 @@ export function summarizeCoachOverview(overview) {
 
 const NAVIGATE_TOOL = {
   name: 'navigate_to',
-  roles: ['coach', 'client'],
+  roles: ['coach', 'client', 'trainer'],
   description: 'Open a page of the app for the user. Use when they ask where something is or to go somewhere.',
   parameters: (role) => ({
     type: 'object',
@@ -370,8 +373,10 @@ const CLIENT_TOOLS = [
 const ALL_TOOLS = [
   ...COACH_TOOLS,
   ...ENGAGEMENT_COACH_TOOLS,
+  ...GROWTH_COACH_TOOLS,
   ...CLIENT_TOOLS.filter((tool) => tool !== NAVIGATE_TOOL),
   ...ENGAGEMENT_CLIENT_TOOLS,
+  ...GROWTH_CLIENT_TOOLS,
 ];
 
 export function toolsForRole(role) {
