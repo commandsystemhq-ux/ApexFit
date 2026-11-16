@@ -20,7 +20,7 @@ APEXFIT PAGES FOR COACHES
 - Groups (${PAGES.groups.path}): group coaching. Create groups such as a 90-day challenge, add or remove active clients, give the whole group one program with "Assign to the whole group" (clients who join later get it automatically), and post updates only the members see.
 - Contracts (${PAGES.contracts.path}): create contracts and liability waivers (two ready templates), optionally required during onboarding. Clients sign by typing their name and drawing a signature; the coach sees who signed and can open the signed copy. Once someone has signed, the wording is locked: archive it and create a new version to change it.
 - Team (${PAGES.team.path}): invite assistant trainers by email, choose what each may do (assign programs, view health assessments, follow and send messages, manage groups for their clients) and give them clients. The trainer signs in as a coach with the invited email and accepts. A trainer only ever sees their own clients; you keep full access. Clients show a Trainer badge and can be filtered by trainer.
-- Video sessions (${PAGES.sessions.path}): schedule one-to-one or group video calls with Zoom, Google Meet or any https link. With Zoom connected on the server a Zoom meeting is created automatically; otherwise paste the link. Clients get a notification and a Join button with a countdown.
+- Video sessions (${PAGES.sessions.path}): schedule one-to-one or group video calls. The default is the built-in ApexFit Live room: no link and no extra account, the coach and the clients all join a video room inside ApexFit (camera, microphone, screen sharing) with the Join Live Room button, and End call returns to the app. Zoom, Google Meet or any https link are optional; with Zoom connected on the server a Zoom meeting can be created automatically. Clients get a notification and a Join button with a countdown.
 - Schedule (${PAGES.schedule.path}): plan in-person training sessions and sync them with Google Calendar.
 - Store (${PAGES.store.path}): sell ready-made programs. Pick a program, set a price (0 = free) and currency, publish it. Clients of the coach buy it in their Store; paid items go through Stripe Checkout and the program is assigned automatically after payment. You see sales, revenue and a public store link to share (anyone can browse it, only your clients can buy).
 - Packages & invoices (${PAGES.invoicing.path}): sell session packages, issue invoices, and get paid through Stripe.
@@ -46,7 +46,7 @@ APEXFIT PAGES FOR CLIENTS
 - Habits (${PAGES.habits.path}): log sleep hours, water and steps.
 - Intake form (${PAGES.intake.path}): onboarding questionnaire (goals, experience, injuries, equipment) that the coach reads.
 - Health assessment (${PAGES.assessments.path}): the seven standard PAR-Q yes/no health questions plus fitness goals and past injuries. It is sent to the coach. If any answer is Yes, the app asks the client to get a doctor's approval before training; never diagnose, only encourage seeing a doctor.
-- Video sessions (${PAGES.mySessions.path}): upcoming live sessions with the coach (one-to-one or a group you are in), a countdown, and a Join session button that opens the meeting link.
+- Video sessions (${PAGES.mySessions.path}): upcoming live sessions with the coach (one-to-one or a group you are in) and a countdown. For ApexFit Live sessions the Join Live Room button opens the video room inside the app 10 minutes before the start; allow camera and microphone when the browser asks, and use End call to come back. Sessions on Zoom or Meet open their link in a new tab.
 - Store (${PAGES.myStore.path}): programs the coach sells. Free ones are added instantly; paid ones open a secure Stripe checkout. Bought programs stay in My purchased programs on the same page.
 - Contracts (${PAGES.myContracts.path}): agreements and waivers from the coach. Open one, read it, type your full name, draw your signature with a finger or mouse, tick the agreement box and press Sign. A signed contract shows Signed and can be viewed again.
 - My groups (${PAGES.myGroups.path}): coaching groups the client was added to, with the shared program and the coach's updates.
@@ -57,7 +57,7 @@ CLIENT HOW-TOS
 - Earn points and level up: log workouts, meals, habits and measurements regularly.
 - Share a win: Community -> post an update or share an earned badge.
 - Finish onboarding: fill in the Health assessment and sign any required Contracts.
-- Join a live session: Video sessions -> Join session now.
+- Join a live session: Video sessions -> Join Live Room (or Join session now for Zoom/Meet), then allow camera and microphone.
 - Buy a program: Store -> Buy (you can only buy from your own coach).`;
 
 const TRAINER_GUIDE = `

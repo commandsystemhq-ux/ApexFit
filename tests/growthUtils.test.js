@@ -162,7 +162,7 @@ test('the session form validates audience, time, duration and link, and knows wh
   assert.equal(validateSessionForm({ ...base, id: 's1', scheduledAt: toDatetimeLocal(new Date(NOW - 5 * 3_600_000)) }, { now: NOW }).valid, true, 'editing a past session is allowed');
   assert.equal(validateSessionForm({ ...base, meetingUrl: 'https://zoom.us/j/1' , provider: 'google_meet' }, { now: NOW }).errors.meetingUrl, 'vsErrLinkProvider');
   assert.equal(validateSessionForm({ ...base, duration: '481' }, { now: NOW }).errors.duration, 'vsErrDuration');
-  assert.equal(emptySessionDraft().provider, 'zoom');
+  assert.equal(emptySessionDraft().provider, 'apexfit_live', 'the built-in room is the default');
 });
 
 test('date-time inputs round-trip through ISO strings', () => {
@@ -262,7 +262,7 @@ test('scheduleVideoSession keeps its promises with Zoom and the database mocked'
   const context = (error) => ({ userClient: { rpc: async (name, args) => { calls.push(`${name}:${args.p_meeting_url}`); return error ? { data: null, error: { message: error } } : { data: 'session-1', error: null }; } } });
 
   const ok = await scheduleVideoSession(context(null), { ...base, provider: 'zoom' }, deps());
-  assert.deepEqual(ok, { id: 'session-1', meetingUrl: 'https://us02web.zoom.us/j/7', passcode: 'p7', provider: 'zoom', generated: true, notified: true });
+  assert.deepEqual(ok, { id: 'session-1', meetingUrl: 'https://us02web.zoom.us/j/7', passcode: 'p7', provider: 'zoom', generated: true, notified: true, roomPath: null });
   assert.deepEqual(calls, ['create', 'schedule_video_session:https://us02web.zoom.us/j/7', 'notify']);
 
   calls.length = 0;

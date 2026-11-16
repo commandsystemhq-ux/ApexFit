@@ -76,7 +76,8 @@ test('parseWhen understands local times, explicit zones and rejects nonsense', (
   assert.equal(inferProvider(undefined, 'https://us02web.zoom.us/j/1'), 'zoom');
   assert.equal(inferProvider(undefined, 'https://meet.google.com/abc-defg-hij'), 'google_meet');
   assert.equal(inferProvider(undefined, 'https://video.example.org/x'), 'custom');
-  assert.equal(inferProvider(undefined, ''), 'zoom');
+  assert.equal(inferProvider(undefined, ''), 'apexfit_live', 'no link means the built-in room');
+  assert.equal(inferProvider('apexfit_live', 'https://us02web.zoom.us/j/1'), 'apexfit_live');
   assert.equal(inferProvider('custom', 'https://us02web.zoom.us/j/1'), 'custom');
 });
 
@@ -170,7 +171,7 @@ test('schedule_video_session explains problems instead of guessing, and cleans u
 
   const offline = coach();
   offline.videoDeps = { ...videoDeps(), zoom: { ...videoDeps().zoom, isConfigured: () => false } };
-  assert.match((await executeTool('schedule_video_session', { ...base, client: 'Omar' }, offline)).error, /Zoom is not configured/);
+  assert.match((await executeTool('schedule_video_session', { ...base, client: 'Omar', provider: 'zoom' }, offline)).error, /Zoom is not configured/);
   assert.match((await executeTool('schedule_video_session', { ...base, client: 'Omar', meeting_url: 'http://zoom.us/j/1' }, offline)).error, /https/);
   assert.match((await executeTool('schedule_video_session', { ...base, client: 'Omar', provider: 'google_meet', meeting_url: 'https://us02web.zoom.us/j/1' }, offline)).error, /does not match/);
   assert.equal(await count('select count(*) as n from public.video_sessions'), 0);

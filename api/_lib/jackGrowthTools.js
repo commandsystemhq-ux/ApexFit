@@ -20,11 +20,12 @@ export function parseWhen(value, utcOffsetMinutes = 0) {
   return new Date(time);
 }
 
+// Without a link the built-in ApexFit Live room is used; a pasted link picks its own provider.
 export function inferProvider(provider, url) {
-  if (['zoom', 'google_meet', 'custom'].includes(provider)) return provider;
+  if (['apexfit_live', 'zoom', 'google_meet', 'custom'].includes(provider)) return provider;
   if (url && linkMatchesProvider('zoom', url)) return 'zoom';
   if (url && linkMatchesProvider('google_meet', url)) return 'google_meet';
-  return url ? 'custom' : 'zoom';
+  return url ? 'custom' : 'apexfit_live';
 }
 
 async function activeClients(ctx) {
@@ -112,7 +113,7 @@ export const GROWTH_COACH_TOOLS = [
   {
     name: 'schedule_video_session',
     roles: ['coach'],
-    description: 'Schedule a live video session for one client or one group and notify them. For Zoom without a link, a meeting is created automatically when Zoom is connected; otherwise a link is required.',
+    description: 'Schedule a live video session for one client or one group and notify them. By default it uses the built-in ApexFit Live room (no link needed; everyone joins inside the app). Zoom, Google Meet or another https link are optional; Zoom without a link is created automatically when Zoom is connected.',
     parameters: () => ({
       type: 'object',
       properties: {
@@ -121,8 +122,8 @@ export const GROWTH_COACH_TOOLS = [
         title: { type: 'string' },
         when: { type: 'string', description: 'Start time as ISO 8601, for example 2026-11-20T18:00 (the user\'s local time) or with a zone offset.' },
         duration_minutes: { type: 'integer', description: 'Defaults to 60.' },
-        provider: { type: 'string', enum: ['zoom', 'google_meet', 'custom'] },
-        meeting_url: { type: 'string', description: 'https meeting link. Optional for Zoom when Zoom is connected.' },
+        provider: { type: 'string', enum: ['apexfit_live', 'zoom', 'google_meet', 'custom'], description: 'Defaults to apexfit_live, the built-in room.' },
+        meeting_url: { type: 'string', description: 'https meeting link, only for Zoom, Google Meet or custom. Leave empty for the built-in room.' },
         passcode: { type: 'string' },
         description: { type: 'string' },
       },
@@ -160,7 +161,8 @@ export const GROWTH_COACH_TOOLS = [
       return {
         result: {
           scheduled: true, session_id: result.id, with: audience, starts_at_utc: startsAt.toISOString(),
-          provider: result.provider, meeting_url: result.meetingUrl, link_generated_automatically: result.generated, clients_notified: result.notified,
+          provider: result.provider, meeting_url: result.meetingUrl, in_app_room: result.provider === 'apexfit_live', room_page: result.roomPath,
+          link_generated_automatically: result.generated, clients_notified: result.notified,
         },
       };
     },
@@ -212,9 +214,12 @@ export const GROWTH_CLIENT_TOOLS = [
         title: session.title, starts_at_utc: new Date(session.scheduled_at).toISOString(), minutes: session.duration_minutes,
         provider: session.provider, group: session.group_name || null, coach: session.coach_name || null, status: session.status,
       });
+      const joinInfo = (session) => (session.provider === 'apexfit_live'
+        ? { join_in_app: `/sessions/${session.id}/room`, join_url: null, passcode: null }
+        : { join_url: session.meeting_url, passcode: session.meeting_passcode || null });
       return {
         result: {
-          upcoming: upcoming.slice(0, 5).map((session) => ({ ...brief(session), join_url: session.meeting_url, passcode: session.meeting_passcode || null })),
+          upcoming: upcoming.slice(0, 5).map((session) => ({ ...brief(session), ...joinInfo(session) })),
           recent: past.slice(0, 3).map(brief),
           open_page: 'mySessions',
         },

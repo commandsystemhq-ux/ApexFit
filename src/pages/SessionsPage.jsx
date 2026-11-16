@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import Button from '../components/Button.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
@@ -15,11 +16,13 @@ import {
   setVideoSessionStatus,
   updateVideoSession,
 } from '../services/sessionService.js';
+import { LIVE_PROVIDER, roomAccess, roomPath } from '../services/liveRoom.js';
 import {
   SESSION_LIMITS,
   SESSION_PROVIDERS,
   emptySessionDraft,
   isValidMeetingUrl,
+  needsMeetingLink,
   providerLabelKey,
   sessionPhase,
   toDatetimeLocal,
@@ -34,6 +37,7 @@ function SessionForm({ initial, clients, groups, zoomConfigured, saving, onSave,
   const errors = attempted ? check.errors : {};
   const set = (field) => (event) => setDraft((current) => ({ ...current, [field]: event.target.value }));
   const fieldError = (key) => key && <span className="field-error" role="alert">{t(key)}</span>;
+  const external = needsMeetingLink(draft.provider);
   const canGenerate = draft.provider === 'zoom' && zoomConfigured && !draft.id;
 
   function handleSubmit(event) {
@@ -99,17 +103,22 @@ function SessionForm({ initial, clients, groups, zoomConfigured, saving, onSave,
         </select>
         {fieldError(errors.provider)}
       </label>
+      {!external && <div className="notice notice-info">{t('vsLiveHelp')}</div>}
+      {external && (
       <label className="form-label">
         <span>{t('vsFieldLink')}</span>
         <input className="field" dir="ltr" value={draft.meetingUrl} placeholder={canGenerate ? t('vsAutoLink') : t('vsLinkPlaceholder')} onChange={set('meetingUrl')} aria-invalid={Boolean(errors.meetingUrl)} />
         {draft.provider === 'zoom' && <small className="muted-copy">{canGenerate ? t('vsAutoLinkHelp') : t('vsZoomManual')}</small>}
         {fieldError(errors.meetingUrl)}
       </label>
+      )}
+      {external && (
       <label className="form-label">
         <span>{t('vsFieldPasscode')}</span>
         <input className="field" dir="ltr" value={draft.passcode} maxLength={SESSION_LIMITS.passcode + 10} onChange={set('passcode')} />
         {fieldError(errors.passcode)}
       </label>
+      )}
       <div className="wf-actions">
         <Button type="submit" variant="primary" disabled={saving}>{draft.id ? (saving ? t('vsSaving') : t('vsSave')) : (saving ? t('vsScheduling') : t('vsSchedule'))}</Button>
         <Button type="button" variant="secondary" onClick={onCancel} disabled={saving}>{t('vsCancelEdit')}</Button>
@@ -207,14 +216,17 @@ export default function SessionsPage() {
           <span dir="auto">{audience}</span>
           <time dateTime={session.scheduled_at}>{new Date(session.scheduled_at).toLocaleString(locale)}</time>
           <span>{session.duration_minutes} {t('vsMinutes')}</span>
-          {session.meeting_passcode && <span dir="ltr">{t('vsPasscode')}: {session.meeting_passcode}</span>}
+          {session.provider !== LIVE_PROVIDER && session.meeting_passcode && <span dir="ltr">{t('vsPasscode')}: {session.meeting_passcode}</span>}
         </div>
         {session.description && <p className="muted-copy" dir="auto">{session.description}</p>}
         <div className="template-actions">
-          {isValidMeetingUrl(session.meeting_url) && session.status === 'scheduled' && (
+          {session.provider === LIVE_PROVIDER && roomAccess(session, 'coach', now) === 'open' && (
+            <Link className="button button-primary button-small" to={roomPath(session.id)}>{t('vsStartRoom')}</Link>
+          )}
+          {session.provider !== LIVE_PROVIDER && isValidMeetingUrl(session.meeting_url) && session.status === 'scheduled' && (
             <a className="button button-primary button-small" href={session.meeting_url} target="_blank" rel="noopener noreferrer">{t('vsOpenMeeting')}</a>
           )}
-          <button className="text-action" type="button" onClick={() => setDraft(emptySessionDraft({ id: session.id, audience: session.group_id ? 'group' : 'client', clientId: session.client_id || '', groupId: session.group_id || '', title: session.title, description: session.description, scheduledAt: toDatetimeLocal(session.scheduled_at), duration: String(session.duration_minutes), provider: session.provider, meetingUrl: session.meeting_url, passcode: session.meeting_passcode, autoLink: false }))}>{t('vsEdit')}</button>
+          <button className="text-action" type="button" onClick={() => setDraft(emptySessionDraft({ id: session.id, audience: session.group_id ? 'group' : 'client', clientId: session.client_id || '', groupId: session.group_id || '', title: session.title, description: session.description, scheduledAt: toDatetimeLocal(session.scheduled_at), duration: String(session.duration_minutes), provider: session.provider, meetingUrl: session.meeting_url || '', passcode: session.meeting_passcode || '', autoLink: false }))}>{t('vsEdit')}</button>
           {session.status === 'scheduled' && <button className="text-action" type="button" disabled={busyId === session.id} onClick={() => run(session, () => setVideoSessionStatus(session.id, 'completed'), 'vsUpdated')}>{t('vsComplete')}</button>}
           {session.status === 'scheduled' && <button className="text-action" type="button" disabled={busyId === session.id} onClick={() => window.confirm(t('vsCancelConfirm')) && run(session, () => setVideoSessionStatus(session.id, 'cancelled'), 'vsUpdated')}>{t('vsCancel')}</button>}
           <button className="text-action wf-danger" type="button" disabled={busyId === session.id} onClick={() => window.confirm(t('vsDeleteConfirm')) && run(session, () => deleteVideoSession(session.id), 'vsDeleted')}>{t('vsDelete')}</button>

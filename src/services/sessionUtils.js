@@ -1,9 +1,14 @@
-export const SESSION_PROVIDERS = ['zoom', 'google_meet', 'custom'];
+export const SESSION_PROVIDERS = ['apexfit_live', 'zoom', 'google_meet', 'custom'];
 export const SESSION_LIMITS = { title: 120, description: 1000, passcode: 50, minDuration: 5, maxDuration: 480 };
 export const JOIN_OPENS_MINUTES = 10;
 
 const ZOOM_HOST = /^https:\/\/([a-z0-9-]+\.)*(zoom\.us|zoom\.com|zoomgov\.com)(\/|\?|$)/i;
 const MEET_HOST = /^https:\/\/meet\.google\.com(\/|\?|$)/i;
+
+// The built-in ApexFit Live room has no external link; every other provider does.
+export function needsMeetingLink(provider) {
+  return provider !== 'apexfit_live';
+}
 
 export function isValidMeetingUrl(url) {
   return typeof url === 'string' && url.length <= 500 && /^https:\/\/[^\s<>"]+$/.test(url);
@@ -33,7 +38,7 @@ export function fromDatetimeLocal(value) {
 export function emptySessionDraft(overrides = {}) {
   return {
     id: null, audience: 'client', clientId: '', groupId: '', title: '', description: '',
-    scheduledAt: '', duration: '60', provider: 'zoom', meetingUrl: '', passcode: '', autoLink: true, ...overrides,
+    scheduledAt: '', duration: '60', provider: 'apexfit_live', meetingUrl: '', passcode: '', autoLink: true, ...overrides,
   };
 }
 
@@ -55,12 +60,12 @@ export function validateSessionForm(form, { zoomConfigured = false, now = Date.n
   else if (!form.id && new Date(scheduledAt).getTime() < now - 3_600_000) errors.scheduledAt = 'vsErrPast';
   if (!Number.isInteger(duration) || duration < SESSION_LIMITS.minDuration || duration > SESSION_LIMITS.maxDuration) errors.duration = 'vsErrDuration';
   if (!SESSION_PROVIDERS.includes(form.provider)) errors.provider = 'vsErrProvider';
-  if (!generate) {
+  if (needsMeetingLink(form.provider) && !generate) {
     if (!url) errors.meetingUrl = 'vsErrLink';
     else if (!isValidMeetingUrl(url)) errors.meetingUrl = 'vsErrLinkSecure';
     else if (!linkMatchesProvider(form.provider, url)) errors.meetingUrl = 'vsErrLinkProvider';
   }
-  if (passcode.length > SESSION_LIMITS.passcode) errors.passcode = 'vsErrPasscode';
+  if (needsMeetingLink(form.provider) && passcode.length > SESSION_LIMITS.passcode) errors.passcode = 'vsErrPasscode';
 
   return {
     valid: Object.keys(errors).length === 0,
@@ -75,8 +80,8 @@ export function validateSessionForm(form, { zoomConfigured = false, now = Date.n
       scheduledAt,
       durationMinutes: duration,
       provider: form.provider,
-      meetingUrl: url,
-      passcode,
+      meetingUrl: needsMeetingLink(form.provider) ? url : '',
+      passcode: needsMeetingLink(form.provider) ? passcode : '',
     },
   };
 }

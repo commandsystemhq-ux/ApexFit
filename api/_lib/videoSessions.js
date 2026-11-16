@@ -2,7 +2,7 @@ import { HttpError } from './http.js';
 import { notifyRecipients } from './pushNotify.js';
 import { createMeeting, deleteMeeting, isZoomConfigured, ZoomError } from './zoom.js';
 
-const PROVIDERS = ['zoom', 'google_meet', 'custom'];
+const PROVIDERS = ['apexfit_live', 'zoom', 'google_meet', 'custom'];
 
 const defaults = {
   zoom: { isConfigured: isZoomConfigured, createMeeting, deleteMeeting },
@@ -19,16 +19,18 @@ export async function scheduleVideoSession(context, input, deps = defaults) {
   const zoom = deps.zoom || defaults.zoom;
   const notify = deps.notify || defaults.notify;
 
-  const provider = PROVIDERS.includes(input.provider) ? input.provider : 'custom';
+  // The built-in ApexFit Live room is the default; it needs no link and no external account.
+  const provider = input.provider === undefined || input.provider === null ? 'apexfit_live' : PROVIDERS.includes(input.provider) ? input.provider : 'custom';
+  const live = provider === 'apexfit_live';
   const scheduledAt = new Date(input.scheduledAt);
   if (Number.isNaN(scheduledAt.getTime())) throw new HttpError(400, 'Choose a date and time for the session.');
   if (scheduledAt.getTime() < Date.now() - 3_600_000) throw new HttpError(400, 'Choose a date and time in the future.');
   const duration = Number(input.durationMinutes ?? 60);
-  let meetingUrl = text(input.meetingUrl, 500);
-  let passcode = text(input.passcode, 50);
+  let meetingUrl = live ? '' : text(input.meetingUrl, 500);
+  let passcode = live ? '' : text(input.passcode, 50);
   let createdMeeting = null;
 
-  if (!meetingUrl) {
+  if (!live && !meetingUrl) {
     if (provider !== 'zoom') throw new HttpError(400, 'Add the meeting link.');
     if (!zoom.isConfigured()) throw new HttpError(503, 'Zoom is not configured. Paste a meeting link instead.');
     try {
@@ -55,7 +57,7 @@ export async function scheduleVideoSession(context, input, deps = defaults) {
     p_scheduled_at: scheduledAt.toISOString(),
     p_duration_minutes: duration,
     p_provider: provider,
-    p_meeting_url: meetingUrl,
+    p_meeting_url: live ? null : meetingUrl,
     p_meeting_passcode: passcode,
   });
   if (error) {
@@ -67,5 +69,5 @@ export async function scheduleVideoSession(context, input, deps = defaults) {
   if (input.notify !== false) {
     notified = await notify(context, 'video', data).then(() => true).catch(() => false);
   }
-  return { id: data, meetingUrl, passcode, provider, generated: Boolean(createdMeeting), notified };
+  return { id: data, meetingUrl: live ? null : meetingUrl, passcode, provider, generated: Boolean(createdMeeting), notified, roomPath: live ? `/sessions/${data}/room` : null };
 }

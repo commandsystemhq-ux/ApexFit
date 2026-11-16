@@ -1,12 +1,19 @@
 import { callApi } from './apiClient.js';
 import { requireSupabase } from './supabaseClient.js';
 
-const SESSION_FIELDS = 'id,client_id,group_id,title,description,scheduled_at,duration_minutes,provider,meeting_url,meeting_passcode,status,created_at';
+const SESSION_FIELDS = 'id,client_id,group_id,title,description,scheduled_at,duration_minutes,provider,meeting_url,meeting_passcode,room_name,status,created_at';
 
 export async function listVideoSessions() {
   const { data, error } = await requireSupabase().from('video_sessions').select(SESSION_FIELDS).order('scheduled_at', { ascending: false }).limit(200);
   if (error) throw error;
   return data || [];
+}
+
+// One session, if the signed-in user may see it (the coach who owns it, the client, or a member of the group).
+export async function getVideoSession(sessionId) {
+  const { data, error } = await requireSupabase().from('video_sessions').select(SESSION_FIELDS).eq('id', sessionId).maybeSingle();
+  if (error) throw error;
+  return data;
 }
 
 export async function getMyVideoSessions() {

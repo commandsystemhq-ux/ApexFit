@@ -1,7 +1,7 @@
-import { lazy, useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import AppShell from './components/AppShell.jsx';
-import { ClientOnly, CoachOnly, LandingGate, PublicOnly, RequireAuth, TrainerOnly, TrialGate } from './components/RouteGuards.jsx';
+import { ClientOnly, CoachOnly, FullPageLoader, LandingGate, PublicOnly, RequireAuth, TrainerOnly, TrialGate } from './components/RouteGuards.jsx';
 import PublicStorePage from './pages/PublicStorePage.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
@@ -18,6 +18,7 @@ const MyStorePage = lazy(() => import('./pages/MyStorePage.jsx'));
 const TeamPage = lazy(() => import('./pages/TeamPage.jsx'));
 const TeamClientsPage = lazy(() => import('./pages/TeamClientsPage.jsx'));
 const SessionsPage = lazy(() => import('./pages/SessionsPage.jsx'));
+const LiveRoomPage = lazy(() => import('./pages/LiveRoomPage.jsx'));
 const MySessionsPage = lazy(() => import('./pages/MySessionsPage.jsx'));
 const ContractsPage = lazy(() => import('./pages/ContractsPage.jsx'));
 const AssessmentPage = lazy(() => import('./pages/AssessmentPage.jsx'));
@@ -68,6 +69,7 @@ export default function App() {
         </Route>
 
         <Route element={<RequireAuth />}>
+          <Route path="/sessions/:sessionId/room" element={<Suspense fallback={<FullPageLoader />}><LiveRoomPage /></Suspense>} />
           <Route element={<AppShell />}>
             <Route element={<CoachOnly />}>
               <Route path={PAGES.dashboard.path} element={<DashboardPage onNavigate={go} />} />

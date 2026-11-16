@@ -1,13 +1,17 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import PageHeader from '../components/PageHeader.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
+import { LIVE_PROVIDER, roomAccess, roomPath } from '../services/liveRoom.js';
 import { getMyVideoSessions } from '../services/sessionService.js';
 import { countdownParts, formatCountdown, isValidMeetingUrl, providerLabelKey, sessionPhase, splitSessions } from '../services/sessionUtils.js';
 
 function SessionCard({ session, now }) {
   const { t, locale } = useLocale();
   const phase = sessionPhase(session, now);
-  const joinable = ['upcoming', 'soon', 'live'].includes(phase) && isValidMeetingUrl(session.meeting_url);
+  const isLive = session.provider === LIVE_PROVIDER;
+  const roomOpen = isLive && roomAccess(session, 'client', now) === 'open';
+  const joinable = !isLive && ['upcoming', 'soon', 'live'].includes(phase) && isValidMeetingUrl(session.meeting_url);
 
   return (
     <article className={`panel session-card ${phase === 'live' ? 'is-live' : ''} ${['cancelled', 'ended'].includes(phase) ? 'is-archived' : ''}`}>
@@ -17,7 +21,7 @@ function SessionCard({ session, now }) {
           {phase === 'live' && <span className="soft-badge badge-green">{t('vsLiveNow')}</span>}
           {phase === 'soon' && <span className="soft-badge badge-amber">{t('vsPhase_soon')}</span>}
           {session.group_name && <span className="soft-badge badge-blue">{t('vsGroupSession')}: {session.group_name}</span>}
-          <span className="soft-badge badge-muted">{t(providerLabelKey(session.provider))}</span>
+          <span className={`soft-badge ${isLive ? 'badge-cyan' : 'badge-muted'}`}>{isLive ? t('vsInAppBadge') : t(providerLabelKey(session.provider))}</span>
           {['completed', 'cancelled'].includes(session.status) && <span className="soft-badge badge-muted">{t(`vsStatus_${session.status}`)}</span>}
           {phase === 'ended' && <span className="soft-badge badge-muted">{t('vsEnded')}</span>}
         </div>
@@ -33,6 +37,13 @@ function SessionCard({ session, now }) {
         <div className="session-countdown" role="timer" aria-live="off">
           <span>{t('vsStartsIn')}</span>
           <strong dir="ltr">{formatCountdown(countdownParts(session.scheduled_at, now))}</strong>
+        </div>
+      )}
+      {isLive && ['upcoming', 'soon', 'live'].includes(phase) && (
+        <div className="template-actions">
+          {roomOpen
+            ? <Link className="button button-primary" to={roomPath(session.id)}>{t('vsJoinLive')}</Link>
+            : <small className="muted-copy">{t('vsJoinLiveOpens')}</small>}
         </div>
       )}
       {session.meeting_passcode && joinable && <small className="muted-copy" dir="ltr">{t('vsPasscode')}: <code>{session.meeting_passcode}</code></small>}
