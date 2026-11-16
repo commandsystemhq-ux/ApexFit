@@ -6,8 +6,7 @@ import { executeTool } from '../api/_lib/jackTools.js';
 import { buildSystemPrompt } from '../api/_lib/jackKnowledge.js';
 import { supportedLocales, translations } from '../src/i18n/translations.js';
 import {
-  DEFAULT_JITSI_DOMAIN, JOIN_GRACE_MINUTES, LIVE_PROVIDER, ROOM_IFRAME_ALLOW, buildRoomUrl, isValidRoomName, resolveJitsiDomain,
-  roomAccess, roomNameFor, roomPath, sanitizeDisplayName,
+  JOIN_GRACE_MINUTES, LIVE_PROVIDER, isValidRoomName, roomAccess, roomNameFor, roomPath, sanitizeDisplayName,
 } from '../src/services/liveRoom.js';
 import { SESSION_PROVIDERS, emptySessionDraft, needsMeetingLink, providerLabelKey, validateSessionForm } from '../src/services/sessionUtils.js';
 import { addUser, createTestDatabase, createUserClient } from './helpers/pgliteSupabase.js';
@@ -41,15 +40,6 @@ test('room names are derived from the session id and strictly validated', () => 
   assert.equal(roomPath(SESSION_ID), `/sessions/${SESSION_ID}/room`);
 });
 
-test('the Jitsi host is a plain domain, defaulting to meet.jit.si', () => {
-  assert.equal(resolveJitsiDomain(undefined), DEFAULT_JITSI_DOMAIN);
-  assert.equal(resolveJitsiDomain('meet.example.com'), 'meet.example.com');
-  assert.equal(resolveJitsiDomain(' https://Video.Example.org/ '), 'video.example.org');
-  for (const bad of ['javascript:alert(1)', 'evil.com/path', 'a b.com', 'localhost', 'http://x.com', '8x8.vc@evil.com', '']) {
-    assert.equal(resolveJitsiDomain(bad), DEFAULT_JITSI_DOMAIN, bad);
-  }
-});
-
 test('display names are cleaned before they are shown to everyone in the room', () => {
   assert.equal(sanitizeDisplayName('  Sara   Ali '), 'Sara Ali');
   assert.equal(sanitizeDisplayName('<img src=x onerror=1>Sara'), 'img src=x onerror=1 Sara');
@@ -57,29 +47,6 @@ test('display names are cleaned before they are shown to everyone in the room', 
   assert.equal(sanitizeDisplayName(''), 'ApexFit');
   assert.equal(sanitizeDisplayName(null, 'Guest'), 'Guest');
   assert.equal(sanitizeDisplayName('x'.repeat(200)).length, 60);
-});
-
-test('the room address carries the room, the participant name and call options', () => {
-  const url = buildRoomUrl({ roomName: roomNameFor(SESSION_ID), displayName: 'Sara Ali', subject: 'Form check' });
-  const [base, fragment] = url.split('#');
-  assert.equal(base, `https://meet.jit.si/apexfit-session-${SESSION_ID}`);
-  const options = Object.fromEntries(fragment.split('&').map((pair) => {
-    const [key, value] = pair.split('=');
-    return [key, JSON.parse(decodeURIComponent(value))];
-  }));
-  assert.equal(options['userInfo.displayName'], 'Sara Ali');
-  assert.equal(options['config.subject'], 'Form check');
-  assert.equal(options['config.startWithAudioMuted'], false);
-  assert.equal(options['config.startWithVideoMuted'], false);
-  assert.equal(options['config.disableDeepLinking'], true);
-
-  assert.equal(buildRoomUrl({ domain: 'meet.example.com', roomName: roomNameFor(SESSION_ID), displayName: 'A' }).startsWith('https://meet.example.com/apexfit-session-'), true);
-  assert.equal(buildRoomUrl({ roomName: 'not-a-room', displayName: 'A' }), null, 'no address for an invalid room');
-  const tricky = buildRoomUrl({ roomName: roomNameFor(SESSION_ID), displayName: 'A&b#c=d' });
-  assert.equal(tricky.split('#').length, 2, 'a # in a name cannot start a second fragment');
-  assert.equal(tricky.split('#')[1].split('&').length, 6, 'a & in a name cannot add an extra option');
-  assert.ok(tricky.includes('A%26b%23c%3Dd'));
-  for (const permission of ['camera', 'microphone', 'fullscreen', 'display-capture', 'autoplay']) assert.ok(ROOM_IFRAME_ALLOW.includes(permission), permission);
 });
 
 test('the room opens 10 minutes early for clients, any time for the coach, and closes after the session', () => {
@@ -147,7 +114,7 @@ test('the server defaults to the built-in room and never calls Zoom for it', asy
 
 test('the built-in room is described for every language and for Jack', () => {
   for (const locale of supportedLocales) {
-    for (const key of ['vsProvider_apexfit_live', 'vsLiveHelp', 'vsJoinLive', 'vsJoinLiveOpens', 'vsStartRoom', 'vsInAppBadge', 'lrEndCall', 'lrRoomTitle', 'lrEarlyTitle', 'lrEarlyBody', 'lrClosedTitle', 'lrClosedBody', 'lrUnavailableTitle', 'lrNotFound', 'lrLoadError', 'lrCameraHint', 'lrOpenNewTab', 'lrBackToSessions']) {
+    for (const key of ['vsProvider_apexfit_live', 'vsLiveHelp', 'vsJoinLive', 'vsJoinLiveOpens', 'vsStartRoom', 'vsInAppBadge', 'lrEndCall', 'lrRoomTitle', 'lrEarlyTitle', 'lrEarlyBody', 'lrClosedTitle', 'lrClosedBody', 'lrUnavailableTitle', 'lrNotFound', 'lrLoadError', 'lrBackToSessions', 'rmShare', 'rmMute', 'rmRetry', 'rmWaiting', 'rmConnected']) {
       assert.ok(translations[locale][key], `${key} (${locale})`);
     }
   }
@@ -301,4 +268,113 @@ test('Jack schedules a built-in room session by default and reports the room pag
   const mine = await executeTool('get_my_sessions', {}, context(ids.omar, 'client'));
   assert.equal(mine.ok, true, mine.error);
   assert.deepEqual(mine.result.upcoming.map((item) => [item.title, item.join_in_app, item.join_url]), [['Live check-in', `/sessions/${booked.result.session_id}/room`, null]]);
+});
+
+// ------------------------------------------- signaling channel access (Realtime)
+
+async function asRealtime(userId, topic, sql, params = []) {
+  await db.query("select set_config('test.uid', $1, false)", [userId]);
+  await db.query("select set_config('realtime.topic', $1, false)", [topic ?? '']);
+  await db.exec('set role authenticated');
+  try {
+    return await db.query(sql, params);
+  } finally {
+    await db.exec('reset role');
+    await db.query("select set_config('test.uid', '', false)");
+    await db.query("select set_config('realtime.topic', '', false)");
+  }
+}
+const canSend = async (userId, topic, extension = 'broadcast') => {
+  try {
+    await asRealtime(userId, topic, 'insert into realtime.messages (topic, extension, payload) values ($1, $2, $3)', [topic, extension, '{}']);
+    return true;
+  } catch (error) {
+    assert.match(error.message, /row-level security/);
+    return false;
+  }
+};
+const canJoin = async (userId, topic) => (await asRealtime(userId, null, 'select public.can_join_video_room($1) as ok', [topic])).rows[0].ok;
+const topicOf = (sessionId) => `video-room-${sessionId}`;
+
+test('only the people a live session is for can listen and send on its signaling channel', async () => {
+  const groupId = await ok(as(ids.coachA).rpc('save_group', { p_group_id: null, p_name: 'Squad', p_description: '' }));
+  await ok(as(ids.coachA).rpc('add_group_members', { p_group_id: groupId, p_client_ids: [ids.omar] }));
+  const solo = await ok(schedule(ids.coachA, { client: ids.sara, at: inHours(0.05) }));
+  const group = await ok(schedule(ids.coachA, { client: null, group: groupId, at: inHours(0.05) }));
+
+  assert.deepEqual([await canJoin(ids.coachA, topicOf(solo)), await canJoin(ids.sara, topicOf(solo))], [true, true]);
+  assert.deepEqual([await canJoin(ids.omar, topicOf(solo)), await canJoin(ids.lina, topicOf(solo)), await canJoin(ids.coachB, topicOf(solo))], [false, false, false]);
+  assert.deepEqual([await canJoin(ids.coachA, topicOf(group)), await canJoin(ids.omar, topicOf(group))], [true, true]);
+  assert.deepEqual([await canJoin(ids.sara, topicOf(group)), await canJoin(ids.lina, topicOf(group))], [false, false], 'a client outside the group is kept out');
+
+  assert.equal(await canSend(ids.coachA, topicOf(solo)), true);
+  assert.equal(await canSend(ids.sara, topicOf(solo)), true);
+  for (const outsider of [ids.omar, ids.lina, ids.coachB]) assert.equal(await canSend(outsider, topicOf(solo)), false, 'outsiders cannot send');
+  assert.equal(await canSend(ids.sara, topicOf(group)), false);
+  assert.equal(await canSend(ids.omar, topicOf(group)), true);
+
+  // Only broadcast traffic on a valid, existing room topic is allowed.
+  assert.equal(await canSend(ids.sara, topicOf(solo), 'presence'), false);
+  assert.equal(await canSend(ids.sara, 'video-room-00000000-0000-4000-8000-00000000ffff'), false, 'unknown session');
+  for (const topic of ['', 'video-room-', 'video-room-not-a-uuid', 'other-topic', `${topicOf(solo)}-extra`, topicOf(solo).toUpperCase()]) {
+    assert.equal(await canSend(ids.coachA, topic), false, topic || 'empty topic');
+  }
+
+  await db.query("delete from realtime.messages");
+  await db.query("insert into realtime.messages (topic, extension, payload) values ($1, 'broadcast', '{}')", [topicOf(solo)]);
+  const visible = async (userId, topic) => Number((await asRealtime(userId, topic, 'select count(*) as n from realtime.messages')).rows[0].n);
+  assert.deepEqual([await visible(ids.sara, topicOf(solo)), await visible(ids.coachA, topicOf(solo))], [1, 1]);
+  assert.deepEqual([await visible(ids.omar, topicOf(solo)), await visible(ids.coachB, topicOf(solo)), await visible(ids.lina, topicOf(solo))], [0, 0, 0], 'outsiders receive nothing');
+  assert.equal(await visible(ids.sara, null), 0, 'no topic, no messages');
+});
+
+test('the signaling channel follows the same timing and status rules as the room page', async () => {
+  const later = await ok(schedule(ids.coachA, { client: ids.sara, at: inHours(3) }));
+  assert.equal(await canJoin(ids.coachA, topicOf(later)), true, 'the coach may get ready early');
+  assert.equal(await canJoin(ids.sara, topicOf(later)), false, 'the client waits for the start window');
+
+  const soon = await ok(schedule(ids.coachA, { client: ids.sara, at: inHours(0.1) }));
+  assert.equal(await canJoin(ids.sara, topicOf(soon)), true, 'inside the 10 minutes before the start');
+
+  const insert = async (startOffsetHours, extra = {}) => {
+    const roomId = extra.id || crypto.randomUUID();
+    await db.query(
+      `insert into public.video_sessions (id, coach_id, client_id, title, scheduled_at, duration_minutes, provider, meeting_url, room_name, status)
+       values ($1, $2, $3, 'direct', now() + make_interval(secs => $4), 60, $5, $6, $7, $8)`,
+      [roomId, ids.coachA, ids.sara, startOffsetHours * 3600, extra.provider || 'apexfit_live', extra.url || null, extra.provider === 'zoom' ? null : roomNameFor(roomId), extra.status || 'scheduled'],
+    );
+    return roomId;
+  };
+  const running = await insert(-0.5);
+  assert.equal(await canJoin(ids.sara, topicOf(running)), true);
+  const justOver = await insert(-1.9);
+  assert.equal(await canJoin(ids.sara, topicOf(justOver)), true, 'a grace hour after the planned end');
+  const over = await insert(-2.2);
+  assert.deepEqual([await canJoin(ids.sara, topicOf(over)), await canJoin(ids.coachA, topicOf(over))], [false, false], 'the room is closed after the grace hour');
+
+  const cancelled = await insert(0.05, { status: 'cancelled' });
+  const completed = await insert(0.05, { status: 'completed' });
+  const zoom = await insert(0.05, { provider: 'zoom', url: 'https://zoom.us/j/1' });
+  for (const closed of [cancelled, completed, zoom]) assert.deepEqual([await canJoin(ids.coachA, topicOf(closed)), await canJoin(ids.sara, topicOf(closed))], [false, false]);
+
+  await db.query("update public.coach_clients set status = 'archived' where client_id = $1", [ids.sara]);
+  assert.equal(await canJoin(ids.sara, topicOf(soon)), false, 'an archived client is locked out');
+  assert.equal(await canJoin(ids.coachA, topicOf(soon)), true);
+  await db.query("update public.profiles set trial_started_at = now() - interval '5 days', trial_ends_at = now() - interval '2 days' where id = $1", [ids.coachA]);
+  assert.equal(await canJoin(ids.coachA, topicOf(soon)), false, 'a coach whose plan ended cannot open rooms');
+
+  assert.equal((await db.query("select public.can_join_video_room(null) as ok")).rows[0].ok, false);
+  await db.exec('set role anon');
+  try {
+    await assert.rejects(db.query("select public.can_join_video_room('video-room-x')"), /permission denied/);
+  } finally {
+    await db.exec('reset role');
+  }
+});
+
+test('the signaling migration is part of manual-setup.sql and can be applied again', async () => {
+  const migration = readFileSync(new URL('../supabase/migrations/20261115001300_video_room_signaling.sql', import.meta.url), 'utf8').replace(/\r\n/g, '\n').trim();
+  assert.ok(readFileSync(MANUAL_SETUP, 'utf8').replace(/\r\n/g, '\n').includes(migration));
+  await db.exec(migration);
+  assert.equal((await db.query("select count(*)::int as n from pg_policies where schemaname = 'realtime'")).rows[0].n, 2);
 });

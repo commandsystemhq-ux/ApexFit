@@ -21,6 +21,14 @@ const SUPABASE_STUBS = `
   create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text, name text, owner uuid);
   alter table storage.objects enable row level security;
   create function storage.foldername(name text) returns text[] language sql immutable as $$ select string_to_array(name, '/') $$;
+  create schema realtime;
+  grant usage on schema realtime to anon, authenticated, service_role;
+  create table realtime.messages (id bigserial primary key, topic text not null, extension text not null, payload jsonb);
+  alter table realtime.messages enable row level security;
+  grant select, insert on realtime.messages to authenticated;
+  grant usage on sequence realtime.messages_id_seq to authenticated;
+  create function realtime.topic() returns text language sql stable as $$ select nullif(current_setting('realtime.topic', true), '') $$;
+  grant execute on function realtime.topic() to anon, authenticated, service_role;
 `;
 
 const IDENTIFIER = /^[a-z_][a-z0-9_]*$/;

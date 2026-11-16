@@ -1,19 +1,18 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import BrandMark from '../components/BrandMark.jsx';
 import Button from '../components/Button.jsx';
+import NativeRoom from '../components/NativeRoom.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import { PAGES, roleOf } from '../routes.js';
 import { displayNameFor } from '../services/profileUtils.js';
-import { ROOM_IFRAME_ALLOW, buildRoomUrl, roomAccess } from '../services/liveRoom.js';
+import { roomAccess, sanitizeDisplayName } from '../services/liveRoom.js';
 import { getVideoSession } from '../services/sessionService.js';
 import { isUuid } from '../services/storeUtils.js';
 
-const IFRAME_SANDBOX = 'allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms allow-modals allow-downloads allow-presentation';
-
-// Full-screen ApexFit Live room: an embedded Jitsi Meet call for one session. Only people who can read the
-// session (its coach, the client, or a member of the group) get past the database, so the room name is not enough.
+// Full-screen ApexFit Live room page: the ApexFit bar around the native WebRTC call. Only sessions the database
+// lets the signed-in user read are found, and the signaling channel applies the same access rules again.
 export default function LiveRoomPage() {
   const { t, locale } = useLocale();
   const navigate = useNavigate();
@@ -48,17 +47,8 @@ export default function LiveRoomPage() {
 
   const { session } = state;
   const access = session ? roomAccess(session, role, now) : 'unavailable';
-  const roomUrl = useMemo(() => {
-    if (!session || access !== 'open') return null;
-    return buildRoomUrl({
-      domain: import.meta.env.VITE_JITSI_DOMAIN,
-      roomName: session.room_name,
-      displayName: displayNameFor(profile, user),
-      subject: session.title,
-    });
-  }, [session, access, profile, user]);
-
   const endCall = () => navigate(backPath, { replace: true });
+
   let message = null;
   if (state.status === 'loading') message = { title: t('lrLoading') };
   else if (state.status === 'missing') message = { title: t('lrNotFound') };
@@ -88,22 +78,15 @@ export default function LiveRoomPage() {
         </main>
       )}
 
-      {roomUrl && (
-        <main className="live-room-stage">
-          <iframe
-            className="live-room-frame"
-            title={session.title}
-            src={roomUrl}
-            allow={ROOM_IFRAME_ALLOW}
-            allowFullScreen
-            sandbox={IFRAME_SANDBOX}
-            referrerPolicy="strict-origin-when-cross-origin"
-          />
-          <p className="live-room-hint">
-            {t('lrCameraHint')}{' '}
-            <a href={roomUrl} target="_blank" rel="noopener noreferrer">{t('lrOpenNewTab')}</a>
-          </p>
-        </main>
+      {!message && (
+        <NativeRoom
+          sessionId={session.id}
+          userId={user.id}
+          name={sanitizeDisplayName(displayNameFor(profile, user))}
+          coachId={session.coach_id}
+          selfRole={role}
+          onEnd={endCall}
+        />
       )}
     </div>
   );

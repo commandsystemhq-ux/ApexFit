@@ -1,7 +1,7 @@
 import { callApi } from './apiClient.js';
 import { requireSupabase } from './supabaseClient.js';
 
-const SESSION_FIELDS = 'id,client_id,group_id,title,description,scheduled_at,duration_minutes,provider,meeting_url,meeting_passcode,room_name,status,created_at';
+const SESSION_FIELDS = 'id,coach_id,client_id,group_id,title,description,scheduled_at,duration_minutes,provider,meeting_url,meeting_passcode,room_name,status,created_at';
 
 export async function listVideoSessions() {
   const { data, error } = await requireSupabase().from('video_sessions').select(SESSION_FIELDS).order('scheduled_at', { ascending: false }).limit(200);
