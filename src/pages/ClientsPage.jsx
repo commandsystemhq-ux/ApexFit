@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Button from '../components/Button.jsx';
+import ClientCompliancePanel from '../components/ClientCompliancePanel.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import {
@@ -9,6 +10,7 @@ import {
   listOpenInvites,
   setClientStatus,
 } from '../services/coachClientService.js';
+import { listClearanceFlags } from '../services/assessmentService.js';
 import { clientLabel } from '../services/coachingUtils.js';
 
 const GOAL_LABELS = {
@@ -21,6 +23,7 @@ export default function ClientsPage({ onNavigate, onNotify }) {
   const { locale, t } = useLocale();
   const [clients, setClients] = useState([]);
   const [invites, setInvites] = useState([]);
+  const [clearance, setClearance] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [creating, setCreating] = useState(false);
@@ -29,9 +32,10 @@ export default function ClientsPage({ onNavigate, onNotify }) {
 
   async function refresh() {
     try {
-      const [clientRows, inviteRows] = await Promise.all([listMyClients(), listOpenInvites()]);
+      const [clientRows, inviteRows, flagRows] = await Promise.all([listMyClients(), listOpenInvites(), listClearanceFlags().catch(() => [])]);
       setClients(clientRows);
       setInvites(inviteRows);
+      setClearance(Object.fromEntries(flagRows.filter((row) => row.medical_clearance_required).map((row) => [row.client_id, true])));
       setError('');
     } catch (loadError) {
       setError(loadError.message);
@@ -113,6 +117,7 @@ export default function ClientsPage({ onNavigate, onNotify }) {
                     <strong>{clientLabel(client)}</strong>
                     <small>{client.client_email} · {t('joinedOn')} {new Date(client.created_at).toLocaleDateString(locale)}</small>
                   </div>
+                  {clearance[client.client_id] && <span className="soft-badge badge-amber">{t('asmClearanceBadge')}</span>}
                   <span className={`soft-badge ${client.status === 'active' ? 'badge-blue' : 'badge-muted'}`}>{t(client.status === 'active' ? 'active' : 'archivedStatus')}</span>
                 </div>
                 <div className="client-row-actions">
@@ -138,6 +143,7 @@ export default function ClientsPage({ onNavigate, onNotify }) {
                         {intake.data.additional_notes && <div><dt>{t('intakeNotes')}</dt><dd>{intake.data.additional_notes}</dd></div>}
                       </dl>
                     )}
+                    <ClientCompliancePanel clientId={client.client_id} />
                   </div>
                 )}
               </article>

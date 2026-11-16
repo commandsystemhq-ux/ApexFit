@@ -1,5 +1,6 @@
 import { businessTranslations } from './businessTranslations.js';
 import { communityTranslations } from './communityTranslations.js';
+import { engagementTranslations, jackEngagementTranslations } from './engagementTranslations.js';
 import { jackTranslations } from './jackTranslations.js';
 import { platformTranslations } from './platformTranslations.js';
 import { priority2Translations } from './priority2Translations.js';
@@ -589,4 +590,8 @@ for (const locale of supportedLocales) {
 
 for (const locale of supportedLocales) {
   Object.assign(translations[locale], jackTranslations[locale]);
+}
+
+for (const locale of supportedLocales) {
+  Object.assign(translations[locale], engagementTranslations[locale], jackEngagementTranslations[locale]);
 }

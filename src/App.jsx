@@ -11,6 +11,11 @@ import { AUTH_PATHS, PAGES, legacyHashPath, pathFor } from './routes.js';
 
 const BillingPage = lazy(() => import('./pages/BillingPage.jsx'));
 const WorkflowsPage = lazy(() => import('./pages/WorkflowsPage.jsx'));
+const GroupsPage = lazy(() => import('./pages/GroupsPage.jsx'));
+const ContractsPage = lazy(() => import('./pages/ContractsPage.jsx'));
+const AssessmentPage = lazy(() => import('./pages/AssessmentPage.jsx'));
+const ClientContractsPage = lazy(() => import('./pages/ClientContractsPage.jsx'));
+const ClientGroupsPage = lazy(() => import('./pages/ClientGroupsPage.jsx'));
 const ClientPortalPage = lazy(() => import('./pages/ClientPortalPage.jsx'));
 const ClientsPage = lazy(() => import('./pages/ClientsPage.jsx'));
 const CoachHubPage = lazy(() => import('./pages/CoachHubPage.jsx'));
@@ -63,6 +68,8 @@ export default function App() {
               <Route path={PAGES.programTemplates.path} element={<ProgramTemplatesPage onNavigate={go} onNotify={showToast} />} />
               <Route path={PAGES.messages.path} element={<MessagesPage onNavigate={go} />} />
               <Route path={PAGES.workflows.path} element={<WorkflowsPage onNotify={showToast} />} />
+              <Route path={PAGES.groups.path} element={<GroupsPage />} />
+              <Route path={PAGES.contracts.path} element={<ContractsPage />} />
               <Route path={PAGES.clients.path} element={<ClientsPage onNavigate={go} onNotify={showToast} />} />
               <Route path={PAGES.schedule.path} element={<SchedulePage onNavigate={go} onNotify={showToast} />} />
               <Route path={PAGES.invoicing.path} element={<InvoicingPage onNavigate={go} onNotify={showToast} />} />
@@ -75,6 +82,9 @@ export default function App() {
                 <Route key={section} path={PAGES[section].path} element={<ClientPortalPage section={section} />} />
               ))}
               <Route path={PAGES.coachHub.path} element={<CoachHubPage />} />
+              <Route path={PAGES.assessments.path} element={<AssessmentPage />} />
+              <Route path={PAGES.myContracts.path} element={<ClientContractsPage />} />
+              <Route path={PAGES.myGroups.path} element={<ClientGroupsPage />} />
             </Route>
 
             <Route element={<TrialGate />}>

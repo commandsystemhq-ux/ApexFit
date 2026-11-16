@@ -16,7 +16,9 @@ APEXFIT PAGES FOR COACHES
 - Exercise library (${PAGES.exerciseLibrary.path}): search and filter the published exercise catalog with demo videos.
 - Messages (${PAGES.messages.path}): send short notes and videos to one client or all clients.
 - Workflows (${PAGES.workflows.path}): automated onboarding and follow-up sequences. A workflow has a trigger (a new client joins, a program is assigned, a workout is missed for 2 days, a level or badge is reached) and up to 10 steps. Each step waits a number of days after the trigger, then either sends a message or assigns a task to the client. Messages can use {client_name}, {coach_name} and {brand_name}. There are three ready templates (welcome new client, weekly consistency follow-up, body measurements reminder) and a toggle to turn each workflow on or off. Workflows start for new events only.
-- Clients (${PAGES.clients.path}): the roster. Create a 7-day invite code, copy it, and send it to a client; the client enters it in their Coach Hub to join. Open a client's onboarding form, archive or restore clients.
+- Clients (${PAGES.clients.path}): the roster. Create a 7-day invite code, copy it, and send it to a client; the client enters it in their Coach Hub to join. Open a client's onboarding form, health assessment (PAR-Q) and contract signatures, archive or restore clients. A client who answered Yes to any PAR-Q question gets a "Medical clearance needed" badge: they should get a doctor's approval before training.
+- Groups (${PAGES.groups.path}): group coaching. Create groups such as a 90-day challenge, add or remove active clients, give the whole group one program with "Assign to the whole group" (clients who join later get it automatically), and post updates only the members see.
+- Contracts (${PAGES.contracts.path}): create contracts and liability waivers (two ready templates), optionally required during onboarding. Clients sign by typing their name and drawing a signature; the coach sees who signed and can open the signed copy. Once someone has signed, the wording is locked: archive it and create a new version to change it.
 - Schedule (${PAGES.schedule.path}): plan training sessions and sync them with Google Calendar.
 - Packages & invoices (${PAGES.invoicing.path}): sell session packages, issue invoices, and get paid through Stripe.
 - Billing (${PAGES.billing.path}): the coach plan is a 3-day free trial, then $39 per month.${SHARED_PAGES}
@@ -25,7 +27,10 @@ COACH HOW-TOS
 - Add a client: Clients -> Create invite code -> share the code. The client signs up as a client and redeems it.
 - Create and give a program: Workout builder -> save -> Program templates -> Assign to client.
 - Automate a welcome: Workflows -> New workflow (or "Use template") -> pick the trigger and steps -> Save.
-- Check who stopped training: ask for a summary; clients with no workout for 2 days or more are flagged.`;
+- Check who stopped training: ask for a summary; clients with no workout for 2 days or more are flagged.
+- Run a challenge: Groups -> New group -> add clients -> choose a program -> Assign to the whole group.
+- Collect a waiver: Contracts -> New contract (or a template) -> tick the onboarding option -> clients see it and sign.
+- Check health risks: ask which clients need medical clearance, or open the client in Clients.`;
 
 const CLIENT_GUIDE = `
 APEXFIT PAGES FOR CLIENTS
@@ -35,19 +40,23 @@ APEXFIT PAGES FOR CLIENTS
 - Food (${PAGES.food.path}): log meals and calories.
 - Habits (${PAGES.habits.path}): log sleep hours, water and steps.
 - Intake form (${PAGES.intake.path}): onboarding questionnaire (goals, experience, injuries, equipment) that the coach reads.
+- Health assessment (${PAGES.assessments.path}): the seven standard PAR-Q yes/no health questions plus fitness goals and past injuries. It is sent to the coach. If any answer is Yes, the app asks the client to get a doctor's approval before training; never diagnose, only encourage seeing a doctor.
+- Contracts (${PAGES.myContracts.path}): agreements and waivers from the coach. Open one, read it, type your full name, draw your signature with a finger or mouse, tick the agreement box and press Sign. A signed contract shows Signed and can be viewed again.
+- My groups (${PAGES.myGroups.path}): coaching groups the client was added to, with the shared program and the coach's updates.
 - Coach Hub (${PAGES.coachHub.path}): messages and tasks from the coach, upcoming sessions, packages and invoices, and the place to enter an invite code to join a coach.${SHARED_PAGES}
 
 CLIENT HOW-TOS
 - Join a coach: Coach Hub -> enter the invite code your coach sent.
 - Earn points and level up: log workouts, meals, habits and measurements regularly.
-- Share a win: Community -> post an update or share an earned badge.`;
+- Share a win: Community -> post an update or share an earned badge.
+- Finish onboarding: fill in the Health assessment and sign any required Contracts.`;
 
 export function buildSystemPrompt({ role, locale = 'en', route, pageTitle, name, summary, today }) {
   const language = LANGUAGE_NAMES[locale] || 'English';
   const roleName = role === 'coach' ? 'coach' : 'client';
   const toolRules = role === 'coach'
-    ? 'You can create workflows, assign programs to clients, post to the community, read the client summary, and open pages.'
-    : 'You can log workouts, log body weight and body fat, read the schedule, and open pages.';
+    ? 'You can create workflows, assign programs to clients, create coaching groups and assign programs to whole groups, create contracts, read a client\'s health assessment, post to the community, read the client summary, and open pages.'
+    : 'You can log workouts, log body weight and body fat, read the schedule, check groups and contracts, and open pages. You cannot fill in the health assessment or sign contracts for the user: send them to the page with navigate_to.';
 
   return [
     `You are Jack, the built-in AI assistant of ApexFit, a fitness coaching platform. You are talking to a ${roleName}${name ? ` named ${name}` : ''}.`,

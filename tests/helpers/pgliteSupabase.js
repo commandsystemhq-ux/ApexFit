@@ -1,4 +1,4 @@
-﻿import { readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { PGlite } from '@electric-sql/pglite';
 
 // An in-process Postgres loaded with the real supabase/manual-setup.sql (only the Supabase-provided
@@ -105,12 +105,13 @@ class Query {
 }
 
 // Returns an object with the subset of the supabase-js API the Jack tools use.
-export function createUserClient(db, userId) {
+export function createUserClient(db, userId, { headers = null } = {}) {
   let queue = Promise.resolve();
 
   function runner(sql, params, kind) {
     const task = queue.then(async () => {
       await db.query("select set_config('test.uid', $1, false)", [userId]);
+      await db.query("select set_config('request.headers', $1, false)", [headers ? JSON.stringify(headers) : '']);
       await db.exec('set role authenticated');
       try {
         const result = await db.query(sql, params);
@@ -136,6 +137,8 @@ export function createUserClient(db, userId) {
       const keys = Object.keys(args);
       const params = keys.map((key) => {
         const value = args[key];
+        // Arrays of plain strings are Postgres arrays (uuid[]); every other object or array is JSON.
+        if (Array.isArray(value) && value.length > 0 && value.every((item) => typeof item === 'string')) return value;
         return value !== null && typeof value === 'object' ? JSON.stringify(value) : value;
       });
       const call = keys.map((key, index) => `${key} => $${index + 1}`).join(', ');

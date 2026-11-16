@@ -7,6 +7,8 @@ export const PAGES = {
   exerciseLibrary: { path: '/exercises', titleKey: 'exerciseLibrary', icon: '⌕', access: 'coach' },
   workflows: { path: '/workflows', titleKey: 'workflows', icon: '↻', access: 'coach' },
   messages: { path: '/messages', titleKey: 'messages', icon: '◌', access: 'coach' },
+  groups: { path: '/groups', titleKey: 'navGroups', icon: '\u25CE', access: 'coach' },
+  contracts: { path: '/contracts', titleKey: 'navContracts', icon: '\u270E', access: 'coach' },
   clients: { path: '/clients', titleKey: 'clients', icon: '☺', access: 'coach' },
   schedule: { path: '/schedule', titleKey: 'schedule', icon: '◷', access: 'coach' },
   invoicing: { path: '/invoicing', titleKey: 'invoicing', icon: '$', access: 'coach' },
@@ -17,6 +19,9 @@ export const PAGES = {
   food: { path: '/food', titleKey: 'foodTab', icon: '◔', access: 'client' },
   habits: { path: '/habits', titleKey: 'habitTracker', icon: '✓', access: 'client' },
   intake: { path: '/intake', titleKey: 'intakeTab', icon: '☰', access: 'client' },
+  assessments: { path: '/assessments', titleKey: 'navAssessments', icon: '\u2665', access: 'client' },
+  myContracts: { path: '/my-contracts', titleKey: 'navMyContracts', icon: '\u270E', access: 'client' },
+  myGroups: { path: '/my-groups', titleKey: 'navMyGroups', icon: '\u25CE', access: 'client' },
   coachHub: { path: '/coach-hub', titleKey: 'coachHub', icon: '✉', access: 'client' },
   community: { path: '/community', titleKey: 'community', icon: '★', access: 'any' },
   leaderboard: { path: '/leaderboard', titleKey: 'leaderboardPage', icon: '♛', access: 'any' },
@@ -27,13 +32,13 @@ export const AUTH_PATHS = { home: '/', login: '/login', signup: '/signup' };
 
 const COACH_NAVIGATION = [
   { group: 'main', items: ['dashboard', 'generator', 'workoutBuilder', 'programTemplates', 'exerciseLibrary', 'messages', 'workflows'] },
-  { group: 'clients', items: ['clients', 'schedule', 'invoicing', 'community', 'leaderboard', 'billing'] },
+  { group: 'clients', items: ['clients', 'groups', 'contracts', 'schedule', 'invoicing', 'community', 'leaderboard', 'billing'] },
   { group: 'account', items: ['settings'] },
 ];
 
 const CLIENT_NAVIGATION = [
-  { group: 'clients', items: ['workouts', 'progress', 'strength', 'food', 'habits', 'intake'] },
-  { group: 'community', items: ['coachHub', 'community', 'leaderboard'] },
+  { group: 'clients', items: ['workouts', 'progress', 'strength', 'food', 'habits', 'intake', 'assessments', 'myContracts'] },
+  { group: 'community', items: ['coachHub', 'myGroups', 'community', 'leaderboard'] },
   { group: 'account', items: ['settings'] },
 ];
 

@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import BrandMark from './BrandMark.jsx';
 import Button from './Button.jsx';
 import LanguageToggle from './LanguageToggle.jsx';
+import OnboardingNotice from './OnboardingNotice.jsx';
 import UserAvatar from './UserAvatar.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
@@ -65,6 +66,7 @@ export default function AppShell() {
           </div>
         </header>
         <div className="page-content">
+          <OnboardingNotice />
           <Suspense fallback={<div className="empty-state" role="status">{t('loadingProgress')}</div>}>
             <Fragment key={dataVersion}><Outlet /></Fragment>
           </Suspense>

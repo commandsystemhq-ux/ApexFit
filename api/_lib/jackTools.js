@@ -1,4 +1,6 @@
 import { PAGES } from '../../src/routes.js';
+import { ENGAGEMENT_CLIENT_TOOLS, ENGAGEMENT_COACH_TOOLS } from './jackEngagementTools.js';
+import { ToolError, matchOne, requireText } from './jackShared.js';
 import { normalizeBodyMetric } from '../../src/services/clientTrackingUtils.js';
 import {
   WORKFLOW_ACTIONS,
@@ -7,10 +9,10 @@ import {
   validateWorkflowDraft,
 } from '../../src/services/workflowUtils.js';
 
+export { ToolError, matchOne };
+
 // Every tool runs with the signed-in user's own Supabase client (their JWT), so row-level security and
 // the role checks inside each database function still apply. Roles are re-checked here before running.
-
-export class ToolError extends Error {}
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const STALE_DAYS = 2;
@@ -19,13 +21,6 @@ export function navigablePages(role) {
   return Object.entries(PAGES)
     .filter(([, page]) => page.access === role || page.access === 'any')
     .map(([id]) => id);
-}
-
-function requireText(value, label, max) {
-  const text = typeof value === 'string' ? value.trim() : '';
-  if (!text) throw new ToolError(`${label} is required.`);
-  if (text.length > max) throw new ToolError(`${label} is too long (max ${max} characters).`);
-  return text;
 }
 
 function optionalDate(value, label, today) {
@@ -39,24 +34,6 @@ function optionalDate(value, label, today) {
 
 function escapeLike(value) {
   return value.replace(/[\\%_]/g, (character) => `\\${character}`);
-}
-
-// Finds exactly one item for a spoken name. Several matches are returned to the model as a question to ask.
-export function matchOne(items, query, keysOf, label) {
-  const needle = String(query || '').trim().toLowerCase();
-  if (!needle) throw new ToolError(`${label} is required.`);
-  const keys = (item) => keysOf(item).filter(Boolean).map((key) => String(key).toLowerCase());
-  const describe = (list) => list.slice(0, 6).map((item) => keysOf(item).find(Boolean)).join(', ');
-
-  const exact = items.filter((item) => keys(item).includes(needle));
-  if (exact.length === 1) return exact[0];
-  if (exact.length > 1) throw new ToolError(`Several ${label}s match "${query}": ${describe(exact)}. Ask which one.`);
-
-  const partial = items.filter((item) => keys(item).some((key) => key.includes(needle)));
-  if (partial.length === 1) return partial[0];
-  if (partial.length > 1) throw new ToolError(`Several ${label}s match "${query}": ${describe(partial)}. Ask which one.`);
-
-  throw new ToolError(`No ${label} matches "${query}".${items.length ? ` Available: ${describe(items)}.` : ''}`);
 }
 
 function describeDraftErrors(errors) {
@@ -390,7 +367,12 @@ const CLIENT_TOOLS = [
   NAVIGATE_TOOL,
 ];
 
-const ALL_TOOLS = [...COACH_TOOLS, ...CLIENT_TOOLS.filter((tool) => tool !== NAVIGATE_TOOL)];
+const ALL_TOOLS = [
+  ...COACH_TOOLS,
+  ...ENGAGEMENT_COACH_TOOLS,
+  ...CLIENT_TOOLS.filter((tool) => tool !== NAVIGATE_TOOL),
+  ...ENGAGEMENT_CLIENT_TOOLS,
+];
 
 export function toolsForRole(role) {
   return ALL_TOOLS.filter((tool) => tool.roles.includes(role));
