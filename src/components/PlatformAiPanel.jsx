@@ -9,9 +9,8 @@ const DEFAULT_CHOICE = 'default';
 const labelKey = (provider, name) => (name === 'model' && provider === 'bedrock' ? 'aiField_modelBedrock'
   : name === 'model' && provider === 'azure_foundry' ? 'aiField_modelAzure' : `aiField_${name}`);
 
-// Shown on the coach's Settings page only. Clients and assistant trainers never get this component, and the
-// server refuses them if they call the API directly.
-export default function AiSettingsPanel() {
+// The platform-wide AI provider. Rendered only on the platform owner's admin page; the server refuses anyone else.
+export default function PlatformAiPanel() {
   const { t } = useLocale();
   const [view, setView] = useState(null);
   const [loadError, setLoadError] = useState('');
@@ -179,7 +178,7 @@ export default function AiSettingsPanel() {
           {busy === 'test' ? t('aiTesting') : t('aiTest')}
         </Button>
       </div>
-      <small className="muted-copy">{t('aiClientsNote')}</small>
+      <small className="muted-copy">{t('aiEveryoneNote')}</small>
     </section>
   );
 }

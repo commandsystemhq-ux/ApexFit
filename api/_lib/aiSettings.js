@@ -4,19 +4,34 @@ import { HttpError } from './http.js';
 import { ModelError, createModelFromConfig, createModelFromEnv, envProviderConfigs } from './jackModels.js';
 import { AI_PROVIDERS, PROVIDER_FIELDS, secretFieldNames, validateAiSettings } from '../../src/services/aiProviders.js';
 
-// The coach's AI settings: who may manage them, how they are stored (credentials encrypted with
-// TOKEN_ENCRYPTION_KEY), the "test connection" check, and how Jack picks the model for anyone who talks to it.
-// Everything that touches the database goes through `store`, so the rules here can be tested without Supabase.
+// The platform-wide AI provider for Jack. One model serves every coach, assistant trainer and client. Only the
+// platform owner can change it: either with the server's environment variables, or through the admin screen,
+// which is open only to the people listed in PLATFORM_ADMIN_EMAILS. Credentials set on the admin screen are
+// encrypted with TOKEN_ENCRYPTION_KEY. Everything that touches the database goes through `store`, so the rules
+// here can be tested without Supabase.
 
-export const AI_MANAGER_STATES = ['trialing', 'active'];
+// ---------------------------------------------------------------- who is the platform owner
 
-// Only the account owner: a coach with a running trial or plan. Clients and assistant trainers (access state
-// 'trainer') never pass. The database functions repeat this check.
-export function assertCanManageAi(access) {
-  if (!access || access.role !== 'coach' || !AI_MANAGER_STATES.includes(access.access_state)) {
-    throw new HttpError(403, 'AI settings are available to the account owner only.');
-  }
+export function platformAdminEmails(environment = process.env) {
+  return (environment.PLATFORM_ADMIN_EMAILS || '')
+    .split(/[\s,;]+/)
+    .map((email) => email.trim().toLowerCase())
+    .filter((email) => email.includes('@'));
 }
+
+// The signed-in person (verified by Supabase, never taken from the request body) must have a confirmed email
+// address that is listed in PLATFORM_ADMIN_EMAILS. With the list empty, nobody is a platform admin.
+export function isPlatformAdmin(user, environment = process.env) {
+  const email = String(user?.email || '').trim().toLowerCase();
+  const confirmed = Boolean(user?.email_confirmed_at || user?.confirmed_at);
+  return Boolean(email) && confirmed && platformAdminEmails(environment).includes(email);
+}
+
+export function assertPlatformAdmin(user, environment = process.env) {
+  if (!isPlatformAdmin(user, environment)) throw new HttpError(403, 'Platform settings are available to the platform owner only.');
+}
+
+// ------------------------------------------------------------------- credentials at rest
 
 function encryptionKey(environment) {
   const key = (environment.TOKEN_ENCRYPTION_KEY || '').trim();
@@ -35,10 +50,10 @@ export function decryptCredentials(payload, environment = process.env) {
   } catch (error) {
     if (error instanceof ConfigError) throw error;
   }
-  throw new ConfigError('The saved AI credentials could not be read. The account owner must save them again in Settings.');
+  throw new ConfigError('The saved AI credentials could not be read. Save them again on the AI admin screen.');
 }
 
-// A model configuration (the provider's fields plus decrypted credentials) from a stored row.
+// A model configuration (the provider's fields plus decrypted credentials) from the stored row.
 export function configFromRow(row, environment = process.env) {
   return {
     provider: row.provider,
@@ -59,63 +74,78 @@ export function environmentSummary(environment = process.env) {
 
 // ---------------------------------------------------------------- the database side
 
-function rpcError(error) {
-  if (/account owner only/i.test(error.message)) return new HttpError(403, 'AI settings are available to the account owner only.');
-  return error;
-}
-
-export function createAiStore({ userClient, admin }) {
-  async function call(client, name, args) {
-    const { data, error } = await client.rpc(name, args);
-    if (error) throw rpcError(error);
-    return data;
-  }
+// `admin` is the service-role Supabase client: the only way into platform_ai_settings.
+export function createAiStore({ admin }) {
+  const fail = (error) => {
+    if (error) throw new Error(error.message || 'The platform AI settings could not be reached.');
+  };
   return {
-    view: () => call(userClient, 'get_my_ai_settings'),
-    save: (row) => call(userClient, 'save_my_ai_settings', {
-      p_provider: row.provider, p_model: row.model, p_region: row.region, p_endpoint: row.endpoint, p_credentials_encrypted: row.credentialsEncrypted,
-    }),
-    clear: () => call(userClient, 'clear_my_ai_settings'),
-    recordTest: (ok) => call(userClient, 'record_my_ai_test', { p_ok: ok }),
-    raw: (userId) => call(admin, 'service_get_ai_settings', { p_user: userId }),
+    async get() {
+      const { data, error } = await admin.from('platform_ai_settings').select('*').eq('id', true).maybeSingle();
+      fail(error);
+      return data;
+    },
+    async save(row, userId) {
+      const { error } = await admin.from('platform_ai_settings').upsert({
+        id: true,
+        provider: row.provider,
+        model: row.model,
+        region: row.region,
+        endpoint: row.endpoint,
+        credentials_encrypted: row.credentialsEncrypted,
+        updated_at: new Date().toISOString(),
+        updated_by: userId,
+        last_tested_at: null,
+        last_test_ok: null,
+      }, { onConflict: 'id' });
+      fail(error);
+    },
+    async clear() {
+      const { error } = await admin.from('platform_ai_settings').delete().eq('id', true);
+      fail(error);
+    },
+    async recordTest(ok) {
+      const { error } = await admin.from('platform_ai_settings').update({ last_tested_at: new Date().toISOString(), last_test_ok: ok }).eq('id', true);
+      fail(error);
+    },
   };
 }
 
-// ------------------------------------------------------------------ the three actions
+// ------------------------------------------------------------------ the actions
 
 // Names of the credentials already stored for this provider, without reading any value out.
-function savedCredentials(raw, provider, environment) {
-  if (!raw || raw.provider !== provider) return { names: [], values: {}, unreadable: false };
+function savedCredentials(row, provider, environment) {
+  if (!row || row.provider !== provider) return { names: [], values: {}, unreadable: false };
   try {
-    const values = decryptCredentials(raw.credentials_encrypted, environment);
+    const values = decryptCredentials(row.credentials_encrypted, environment);
     return { names: Object.keys(values).filter((name) => values[name]), values, unreadable: false };
   } catch {
     return { names: [], values: {}, unreadable: true };
   }
 }
 
-async function loadView(store, access, environment) {
-  const [view, raw] = await Promise.all([store.view(), store.raw(access.id)]);
-  const saved = view.configured ? savedCredentials(raw, view.provider, environment) : { names: [], unreadable: false };
+async function loadView(store, environment) {
+  const row = await store.get();
+  const saved = row ? savedCredentials(row, row.provider, environment) : { names: [], unreadable: false };
   return {
-    configured: Boolean(view.configured),
-    provider: view.provider || null,
-    model: view.model || '',
-    region: view.region || '',
-    endpoint: view.endpoint || '',
+    configured: Boolean(row),
+    provider: row?.provider || null,
+    model: row?.model || '',
+    region: row?.region || '',
+    endpoint: row?.endpoint || '',
     // Only which credentials exist; their values never leave the server.
     secrets: Object.fromEntries(saved.names.map((name) => [name, true])),
     unreadable: saved.unreadable,
-    updatedAt: view.updated_at || null,
-    lastTest: view.last_tested_at ? { at: view.last_tested_at, ok: Boolean(view.last_test_ok) } : null,
+    updatedAt: row?.updated_at || null,
+    lastTest: row?.last_tested_at ? { at: row.last_tested_at, ok: Boolean(row.last_test_ok) } : null,
     environment: environmentSummary(environment),
   };
 }
 
 // Checks the typed fields against what is already saved. Returns either errors or the complete configuration.
-async function buildConfig({ provider, settings, removeSecrets = [], raw, environment }) {
+function buildConfig({ provider, settings, removeSecrets = [], row, environment }) {
   if (!AI_PROVIDERS.includes(provider)) return { errors: { provider: 'aiErrProvider' } };
-  const saved = savedCredentials(raw, provider, environment);
+  const saved = savedCredentials(row, provider, environment);
   const checked = validateAiSettings(provider, settings || {}, { savedSecrets: saved.names });
   if (!checked.valid) return { errors: checked.errors };
 
@@ -167,21 +197,27 @@ function describeFailure(error) {
   throw error;
 }
 
-// body: { action: 'get' | 'save' | 'test' | 'clear', provider?, settings?, removeSecrets? }
-// Returns { status, body } for the route to send.
-export async function handleAiRequest({ body = {}, access, store, environment = process.env, fetchImpl = fetch }) {
-  assertCanManageAi(access);
+const removalsOf = (body) => (Array.isArray(body.removeSecrets) ? body.removeSecrets : []);
 
-  if (body.action === 'get') return { status: 200, body: await loadView(store, access, environment) };
+// body: { action: 'status' | 'get' | 'save' | 'test' | 'clear', provider?, settings?, removeSecrets? }
+// Returns { status, body } for the route to send. Apart from 'status' (which only tells a person whether they are
+// the platform owner), every action is refused for anyone else before the database is touched.
+// `store` may be a function so that the database client is only created for the owner.
+export async function handleAiRequest({ body = {}, user, store: storeOrFactory, environment = process.env, fetchImpl = fetch }) {
+  if (body.action === 'status') return { status: 200, body: { admin: isPlatformAdmin(user, environment) } };
+  assertPlatformAdmin(user, environment);
+  const store = typeof storeOrFactory === 'function' ? storeOrFactory() : storeOrFactory;
+
+  if (body.action === 'get') return { status: 200, body: await loadView(store, environment) };
 
   if (body.action === 'clear') {
     await store.clear();
-    return { status: 200, body: await loadView(store, access, environment) };
+    return { status: 200, body: await loadView(store, environment) };
   }
 
   if (body.action === 'save') {
-    const raw = await store.raw(access.id);
-    const built = await buildConfig({ provider: body.provider, settings: body.settings, removeSecrets: Array.isArray(body.removeSecrets) ? body.removeSecrets : [], raw, environment });
+    const row = await store.get();
+    const built = buildConfig({ provider: body.provider, settings: body.settings, removeSecrets: removalsOf(body), row, environment });
     if (built.errors) return { status: 422, body: { error: 'Check the highlighted fields.', errors: built.errors } };
     try {
       createModelFromConfig(built.config, fetchImpl); // refuses a configuration the adapters cannot use
@@ -195,48 +231,51 @@ export async function handleAiRequest({ body = {}, access, store, environment = 
       region: built.plain.region || null,
       endpoint: built.plain.endpoint || null,
       credentialsEncrypted: encryptCredentials(built.credentials, environment),
-    });
-    return { status: 200, body: await loadView(store, access, environment) };
+    }, user.id);
+    return { status: 200, body: await loadView(store, environment) };
   }
 
   if (body.action === 'test') {
-    const raw = await store.raw(access.id);
+    const row = await store.get();
     let config;
-    let recordResult = false;
+    let source = 'environment';
     if (body.provider) {
-      const built = await buildConfig({ provider: body.provider, settings: body.settings, removeSecrets: Array.isArray(body.removeSecrets) ? body.removeSecrets : [], raw, environment });
+      const built = buildConfig({ provider: body.provider, settings: body.settings, removeSecrets: removalsOf(body), row, environment });
       if (built.errors) return { status: 422, body: { error: 'Check the highlighted fields.', errors: built.errors } };
       config = built.config;
-    } else if (raw) {
-      config = configFromRow(raw, environment);
-      recordResult = true;
+      source = 'draft';
+    } else if (row) {
+      config = configFromRow(row, environment);
+      source = 'saved';
     }
 
     let outcome;
     try {
       const model = config ? createModelFromConfig(config, fetchImpl) : createModelFromEnv(environment, fetchImpl);
-      outcome = { ...(await testModel(model)), source: config ? (recordResult ? 'saved' : 'draft') : 'environment' };
+      outcome = { ...(await testModel(model)), source };
     } catch (error) {
-      outcome = { ...describeFailure(error), source: config ? (recordResult ? 'saved' : 'draft') : 'environment', provider: config?.provider || null };
+      outcome = { ...describeFailure(error), source, provider: config?.provider || null };
     }
-    if (recordResult) await store.recordTest(outcome.ok).catch(() => {});
+    if (source === 'saved') await store.recordTest(outcome.ok).catch(() => {});
     return { status: 200, body: outcome };
   }
 
   throw new HttpError(400, 'Unknown action.');
 }
 
-// ------------------------------------------------------- the model Jack uses for a person
+// ------------------------------------------------------ the model Jack uses for everyone
 
-// The coach's saved provider applies to the coach, to their assistant trainers and to their clients; without
-// saved settings (or when the database cannot be reached) the server's environment variables are used.
-export async function resolveJackModel({ admin, userId, environment = process.env, fetchImpl = fetch }) {
+// The platform setting (when the owner has saved one) wins; otherwise the server's environment variables are
+// used. The same model serves every account. When the database cannot be read the environment is the fallback.
+export async function resolveJackModel({ admin, environment = process.env, fetchImpl = fetch }) {
   let row = null;
   if (admin) {
-    const { data, error } = await admin.rpc('service_get_ai_settings', { p_user: userId });
-    if (error) console.error('Could not read the AI settings', error.message);
-    else row = data;
+    try {
+      row = await createAiStore({ admin }).get();
+    } catch (error) {
+      console.error('Could not read the platform AI settings', error?.message);
+    }
   }
-  if (row) return { model: createModelFromConfig(configFromRow(row, environment), fetchImpl), source: 'database', ownerId: row.owner_id };
-  return { model: createModelFromEnv(environment, fetchImpl), source: 'environment', ownerId: null };
+  if (row) return { model: createModelFromConfig(configFromRow(row, environment), fetchImpl), source: 'database' };
+  return { model: createModelFromEnv(environment, fetchImpl), source: 'environment' };
 }

@@ -8,7 +8,7 @@ import LoginPage from './pages/LoginPage.jsx';
 import SignupPage from './pages/SignupPage.jsx';
 import { useAuth } from './contexts/AuthContext.jsx';
 import { useToast } from './contexts/ToastContext.jsx';
-import { AUTH_PATHS, PAGES, legacyHashPath, pathFor } from './routes.js';
+import { ADMIN_PATHS, AUTH_PATHS, PAGES, legacyHashPath, pathFor } from './routes.js';
 
 const BillingPage = lazy(() => import('./pages/BillingPage.jsx'));
 const WorkflowsPage = lazy(() => import('./pages/WorkflowsPage.jsx'));
@@ -37,6 +37,7 @@ const MessagesPage = lazy(() => import('./pages/MessagesPage.jsx'));
 const ProgramTemplatesPage = lazy(() => import('./pages/ProgramTemplatesPage.jsx'));
 const SchedulePage = lazy(() => import('./pages/SchedulePage.jsx'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage.jsx'));
+const AdminAiPage = lazy(() => import('./pages/AdminAiPage.jsx'));
 const WorkoutBuilderPage = lazy(() => import('./pages/WorkoutBuilderPage.jsx'));
 
 // Old bookmarks and notifications used hash URLs such as /#coachHub.
@@ -115,6 +116,7 @@ export default function App() {
             </Route>
 
             <Route path={PAGES.settings.path} element={<SettingsPage />} />
+<Route path={ADMIN_PATHS.ai} element={<AdminAiPage />} />
           </Route>
         </Route>
 

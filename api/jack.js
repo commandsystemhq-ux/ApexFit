@@ -20,10 +20,16 @@ async function loadAccess(userClient) {
   return data;
 }
 
-// The provider's own message (rejected credentials, busy…) is for the account owner. Clients and assistant
-// trainers cannot fix it, so they get a neutral one and never see which provider is in use.
-function friendlyError(error, role) {
-  if (error instanceof ModelError) return role === 'coach' ? error.message : error.status === 429 ? error.message : 'Jack is unavailable right now. Please try again later.';
+// Which AI provider runs Jack is the platform owner's business. Nobody who talks to Jack ever sees the provider's
+// own message (rejected credentials, wrong model…); it goes to the server log, and the owner can use "Test
+// connection" on the AI admin screen to see it.
+const UNAVAILABLE = 'Jack is unavailable right now. Please try again later.';
+
+function friendlyError(error) {
+  if (error instanceof ModelError) {
+    console.error('Jack model error', error.status, error.detail);
+    return error.status === 429 ? error.message : UNAVAILABLE;
+  }
   console.error('Jack failed', error);
   return 'Jack ran into a problem. Please try again.';
 }
@@ -36,8 +42,8 @@ export default handler(['POST'], async (req, res) => {
   const request = parseJackRequest(await readJson(req), { fallbackLocale: access.locale });
   if (request.error) throw new HttpError(400, request.error);
 
-  // The model is the one the coach chose in Settings (for a client or an assistant trainer: their coach's choice),
-  // else the server's environment. Fails with a 503 before any streaming starts when nothing is configured.
+  // One model for the whole platform: the platform owner's setting, else the server's environment variables.
+  // Fails with a 503 before any streaming starts when nothing is configured.
   let admin = null;
   try {
     admin = adminClient();
@@ -49,11 +55,11 @@ export default handler(['POST'], async (req, res) => {
 
   let model;
   try {
-    ({ model } = await resolveJackModel({ admin, userId: user.id }));
+    ({ model } = await resolveJackModel({ admin }));
   } catch (error) {
-    // How the AI is set up is the account owner's business: everyone else just hears that Jack is not ready.
-    if (error instanceof ConfigError && role !== 'coach') throw new HttpError(503, 'Jack is not available yet. Please ask your coach.');
-    throw error;
+    if (!(error instanceof ConfigError)) throw error;
+    console.error('Jack is not configured:', error.message);
+    throw new HttpError(503, UNAVAILABLE);
   }
 
   const system = buildSystemPrompt({
@@ -78,7 +84,7 @@ export default handler(['POST'], async (req, res) => {
   try {
     await runJack({ model, system, history: request.messages, ctx, emit });
   } catch (error) {
-    emit({ type: 'error', message: friendlyError(error, role) });
+    emit({ type: 'error', message: friendlyError(error) });
   } finally {
     emit({ type: 'done' });
     res.end();

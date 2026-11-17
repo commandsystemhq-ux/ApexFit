@@ -341,7 +341,7 @@ export function envProviderConfigs(environment = process.env) {
     azure_foundry: null,
     bedrock: null,
   };
-  const azureModel = read('AZURE_FOUNDRY_MODEL') || read('AZURE_FOUNDRY_DEPLOYMENT') || sharedModel;
+  const azureModel = read('AZURE_FOUNDRY_DEPLOYMENT') || read('AZURE_FOUNDRY_MODEL') || sharedModel;
   if (read('AZURE_FOUNDRY_ENDPOINT') && read('AZURE_FOUNDRY_API_KEY') && azureModel) {
     configs.azure_foundry = { provider: 'azure_foundry', endpoint: read('AZURE_FOUNDRY_ENDPOINT'), apiKey: read('AZURE_FOUNDRY_API_KEY'), model: azureModel };
   }
@@ -362,7 +362,7 @@ export function createModelFromEnv(environment = process.env, fetchImpl = fetch)
   const configs = envProviderConfigs(environment);
   const chosen = preferred ? configs[preferred] : configs.openai || configs.gemini || configs.azure_foundry || configs.bedrock;
   if (!chosen) {
-    throw new ConfigError('Jack is not configured. Set the AI provider in Settings, or set OPENAI_API_KEY, GEMINI_API_KEY, the AZURE_FOUNDRY_* or the AWS Bedrock variables on the server.');
+    throw new ConfigError('Jack is not configured. Set OPENAI_API_KEY, GEMINI_API_KEY, the AZURE_FOUNDRY_* or the AWS Bedrock variables on the server, or choose the provider on the platform AI admin screen.');
   }
   return createModelFromConfig(chosen, fetchImpl);
 }

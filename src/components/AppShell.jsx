@@ -10,7 +10,7 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import { useChatUnread } from '../hooks/useChatUnread.js';
 import { displayNameFor } from '../services/profileUtils.js';
-import { PAGES, homePathFor, navigationFor, pageForPath, roleOf } from '../routes.js';
+import { ADMIN_PATHS, PAGES, homePathFor, navigationFor, pageForPath, roleOf } from '../routes.js';
 
 const JackFloatingWidget = lazy(() => import('./JackFloatingWidget.jsx'));
 
@@ -63,7 +63,7 @@ export default function AppShell() {
         <header className="topbar">
           <div className="topbar-title-wrap">
             <button className="menu-toggle" onClick={() => setMenuOpen(true)} aria-label={t('openNavigation')}>☰</button>
-            <h1 className="topbar-title">{t(page?.titleKey || 'dashboard')}</h1>
+            <h1 className="topbar-title">{t(page?.titleKey || (location.pathname === ADMIN_PATHS.ai ? 'adminAiTitle' : 'dashboard'))}</h1>
           </div>
           <div className="topbar-actions">
             <LanguageToggle />

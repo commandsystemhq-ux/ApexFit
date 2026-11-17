@@ -1,14 +1,8 @@
-// The AI providers the coach can choose for Jack, the fields each one needs, and the checks on those fields.
-// Shared by the settings screen (to show the right inputs and explain mistakes) and by the server (which
+// The AI providers the platform owner can choose for Jack, the fields each one needs, and the checks on those fields.
+// Shared by the platform admin screen (to show the right inputs and explain mistakes) and by the server (which
 // repeats every check before anything is stored or called).
 
 export const AI_PROVIDERS = ['openai', 'gemini', 'bedrock', 'azure_foundry'];
-
-// The AI settings belong to the account owner: a coach with a running trial or plan. Clients and assistant
-// trainers (access state 'trainer') get no such section, and the server refuses them as well.
-export function canSeeAiSettings(profile) {
-  return profile?.role === 'coach' && ['trialing', 'active'].includes(profile.access_state);
-}
 
 // secret: kept encrypted on the server and never sent back to the browser.
 export const PROVIDER_FIELDS = {

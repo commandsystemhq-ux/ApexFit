@@ -1,18 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { signRequest, uriEncode } from '../api/_lib/awsSigV4.js';
 import { ConfigError } from '../api/_lib/config.js';
 import { HttpError } from '../api/_lib/http.js';
 import { runJack } from '../api/_lib/jackAgent.js';
 import {
-  ModelError, azureChatUrl, bedrockHost, createAzureFoundryModel, createBedrockModel, createModelFromConfig, createModelFromEnv, toConverseMessages,
+  ModelError, azureChatUrl, bedrockHost, createAzureFoundryModel, createBedrockModel, createModelFromConfig, createModelFromEnv, envProviderConfigs, toConverseMessages,
 } from '../api/_lib/jackModels.js';
 import {
-  assertCanManageAi, decryptCredentials, encryptCredentials, environmentSummary, handleAiRequest, resolveJackModel,
+  assertPlatformAdmin, createAiStore, decryptCredentials, encryptCredentials, environmentSummary, handleAiRequest, isPlatformAdmin, platformAdminEmails, resolveJackModel,
 } from '../api/_lib/aiSettings.js';
 import { buildSystemPrompt } from '../api/_lib/jackKnowledge.js';
-import { canSeeAiSettings, normalizeAzureEndpoint, validateAiSettings } from '../src/services/aiProviders.js';
+import { normalizeAzureEndpoint, validateAiSettings } from '../src/services/aiProviders.js';
+import { navigablePages } from '../api/_lib/jackTools.js';
+import { ADMIN_PATHS, PAGES } from '../src/routes.js';
 import { supportedLocales, translations } from '../src/i18n/translations.js';
 
 // -------------------------------------------------------------------- helpers
@@ -370,27 +373,26 @@ test('provider settings are validated field by field', () => {
   assert.equal(validateAiSettings('azure_foundry', { ...AZURE_SETTINGS, endpoint: 'https://Res.Services.AI.Azure.com/' }).values.endpoint, 'https://res.services.ai.azure.com');
 });
 
-// ----------------------------------------------------- settings: who, storage, test
+// ------------------------------------------- the platform owner: who, storage, test
 
 function memoryStore(initial = null) {
   const calls = [];
-  const state = { row: initial, test: null };
+  const state = { row: initial, test: null, savedBy: null };
   return {
     state,
     calls,
-    async view() {
-      calls.push('view');
-      return state.row
-        ? { configured: true, provider: state.row.provider, model: state.row.model, region: state.row.region, endpoint: state.row.endpoint, updated_at: '2026-11-17T10:00:00Z', last_tested_at: state.test && '2026-11-17T10:05:00Z', last_test_ok: state.test }
-        : { configured: false };
+    async get() {
+      calls.push('get');
+      return state.row && {
+        provider: state.row.provider, model: state.row.model, region: state.row.region, endpoint: state.row.endpoint,
+        credentials_encrypted: state.row.credentialsEncrypted, updated_at: '2026-11-17T10:00:00Z',
+        last_tested_at: state.test === null ? null : '2026-11-17T10:05:00Z', last_test_ok: state.test,
+      };
     },
-    async raw() {
-      calls.push('raw');
-      return state.row && { owner_id: 'coach-1', provider: state.row.provider, model: state.row.model, region: state.row.region, endpoint: state.row.endpoint, credentials_encrypted: state.row.credentialsEncrypted };
-    },
-    async save(row) {
+    async save(row, userId) {
       calls.push('save');
       state.row = row;
+      state.savedBy = userId;
       state.test = null;
     },
     async clear() {
@@ -404,44 +406,73 @@ function memoryStore(initial = null) {
   };
 }
 
-const OWNER = { id: 'coach-1', role: 'coach', access_state: 'active' };
-const request = (store, body, extra = {}) => handleAiRequest({ body, access: OWNER, store, environment: ENVIRONMENT, ...extra });
+const PLATFORM_ENV = { ...ENVIRONMENT, PLATFORM_ADMIN_EMAILS: 'Owner@Example.com, second@example.com' };
+const OWNER = { id: 'owner-1', email: 'owner@example.com', email_confirmed_at: '2026-01-01T00:00:00Z' };
+const request = (store, body, extra = {}) => handleAiRequest({ body, user: OWNER, store, environment: PLATFORM_ENV, ...extra });
 
-test('only the account owner reaches the AI settings; clients, assistant trainers and others are refused before anything is read', async () => {
+test('only people listed in PLATFORM_ADMIN_EMAILS, with a confirmed email, are platform admins', () => {
+  assert.deepEqual(platformAdminEmails({ PLATFORM_ADMIN_EMAILS: ' A@x.com;b@y.com\nc@z.com , nonsense, ' }), ['a@x.com', 'b@y.com', 'c@z.com']);
+  assert.deepEqual(platformAdminEmails({}), []);
+
+  assert.equal(isPlatformAdmin(OWNER, PLATFORM_ENV), true);
+  assert.equal(isPlatformAdmin({ ...OWNER, email: 'SECOND@example.com' }, PLATFORM_ENV), true, 'case does not matter');
+  assert.equal(isPlatformAdmin({ ...OWNER, email_confirmed_at: undefined, confirmed_at: '2026-01-01' }, PLATFORM_ENV), true);
+
   const refused = [
-    { id: 'c1', role: 'client', access_state: 'client' },
-    { id: 't1', role: 'coach', access_state: 'trainer' },
-    { id: 'e1', role: 'coach', access_state: 'expired' },
-    { id: 'x1', role: 'admin', access_state: 'active' },
-    {},
+    { ...OWNER, email_confirmed_at: undefined },
+    { ...OWNER, email: 'owner@example.com.evil.io' },
+    { ...OWNER, email: 'evil-owner@example.com' },
+    { ...OWNER, email: 'owner+tag@example.com' },
+    { ...OWNER, email: 'someone@example.com' },
+    { ...OWNER, email: '' },
+    { id: 'x' },
     null,
+    undefined,
   ];
-  for (const access of refused) {
-    for (const action of ['get', 'save', 'test', 'clear', 'whatever']) {
-      const store = memoryStore();
-      await assert.rejects(
-        handleAiRequest({ body: { action, provider: 'bedrock', settings: BEDROCK_SETTINGS }, access, store, environment: ENVIRONMENT }),
-        (error) => error instanceof HttpError && error.status === 403,
-        `${JSON.stringify(access)} ${action}`,
-      );
-      assert.deepEqual(store.calls, [], 'nothing was read or written');
-    }
-    assert.throws(() => assertCanManageAi(access), HttpError);
+  for (const user of refused) {
+    assert.equal(isPlatformAdmin(user, PLATFORM_ENV), false, JSON.stringify(user));
+    assert.throws(() => assertPlatformAdmin(user, PLATFORM_ENV), (error) => error instanceof HttpError && error.status === 403);
   }
-  for (const state of ['trialing', 'active']) assert.doesNotThrow(() => assertCanManageAi({ role: 'coach', access_state: state }));
+  assert.equal(isPlatformAdmin(OWNER, {}), false, 'with no list, nobody is an admin');
+  assert.equal(isPlatformAdmin(OWNER, { PLATFORM_ADMIN_EMAILS: '' }), false);
+});
+
+test('coaches, assistant trainers and clients are refused every action before the database is even opened', async () => {
+  // Their role does not matter: only the verified email address does. A coach or client cannot claim to be the owner.
+  const people = [
+    { id: 'coach-1', email: 'coach@example.com', email_confirmed_at: '2026-01-01', app_metadata: { role: 'coach' } },
+    { id: 'trainer-1', email: 'trainer@example.com', email_confirmed_at: '2026-01-01', user_metadata: { role: 'coach', access_state: 'trainer' } },
+    { id: 'client-1', email: 'client@example.com', email_confirmed_at: '2026-01-01', user_metadata: { role: 'super_admin', admin: true } },
+    { id: 'client-2', email: 'owner@example.com', email_confirmed_at: null },
+  ];
+  for (const user of people) {
+    for (const action of ['get', 'save', 'test', 'clear', 'whatever', undefined]) {
+      let opened = 0;
+      await assert.rejects(
+        handleAiRequest({ body: { action, provider: 'bedrock', settings: BEDROCK_SETTINGS, admin: true, role: 'super_admin' }, user, store: () => { opened += 1; return memoryStore(); }, environment: PLATFORM_ENV }),
+        (error) => error instanceof HttpError && error.status === 403,
+        `${user.id} ${action}`,
+      );
+      assert.equal(opened, 0, 'the store was never created');
+    }
+    const status = await handleAiRequest({ body: { action: 'status' }, user, store: () => { throw new Error('no store for status'); }, environment: PLATFORM_ENV });
+    assert.deepEqual(status, { status: 200, body: { admin: false } }, 'they only learn that they are not the owner');
+  }
+  assert.deepEqual((await handleAiRequest({ body: { action: 'status' }, user: OWNER, store: () => memoryStore(), environment: PLATFORM_ENV })).body, { admin: true });
 });
 
 test('saving encrypts the credentials; reading them back never exposes a secret value', async () => {
   const store = memoryStore();
   const saved = await request(store, { action: 'save', provider: 'bedrock', settings: { ...BEDROCK_SETTINGS, sessionToken: 'session-token-value-1234' } });
   assert.equal(saved.status, 200);
+  assert.equal(store.state.savedBy, 'owner-1');
 
   const row = store.state.row;
   assert.deepEqual([row.provider, row.model, row.region, row.endpoint], ['bedrock', 'anthropic.claude-3-5-sonnet-20241022-v2:0', 'us-east-1', null]);
   for (const secret of [BEDROCK_KEYS.accessKeyId, BEDROCK_KEYS.secretAccessKey, 'session-token-value-1234']) {
     assert.ok(!JSON.stringify(row).includes(secret), 'ciphertext only at rest');
   }
-  assert.deepEqual(decryptCredentials(row.credentialsEncrypted, ENVIRONMENT), { ...BEDROCK_KEYS, sessionToken: 'session-token-value-1234' });
+  assert.deepEqual(decryptCredentials(row.credentialsEncrypted, PLATFORM_ENV), { ...BEDROCK_KEYS, sessionToken: 'session-token-value-1234' });
 
   const shown = JSON.stringify((await request(store, { action: 'get' })).body);
   for (const secret of [BEDROCK_KEYS.accessKeyId, BEDROCK_KEYS.secretAccessKey, 'session-token-value-1234', row.credentialsEncrypted]) assert.ok(!shown.includes(secret));
@@ -454,14 +485,14 @@ test('a later save keeps credentials left empty, replaces new ones, and may drop
   await request(store, { action: 'save', provider: 'bedrock', settings: { ...BEDROCK_SETTINGS, sessionToken: 'session-token-value-1234' } });
 
   await request(store, { action: 'save', provider: 'bedrock', settings: { region: 'eu-west-1', model: 'amazon.nova-pro-v1:0' } });
-  assert.deepEqual(decryptCredentials(store.state.row.credentialsEncrypted, ENVIRONMENT), { ...BEDROCK_KEYS, sessionToken: 'session-token-value-1234' });
+  assert.deepEqual(decryptCredentials(store.state.row.credentialsEncrypted, PLATFORM_ENV), { ...BEDROCK_KEYS, sessionToken: 'session-token-value-1234' });
   assert.deepEqual([store.state.row.region, store.state.row.model], ['eu-west-1', 'amazon.nova-pro-v1:0']);
 
   await request(store, { action: 'save', provider: 'bedrock', settings: { region: 'eu-west-1', model: 'amazon.nova-pro-v1:0', secretAccessKey: 'newSecretAccessKey0123456789ABCDEFGHIJ' } });
-  assert.equal(decryptCredentials(store.state.row.credentialsEncrypted, ENVIRONMENT).secretAccessKey, 'newSecretAccessKey0123456789ABCDEFGHIJ');
+  assert.equal(decryptCredentials(store.state.row.credentialsEncrypted, PLATFORM_ENV).secretAccessKey, 'newSecretAccessKey0123456789ABCDEFGHIJ');
 
   await request(store, { action: 'save', provider: 'bedrock', settings: { region: 'eu-west-1', model: 'amazon.nova-pro-v1:0' }, removeSecrets: ['sessionToken', 'accessKeyId'] });
-  const creds = decryptCredentials(store.state.row.credentialsEncrypted, ENVIRONMENT);
+  const creds = decryptCredentials(store.state.row.credentialsEncrypted, PLATFORM_ENV);
   assert.equal('sessionToken' in creds, false, 'optional credentials can be removed');
   assert.equal(creds.accessKeyId, BEDROCK_KEYS.accessKeyId, 'required credentials cannot be removed');
 });
@@ -476,7 +507,7 @@ test('switching provider drops the old credentials and requires the new ones', a
 
   const switched = await request(store, { action: 'save', provider: 'azure_foundry', settings: AZURE_SETTINGS });
   assert.equal(switched.status, 200);
-  assert.deepEqual(decryptCredentials(store.state.row.credentialsEncrypted, ENVIRONMENT), { apiKey: AZURE_SETTINGS.apiKey });
+  assert.deepEqual(decryptCredentials(store.state.row.credentialsEncrypted, PLATFORM_ENV), { apiKey: AZURE_SETTINGS.apiKey });
   assert.deepEqual([store.state.row.endpoint, store.state.row.region], [AZURE_SETTINGS.endpoint, null]);
 });
 
@@ -488,7 +519,8 @@ test('invalid input is refused with field errors, and nothing can be stored with
   assert.equal((await request(store, { action: 'save', settings: {} })).status, 422);
   assert.equal(store.calls.includes('save'), false);
 
-  await assert.rejects(handleAiRequest({ body: { action: 'save', provider: 'bedrock', settings: BEDROCK_SETTINGS }, access: OWNER, store, environment: {} }), ConfigError);
+  const withoutKey = { PLATFORM_ADMIN_EMAILS: 'owner@example.com' };
+  await assert.rejects(handleAiRequest({ body: { action: 'save', provider: 'bedrock', settings: BEDROCK_SETTINGS }, user: OWNER, store, environment: withoutKey }), ConfigError);
   assert.equal(store.calls.includes('save'), false);
   await assert.rejects(request(store, { action: 'explode' }), (error) => error instanceof HttpError && error.status === 400);
 });
@@ -542,19 +574,19 @@ test('Test connection reports failures to the owner with the provider\'s explana
   assert.equal(failingSaved.state.test, false);
 });
 
-test('Test connection without any saved settings tests the platform default, or says there is none', async () => {
+test('Test connection without a saved setting tests the environment variables, or says there are none', async () => {
   const store = memoryStore();
   const none = await request(store, { action: 'test' });
   assert.deepEqual([none.body.ok, none.body.source], [false, 'environment']);
   assert.match(none.body.error, /not configured/);
 
-  const env = { ...ENVIRONMENT, OPENAI_API_KEY: 'sk-platform-key-123' };
+  const env = { ...PLATFORM_ENV, OPENAI_API_KEY: 'sk-platform-key-123' };
   const fetchImpl = mockFetch(reply({ choices: [{ message: { content: 'OK' } }] }));
-  const platform = await handleAiRequest({ body: { action: 'test' }, access: OWNER, store, environment: env, fetchImpl });
+  const platform = await handleAiRequest({ body: { action: 'test' }, user: OWNER, store, environment: env, fetchImpl });
   assert.deepEqual([platform.body.ok, platform.body.provider, platform.body.source], [true, 'openai', 'environment']);
 });
 
-test('removing the settings returns Jack to the platform default', async () => {
+test('removing the saved setting returns Jack to the environment variables', async () => {
   const store = memoryStore();
   await request(store, { action: 'save', provider: 'bedrock', settings: BEDROCK_SETTINGS });
   const cleared = await request(store, { action: 'clear' });
@@ -564,75 +596,141 @@ test('removing the settings returns Jack to the platform default', async () => {
 test('credentials that cannot be decrypted are reported, not guessed', async () => {
   const store = memoryStore();
   await request(store, { action: 'save', provider: 'azure_foundry', settings: AZURE_SETTINGS });
-  const rotated = { TOKEN_ENCRYPTION_KEY: randomBytes(32).toString('base64') };
-  const view = (await handleAiRequest({ body: { action: 'get' }, access: OWNER, store, environment: rotated })).body;
+  const rotated = { ...PLATFORM_ENV, TOKEN_ENCRYPTION_KEY: randomBytes(32).toString('base64') };
+  const view = (await handleAiRequest({ body: { action: 'get' }, user: OWNER, store, environment: rotated })).body;
   assert.deepEqual([view.configured, view.unreadable, view.secrets], [true, true, {}]);
   assert.throws(() => decryptCredentials(store.state.row.credentialsEncrypted, rotated), /could not be read/);
-  assert.equal(encryptCredentials({ a: 1 }, ENVIRONMENT) === encryptCredentials({ a: 1 }, ENVIRONMENT), false, 'every encryption is different');
+  assert.equal(encryptCredentials({ a: 1 }, PLATFORM_ENV) === encryptCredentials({ a: 1 }, PLATFORM_ENV), false, 'every encryption is different');
 });
 
-// ------------------------------------------- the model Jack uses for each person
-
-function fakeAdmin(row, { error = null } = {}) {
+// The database client is the service role's; this fake records what the store asks of it.
+function fakeAdmin({ row = null, error = null } = {}) {
   const calls = [];
-  return {
-    calls,
-    async rpc(name, args) {
-      calls.push([name, args]);
-      return { data: error ? null : row, error };
-    },
+  const query = (table) => {
+    const chain = {
+      select: (columns) => { calls.push([table, 'select', columns]); return chain; },
+      eq: (column, value) => { calls.push([table, 'eq', column, value]); return chain; },
+      maybeSingle: async () => ({ data: error ? null : row, error }),
+      upsert: async (payload, options) => { calls.push([table, 'upsert', payload, options]); return { error }; },
+      update: (payload) => { calls.push([table, 'update', payload]); return chain; },
+      delete: () => { calls.push([table, 'delete']); return chain; },
+      then: (resolve) => resolve({ error }),
+    };
+    return chain;
   };
+  return { calls, from: query };
 }
 
-test('Jack uses the owner\'s saved provider for whoever asks, and the environment otherwise', async () => {
+test('the platform setting is one row in platform_ai_settings, reached through the service role', async () => {
+  const admin = fakeAdmin({ row: { provider: 'openai' } });
+  const store = createAiStore({ admin });
+  assert.deepEqual(await store.get(), { provider: 'openai' });
+  await store.save({ provider: 'gemini', model: null, region: null, endpoint: null, credentialsEncrypted: 'cipher' }, 'owner-1');
+  await store.clear();
+  await store.recordTest(true);
+
+  assert.deepEqual(admin.calls.map((call) => call[0]), Array(admin.calls.length).fill('platform_ai_settings'));
+  const upsert = admin.calls.find((call) => call[1] === 'upsert');
+  assert.equal(upsert[2].id, true);
+  assert.deepEqual([upsert[2].provider, upsert[2].credentials_encrypted, upsert[2].updated_by, upsert[3]], ['gemini', 'cipher', 'owner-1', { onConflict: 'id' }]);
+  assert.ok(admin.calls.some((call) => call[1] === 'delete'));
+  assert.ok(admin.calls.filter((call) => call[1] === 'eq').every((call) => call[2] === 'id' && call[3] === true));
+
+  await assert.rejects(createAiStore({ admin: fakeAdmin({ error: { message: 'boom' } }) }).get(), /boom/);
+});
+
+// ----------------------------------------- one model for everyone on the platform
+
+test('Jack runs on one platform model: the saved platform setting first, then the environment variables', async () => {
   const store = memoryStore();
   await request(store, { action: 'save', provider: 'bedrock', settings: BEDROCK_SETTINGS });
-  const row = await store.raw();
+  const row = await store.get();
+  const environment = { ...PLATFORM_ENV, OPENAI_API_KEY: 'sk-env' };
 
-  const admin = fakeAdmin(row);
-  const forClient = await resolveJackModel({ admin, userId: 'client-9', environment: { ...ENVIRONMENT, OPENAI_API_KEY: 'sk-env' } });
-  assert.deepEqual([forClient.source, forClient.model.provider, forClient.ownerId], ['database', 'bedrock', 'coach-1']);
-  assert.deepEqual(admin.calls, [['service_get_ai_settings', { p_user: 'client-9' }]]);
+  const admin = fakeAdmin({ row });
+  const platform = await resolveJackModel({ admin, environment });
+  assert.deepEqual([platform.source, platform.model.provider], ['database', 'bedrock']);
+  assert.deepEqual(admin.calls.slice(0, 2), [['platform_ai_settings', 'select', '*'], ['platform_ai_settings', 'eq', 'id', true]]);
 
-  const fallback = await resolveJackModel({ admin: fakeAdmin(null), userId: 'client-9', environment: { OPENAI_API_KEY: 'sk-env' } });
+  const fallback = await resolveJackModel({ admin: fakeAdmin({ row: null }), environment });
   assert.deepEqual([fallback.source, fallback.model.provider], ['environment', 'openai']);
 
-  const withoutAdmin = await resolveJackModel({ admin: null, userId: 'u', environment: { OPENAI_API_KEY: 'sk-env' } });
+  const withoutAdmin = await resolveJackModel({ admin: null, environment });
   assert.equal(withoutAdmin.source, 'environment');
 
-  const unreachable = await resolveJackModel({ admin: fakeAdmin(null, { error: { message: 'function does not exist' } }), userId: 'u', environment: { OPENAI_API_KEY: 'sk-env' } });
+  const unreachable = await resolveJackModel({ admin: fakeAdmin({ error: { message: 'relation does not exist' } }), environment });
   assert.equal(unreachable.source, 'environment', 'a database without the migration still works through the environment');
 
-  await assert.rejects(resolveJackModel({ admin: fakeAdmin(row), userId: 'u', environment: { TOKEN_ENCRYPTION_KEY: randomBytes(32).toString('base64') } }), /could not be read/);
-  await assert.rejects(resolveJackModel({ admin: fakeAdmin(null), userId: 'u', environment: {} }), /not configured/);
+  await assert.rejects(resolveJackModel({ admin: fakeAdmin({ row }), environment: { TOKEN_ENCRYPTION_KEY: randomBytes(32).toString('base64') } }), /could not be read/);
+  await assert.rejects(resolveJackModel({ admin: fakeAdmin({ row: null }), environment: {} }), /not configured/);
 });
 
-test('the model built from saved settings sends its first request to the right provider', async () => {
+test('every kind of user gets the same model, and its first request goes to the platform provider', async () => {
   const store = memoryStore();
   await request(store, { action: 'save', provider: 'azure_foundry', settings: { ...AZURE_SETTINGS, model: 'gpt-4o' } });
-  const fetchImpl = mockFetch(reply({ choices: [{ message: { content: 'hi' } }] }));
-  const { model } = await resolveJackModel({ admin: fakeAdmin(await store.raw()), userId: 'u', environment: ENVIRONMENT, fetchImpl });
-  await model.complete({ system: 's', messages: [{ role: 'user', content: 'hi' }], tools: [] });
-  assert.equal(fetchImpl.requests[0].url, 'https://my-resource.services.ai.azure.com/openai/deployments/gpt-4o/chat/completions?api-version=2024-10-21');
-  assert.equal(fetchImpl.requests[0].headers['api-key'], AZURE_SETTINGS.apiKey);
+  const row = await store.get();
+
+  const urls = [];
+  for (const role of ['coach', 'trainer', 'client']) {
+    const fetchImpl = mockFetch(reply({ choices: [{ message: { content: `hi ${role}` } }] }));
+    const { model } = await resolveJackModel({ admin: fakeAdmin({ row }), environment: PLATFORM_ENV, fetchImpl });
+    const answer = await model.complete({ system: 's', messages: [{ role: 'user', content: 'hi' }], tools: [] });
+    assert.equal(answer.text, `hi ${role}`);
+    assert.equal(fetchImpl.requests[0].headers['api-key'], AZURE_SETTINGS.apiKey);
+    urls.push(fetchImpl.requests[0].url);
+  }
+  assert.deepEqual([...new Set(urls)], ['https://my-resource.services.ai.azure.com/openai/deployments/gpt-4o/chat/completions?api-version=2024-10-21']);
 });
 
-test('the AI settings section exists only for the account owner, in the screen and in what Jack tells people', () => {
-  assert.equal(canSeeAiSettings({ role: 'coach', access_state: 'active' }), true);
-  assert.equal(canSeeAiSettings({ role: 'coach', access_state: 'trialing' }), true);
-  for (const profile of [{ role: 'client', access_state: 'client' }, { role: 'coach', access_state: 'trainer' }, { role: 'coach', access_state: 'expired' }, {}, null, undefined]) {
-    assert.equal(canSeeAiSettings(profile), false, JSON.stringify(profile));
-  }
+test('the environment names for Azure: the deployment variable wins over the older model variable', () => {
+  const azure = { AZURE_FOUNDRY_ENDPOINT: AZURE_SETTINGS.endpoint, AZURE_FOUNDRY_API_KEY: AZURE_SETTINGS.apiKey };
+  const model = createModelFromEnv({ ...azure, AZURE_FOUNDRY_DEPLOYMENT: 'gpt-4o', AZURE_FOUNDRY_MODEL: 'ignored' }, mockFetch(reply({ choices: [{ message: { content: 'ok' } }] })));
+  assert.equal(model.provider, 'azure_foundry');
+  assert.deepEqual(Object.keys(envProviderConfigs({ ...azure, AZURE_FOUNDRY_DEPLOYMENT: 'gpt-4o', AZURE_FOUNDRY_MODEL: 'old' })).filter((name) => envProviderConfigs({ ...azure, AZURE_FOUNDRY_DEPLOYMENT: 'gpt-4o' })[name]), ['azure_foundry']);
+  assert.equal(envProviderConfigs({ ...azure, AZURE_FOUNDRY_DEPLOYMENT: 'gpt-4o', AZURE_FOUNDRY_MODEL: 'old' }).azure_foundry.model, 'gpt-4o');
+  assert.equal(envProviderConfigs({ ...azure, AZURE_FOUNDRY_MODEL: 'old' }).azure_foundry.model, 'old');
+});
 
-  const prompt = (role) => buildSystemPrompt({ role, locale: 'en', route: '/settings', pageTitle: 'settings', name: 'Sam', summary: '', today: '2026-11-17' });
-  assert.match(prompt('coach'), /AI provider/);
-  assert.match(prompt('coach'), /Amazon Bedrock/);
-  for (const role of ['client', 'trainer']) assert.doesNotMatch(prompt(role), /AI provider|Bedrock|Azure|Foundry/, role);
+// ---------------------------------- nothing about the provider reaches coaches or clients
+
+const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
+
+test('no coach, trainer or client screen, route or Jack text offers or mentions AI provider settings', () => {
+  // The only places that may use the AI settings client: the admin page and its panel.
+  const users = ['src/pages', 'src/components'].flatMap((dir) => readdirSync(new URL(`../${dir}/`, import.meta.url)).map((name) => `${dir}/${name}`))
+    .filter((path) => /\.jsx?$/.test(path) && /aiSettingsService|PlatformAiPanel|aiProviders/.test(read(path)));
+  assert.deepEqual(users.sort(), ['src/components/PlatformAiPanel.jsx', 'src/pages/AdminAiPage.jsx', 'src/pages/SettingsPage.jsx']);
+  assert.ok(!/PlatformAiPanel|PROVIDER_FIELDS|AI_PROVIDERS/.test(read('src/pages/SettingsPage.jsx')), 'the settings page has no provider controls');
+  assert.match(read('src/pages/SettingsPage.jsx'), /getAiStatus/);
+  assert.ok(!/getAiSettings|saveAiSettings|testAiSettings|clearAiSettings/.test(read('src/pages/SettingsPage.jsx')));
+
+  // Not part of any role's navigation, and Jack cannot send anyone there.
+  for (const page of Object.values(PAGES)) assert.ok(!page.path.startsWith('/admin'), page.path);
+  for (const role of ['coach', 'client', 'trainer']) {
+    assert.ok(!navigablePages(role).some((id) => PAGES[id].path.startsWith('/admin')), role);
+    const prompt = buildSystemPrompt({ role, locale: 'en', route: '/settings', pageTitle: 'settings', name: 'Sam', summary: '', today: '2026-11-17' });
+    assert.doesNotMatch(prompt, /AI provider|Bedrock|Azure|Foundry|OpenAI|Gemini|admin\/ai/i, role);
+  }
+  assert.equal(ADMIN_PATHS.ai, '/admin/ai');
+
+  // The old per-coach settings are gone everywhere.
+  for (const path of ['api/_lib/aiSettings.js', 'api/ai.js', 'api/jack.js', 'src/services/aiSettingsService.js', 'src/pages/SettingsPage.jsx', 'README.md', '.env.example']) {
+    assert.doesNotMatch(read(path), /coach_ai_settings|save_my_ai_settings|get_my_ai_settings|resolve_ai_owner|service_get_ai_settings|canSeeAiSettings/, path);
+  }
+  assert.ok(!existsSync(new URL('../supabase/migrations/20261115001600_ai_provider_settings.sql', import.meta.url)));
+});
+
+test('Jack hides the provider\'s own error text from everyone who talks to it', () => {
+  const source = read('api/jack.js');
+  assert.match(source, /Jack is unavailable right now/);
+  assert.doesNotMatch(source, /role === 'coach' \? error\.message/);
+  assert.doesNotMatch(source, /message: error\.detail|emit\(\{ type: 'error', message: error\.message/);
+  assert.match(source, /resolveJackModel\(\{ admin \}\)/, 'one model for the whole platform, no user passed in');
 });
 
 // -------------------------------------------------------------------- translations
 
-const AI_KEY = /^ai[A-Z_]/;
+const AI_KEY = /^(ai[A-Z_]|adminAi)/;
 
 test('every language has the same AI settings texts', () => {
   const keysOf = (locale) => Object.keys(translations[locale]).filter((key) => AI_KEY.test(key)).sort();
@@ -648,5 +746,6 @@ test('every error key the validation can return, and every provider label, exist
   const errors = ['aiErrRequired', 'aiErrRegion', 'aiErrEndpoint', 'aiErrModel', 'aiErrProvider', 'aiErr_apiKey', 'aiErr_accessKeyId', 'aiErr_secretAccessKey', 'aiErr_sessionToken'];
   const labels = ['default', 'openai', 'gemini', 'bedrock', 'azure_foundry'].flatMap((provider) => [`aiProvider_${provider}`, ...(provider === 'default' ? [] : [`aiHint_${provider}`])]);
   const fields = ['apiKey', 'model', 'modelBedrock', 'modelAzure', 'region', 'endpoint', 'accessKeyId', 'secretAccessKey', 'sessionToken'].map((field) => `aiField_${field}`);
-  for (const locale of supportedLocales) for (const key of [...errors, ...labels, ...fields]) assert.ok(translations[locale][key], `${locale}.${key}`);
+  const admin = ['adminAiTitle', 'adminAiDescription', 'adminAiLink', 'adminAiLinkHelp', 'adminAiOpen', 'aiEveryoneNote'];
+  for (const locale of supportedLocales) for (const key of [...errors, ...labels, ...fields, ...admin]) assert.ok(translations[locale][key], `${locale}.${key}`);
 });
