@@ -1069,3 +1069,39 @@ a.sidebar-profile:hover .profile-copy strong { color: #70afff; }
   .room-self { inset-block-end: 92px; width: clamp(96px, 30vw, 150px); }
 }
 @media (prefers-reduced-motion: reduce) { .room-pulse { animation: none; } }
+
+/* Wearables and nutrition */
+.badge-red { border-color: rgba(242, 106, 118, .2); background: rgba(242, 106, 118, .1); color: var(--red); }
+.field-error { color: var(--red); font-size: 10px; }
+.integration-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin-bottom: 14px; }
+.integration-card { display: flex; flex-direction: column; gap: 10px; }
+.integration-card .template-actions { margin-top: auto; }
+.import-preview { display: grid; gap: 8px; margin-bottom: 14px; }
+.import-preview h3, .import-preview h4, .import-preview p { margin: 0; }
+.import-skipped { margin: 0; padding-inline-start: 18px; color: var(--muted); font-size: 11px; }
+.health-metrics { display: grid; gap: 12px; }
+.health-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin: 0; }
+.health-cards div { padding: 9px; border-radius: 8px; background: rgba(255, 255, 255, .03); }
+.health-cards dt { color: var(--subtle); font-size: 9px; }
+.health-cards dd { margin: 3px 0 0; font: 600 15px/1.2 var(--font-display); }
+.health-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.health-charts h5 { margin: 0 0 6px; color: var(--muted); font-size: 10px; font-weight: 600; }
+.health-chart-bars { display: flex; align-items: flex-end; gap: 4px; height: 74px; direction: ltr; }
+.health-chart-column { display: flex; flex: 1; flex-direction: column; justify-content: flex-end; align-items: center; gap: 3px; height: 100%; min-width: 0; }
+.health-chart-bar { display: block; width: 100%; min-height: 2px; border-radius: 4px 4px 0 0; background: var(--gradient-blue); }
+.health-chart-bar[data-empty="true"] { background: var(--line-strong); min-height: 2px; }
+.health-chart-column small { color: var(--subtle); font-size: 8px; }
+.nutrition-tracker { display: grid; gap: 14px; }
+.nutrition-progress { display: grid; gap: 4px; margin-top: 10px; }
+.nutrition-progress-head { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; }
+.nutrition-progress-track { height: 8px; overflow: hidden; border-radius: 999px; background: rgba(255, 255, 255, .07); }
+.nutrition-progress-track span { display: block; height: 100%; border-radius: inherit; background: var(--gradient-blue); transition: width .3s ease; }
+.nutrition-progress.is-on .nutrition-progress-track span { background: var(--green); }
+.nutrition-progress.is-under .nutrition-progress-track span { background: var(--amber); }
+.nutrition-progress.is-over .nutrition-progress-track span { background: var(--red); }
+.nutrition-progress small { color: var(--subtle); font-size: 9px; }
+.nutrition-recent { display: grid; gap: 6px; margin: 12px 0 0; padding: 0; list-style: none; }
+.nutrition-recent li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--muted); }
+.health-targets-form { display: grid; gap: 10px; margin-top: 12px; }
+.health-targets-form h5, .health-panel h4 { margin: 12px 0 6px; }
+.nutrition-section { margin-top: 18px; }

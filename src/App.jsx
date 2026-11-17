@@ -20,6 +20,7 @@ const TeamClientsPage = lazy(() => import('./pages/TeamClientsPage.jsx'));
 const SessionsPage = lazy(() => import('./pages/SessionsPage.jsx'));
 const LiveRoomPage = lazy(() => import('./pages/LiveRoomPage.jsx'));
 const MySessionsPage = lazy(() => import('./pages/MySessionsPage.jsx'));
+const IntegrationsPage = lazy(() => import('./pages/IntegrationsPage.jsx'));
 const ContractsPage = lazy(() => import('./pages/ContractsPage.jsx'));
 const AssessmentPage = lazy(() => import('./pages/AssessmentPage.jsx'));
 const ClientContractsPage = lazy(() => import('./pages/ClientContractsPage.jsx'));
@@ -96,6 +97,7 @@ export default function App() {
                 <Route key={section} path={PAGES[section].path} element={<ClientPortalPage section={section} />} />
               ))}
               <Route path={PAGES.coachHub.path} element={<CoachHubPage />} />
+              <Route path={PAGES.integrations.path} element={<IntegrationsPage />} />
               <Route path={PAGES.assessments.path} element={<AssessmentPage />} />
               <Route path={PAGES.myStore.path} element={<MyStorePage />} />
               <Route path={PAGES.mySessions.path} element={<MySessionsPage />} />

@@ -2,6 +2,7 @@ import { businessTranslations } from './businessTranslations.js';
 import { communityTranslations } from './communityTranslations.js';
 import { engagementTranslations, jackEngagementTranslations } from './engagementTranslations.js';
 import { growthTranslations, jackGrowthTranslations } from './growthTranslations.js';
+import { healthTranslations } from './healthTranslations.js';
 import { jackTranslations } from './jackTranslations.js';
 import { liveRoomTranslations } from './liveRoomTranslations.js';
 import { platformTranslations } from './platformTranslations.js';
@@ -604,4 +605,8 @@ for (const locale of supportedLocales) {
 
 for (const locale of supportedLocales) {
   Object.assign(translations[locale], liveRoomTranslations[locale]);
+}
+
+for (const locale of supportedLocales) {
+  Object.assign(translations[locale], healthTranslations[locale]);
 }

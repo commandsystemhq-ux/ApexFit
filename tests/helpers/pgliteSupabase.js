@@ -136,6 +136,10 @@ export function createUserClient(db, userId, { headers = null } = {}) {
   }
 
   return {
+    // Raw SQL as this user, for checking what the database refuses (direct writes, column grants).
+    sql(text, params = []) {
+      return runner(text, params, 'write');
+    },
     from(table) {
       if (!IDENTIFIER.test(table)) throw new Error(`Bad table ${table}`);
       return new Query(runner, table);

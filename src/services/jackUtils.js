@@ -16,12 +16,13 @@ export const WRITE_TOOLS = [
   'create_store_product',
   'schedule_video_session',
   'invite_trainer',
+  'log_nutrition_summary',
 ];
 
 const COACH_PROMPTS = {
   default: ['jackQ_coachSummary', 'jackQ_coachWorkflow', 'jackQ_coachPost', 'jackQ_coachTour'],
   dashboard: ['jackQ_coachSummary', 'jackQ_coachAbsent', 'jackQ_coachWorkflow', 'jackQ_coachTour'],
-  clients: ['jackQ_coachAbsent', 'jackQ_coachClearance', 'jackQ_coachAssessment', 'jackQ_coachAssign'],
+  clients: ['jackQ_coachAbsent', 'jackQ_coachClearance', 'jackQ_coachHealth', 'jackQ_coachAssign'],
   groups: ['jackQ_coachGroup', 'jackQ_coachGroupProgram', 'jackQ_coachPost', 'jackQ_coachSummary'],
   contracts: ['jackQ_coachContract', 'jackQ_coachClearance', 'jackQ_coachInvite', 'jackQ_coachTour'],
   programTemplates: ['jackQ_coachAssign', 'jackQ_coachTemplates', 'jackQ_coachWorkflow', 'jackQ_coachTour'],
@@ -45,7 +46,8 @@ const CLIENT_PROMPTS = {
   workouts: ['jackQ_clientDone', 'jackQ_clientSchedule', 'jackQ_clientPoints', 'jackQ_clientTour'],
   progress: ['jackQ_clientWeight', 'jackQ_clientProgress', 'jackQ_clientPoints'],
   strength: ['jackQ_clientDone', 'jackQ_clientProgress', 'jackQ_clientTour'],
-  food: ['jackQ_clientFood', 'jackQ_clientPoints', 'jackQ_clientTour'],
+  food: ['jackQ_clientFood', 'jackQ_clientLogMeal', 'jackQ_clientHealth', 'jackQ_clientTour'],
+  integrations: ['jackQ_clientHealth', 'jackQ_clientLogMeal', 'jackQ_clientTour'],
   habits: ['jackQ_clientPoints', 'jackQ_clientWeight', 'jackQ_clientTour'],
   intake: ['jackQ_clientTour', 'jackQ_clientJoin', 'jackQ_clientSchedule'],
   assessments: ['jackQ_clientAssessment', 'jackQ_clientContracts', 'jackQ_clientSchedule'],

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Button from '../components/Button.jsx';
 import ClientCompliancePanel from '../components/ClientCompliancePanel.jsx';
+import ClientHealthPanel from '../components/ClientHealthPanel.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import {
@@ -164,6 +165,7 @@ export default function ClientsPage({ onNavigate, onNotify }) {
                       </dl>
                     )}
                     <ClientCompliancePanel clientId={client.client_id} />
+                    <ClientHealthPanel clientId={client.client_id} canSetTargets />
                   </div>
                 )}
               </article>

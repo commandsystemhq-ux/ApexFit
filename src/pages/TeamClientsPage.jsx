@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import AssessmentSummary from '../components/AssessmentSummary.jsx';
 import Button from '../components/Button.jsx';
+import ClientHealthPanel from '../components/ClientHealthPanel.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
@@ -73,6 +74,7 @@ function ClientCard({ client, overview, can, onChanged }) {
 
       <div className="client-row-actions">
         {can.view_assessments && <button className="text-action" type="button" aria-expanded={open === 'assessment'} onClick={toggleAssessment}>{t('trnViewAssessment')}</button>}
+        {can.view_assessments && <button className="text-action" type="button" aria-expanded={open === 'health'} onClick={() => setOpen(open === 'health' ? '' : 'health')}>{t('trnViewHealth')}</button>}
         {can.manage_programs && <button className="text-action" type="button" aria-expanded={open === 'program'} onClick={() => setOpen(open === 'program' ? '' : 'program')}>{t('trnAssignProgram')}</button>}
         {can.messages && <button className="text-action" type="button" aria-expanded={open === 'message'} onClick={() => setOpen(open === 'message' ? '' : 'message')}>{t('trnMessage')}</button>}
         {can.manage_groups && overview.groups.length > 0 && <button className="text-action" type="button" aria-expanded={open === 'group'} onClick={() => setOpen(open === 'group' ? '' : 'group')}>{t('trnAddToGroup')}</button>}
@@ -85,6 +87,8 @@ function ClientCard({ client, overview, can, onChanged }) {
           {assessment.status === 'ready' && <AssessmentSummary assessment={assessment.data} />}
         </div>
       )}
+
+      {open === 'health' && can.view_assessments && <div className="client-intake-summary"><ClientHealthPanel clientId={client.client_id} /></div>}
 
       {open === 'program' && (
         <div className="group-program-row">

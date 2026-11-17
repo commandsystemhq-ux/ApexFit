@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import ClientFoodLogger from '../components/ClientFoodLogger.jsx';
+import NutritionTracker from '../components/NutritionTracker.jsx';
 import ClientHabitTracker from '../components/ClientHabitTracker.jsx';
 import ClientIntakeForm from '../components/ClientIntakeForm.jsx';
 import ClientOneRepMax from '../components/ClientOneRepMax.jsx';
@@ -53,6 +54,12 @@ export default function ClientPortalPage({ section }) {
       {section === 'progress' && <ClientProgressTracking clientId={user.id} />}
       {section === 'strength' && <ClientOneRepMax />}
       {section === 'food' && <ClientFoodLogger />}
+      {section === 'food' && (
+        <section className="nutrition-section" aria-labelledby="nutrition-section-title">
+          <h3 id="nutrition-section-title" className="contract-section-title">{t('nutSectionTitle')}</h3>
+          <NutritionTracker />
+        </section>
+      )}
       {section === 'habits' && <ClientHabitTracker />}
       {section === 'intake' && <ClientIntakeForm onCompleted={() => setIntakeMissing(false)} />}
     </>

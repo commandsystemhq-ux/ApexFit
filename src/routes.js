@@ -23,6 +23,7 @@ export const PAGES = {
   food: { path: '/food', titleKey: 'foodTab', icon: '◔', access: 'client' },
   habits: { path: '/habits', titleKey: 'habitTracker', icon: '✓', access: 'client' },
   intake: { path: '/intake', titleKey: 'intakeTab', icon: '☰', access: 'client' },
+  integrations: { path: '/integrations', titleKey: 'navIntegrations', icon: '\u25C9', access: 'client' },
   assessments: { path: '/assessments', titleKey: 'navAssessments', icon: '\u2665', access: 'client' },
   myContracts: { path: '/my-contracts', titleKey: 'navMyContracts', icon: '\u270E', access: 'client' },
   myGroups: { path: '/my-groups', titleKey: 'navMyGroups', icon: '\u25CE', access: 'client' },
@@ -43,7 +44,7 @@ const COACH_NAVIGATION = [
 ];
 
 const CLIENT_NAVIGATION = [
-  { group: 'clients', items: ['workouts', 'progress', 'strength', 'food', 'habits', 'intake', 'assessments', 'myContracts'] },
+  { group: 'clients', items: ['workouts', 'progress', 'strength', 'food', 'habits', 'integrations', 'intake', 'assessments', 'myContracts'] },
   { group: 'community', items: ['coachHub', 'mySessions', 'myGroups', 'myStore', 'community', 'leaderboard'] },
   { group: 'account', items: ['settings'] },
 ];
