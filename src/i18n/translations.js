@@ -1,3 +1,4 @@
+import { aiTranslations } from './aiTranslations.js';
 import { businessTranslations } from './businessTranslations.js';
 import { chatTranslations } from './chatTranslations.js';
 import { communityTranslations } from './communityTranslations.js';
@@ -614,4 +615,8 @@ for (const locale of supportedLocales) {
 
 for (const locale of supportedLocales) {
   Object.assign(translations[locale], chatTranslations[locale]);
+}
+
+for (const locale of supportedLocales) {
+  Object.assign(translations[locale], aiTranslations[locale]);
 }

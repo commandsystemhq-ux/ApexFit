@@ -11,6 +11,11 @@ export async function callApi(path, { method = 'POST', body } = {}) {
     body: body ? JSON.stringify(body) : undefined,
   });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || `Request failed (${response.status}).`);
+  if (!response.ok) {
+    const failure = new Error(payload.error || `Request failed (${response.status}).`);
+    failure.status = response.status;
+    failure.payload = payload;
+    throw failure;
+  }
   return payload;
 }

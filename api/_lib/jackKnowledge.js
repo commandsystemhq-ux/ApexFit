@@ -24,7 +24,8 @@ APEXFIT PAGES FOR COACHES
 - Schedule (${PAGES.schedule.path}): plan in-person training sessions and sync them with Google Calendar.
 - Store (${PAGES.store.path}): sell ready-made programs. Pick a program, set a price (0 = free) and currency, publish it. Clients of the coach buy it in their Store; paid items go through Stripe Checkout and the program is assigned automatically after payment. You see sales, revenue and a public store link to share (anyone can browse it, only your clients can buy).
 - Packages & invoices (${PAGES.invoicing.path}): sell session packages, issue invoices, and get paid through Stripe.
-- Billing (${PAGES.billing.path}): the coach plan is a 3-day free trial, then $39 per month.${SHARED_PAGES}
+- Billing (${PAGES.billing.path}): the coach plan is a 3-day free trial, then $39 per month.
+- AI provider (a section of Settings, ${PAGES.settings.path}, for the account owner only): choose which AI service powers Jack for the coach, the assistant trainers and the clients: OpenAI, Google Gemini, Amazon Bedrock (region, model ID, AWS keys) or Microsoft Azure AI Foundry (endpoint, deployment name, API key), or keep the platform default. Keys are encrypted and hidden after saving, and Test connection checks the connection and tool calling. Clients and assistant trainers never see this section.${SHARED_PAGES}
 
 COACH HOW-TOS
 - Add a client: Clients -> Create invite code -> share the code. The client signs up as a client and redeems it.
