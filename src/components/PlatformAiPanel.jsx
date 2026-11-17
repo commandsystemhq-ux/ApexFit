@@ -161,7 +161,10 @@ export default function PlatformAiPanel() {
           ) : (
             <>
               <strong>{t('aiTestFail')}</strong> {testResult.error}
-              {testResult.detail && <><br /><span dir="ltr">{testResult.detail}</span></>}
+              {(testResult.providerStatus || testResult.detail) && (
+                <><br /><span dir="ltr">{[testResult.providerStatus && `HTTP ${testResult.providerStatus}`, testResult.detail].filter(Boolean).join(' · ')}</span></>
+              )}
+              {testResult.requestUrl && <><br /><small className="muted-copy" dir="ltr">{testResult.requestUrl}</small></>}
             </>
           )}
         </div>

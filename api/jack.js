@@ -1,5 +1,5 @@
 import { adminClient, authenticate } from './_lib/auth.js';
-import { resolveJackModel } from './_lib/aiSettings.js';
+import { describeJackFailure, isPlatformAdmin, resolveJackModel } from './_lib/aiSettings.js';
 import { ConfigError } from './_lib/config.js';
 import { HttpError, handler, readJson } from './_lib/http.js';
 import { buildContextSummary, createRateLimiter, pageIdForRoute, parseJackRequest, runJack } from './_lib/jackAgent.js';
@@ -20,18 +20,16 @@ async function loadAccess(userClient) {
   return data;
 }
 
-// Which AI provider runs Jack is the platform owner's business. Nobody who talks to Jack ever sees the provider's
-// own message (rejected credentials, wrong model…); it goes to the server log, and the owner can use "Test
-// connection" on the AI admin screen to see it.
-const UNAVAILABLE = 'Jack is unavailable right now. Please try again later.';
-
-function friendlyError(error) {
+// Which AI provider runs Jack is the platform owner's business. Coaches, assistant trainers and clients are only
+// told that Jack is unavailable; the platform owner (PLATFORM_ADMIN_EMAILS) is shown the provider's real status
+// and message so the setup can be fixed. Everything is also written to the server log.
+function friendlyError(error, admin) {
   if (error instanceof ModelError) {
-    console.error('Jack model error', error.status, error.detail);
-    return error.status === 429 ? error.message : UNAVAILABLE;
+    console.error('Jack model error', error.providerStatus, error.detail, error.requestUrl);
+    return describeJackFailure(error, { admin });
   }
   console.error('Jack failed', error);
-  return 'Jack ran into a problem. Please try again.';
+  return describeJackFailure(error, { admin });
 }
 
 export default handler(['POST'], async (req, res) => {
@@ -39,14 +37,16 @@ export default handler(['POST'], async (req, res) => {
   const access = await loadAccess(userClient);
   if (!allowRequest(user.id)) throw new HttpError(429, 'You are sending messages too quickly. Wait a moment.');
 
+  // Only the platform owner is told why the AI failed. This comes from the verified session, never from the request.
+  const admin = isPlatformAdmin(user);
   const request = parseJackRequest(await readJson(req), { fallbackLocale: access.locale });
   if (request.error) throw new HttpError(400, request.error);
 
   // One model for the whole platform: the platform owner's setting, else the server's environment variables.
   // Fails with a 503 before any streaming starts when nothing is configured.
-  let admin = null;
+  let serviceClient = null;
   try {
-    admin = adminClient();
+    serviceClient = adminClient();
   } catch (error) {
     if (!(error instanceof ConfigError)) throw error;
   }
@@ -55,11 +55,11 @@ export default handler(['POST'], async (req, res) => {
 
   let model;
   try {
-    ({ model } = await resolveJackModel({ admin }));
+    ({ model } = await resolveJackModel({ admin: serviceClient }));
   } catch (error) {
     if (!(error instanceof ConfigError)) throw error;
     console.error('Jack is not configured:', error.message);
-    throw new HttpError(503, UNAVAILABLE);
+    throw new HttpError(503, describeJackFailure(error, { admin }));
   }
 
   const system = buildSystemPrompt({
@@ -84,7 +84,7 @@ export default handler(['POST'], async (req, res) => {
   try {
     await runJack({ model, system, history: request.messages, ctx, emit });
   } catch (error) {
-    emit({ type: 'error', message: friendlyError(error) });
+    emit({ type: 'error', message: friendlyError(error, admin) });
   } finally {
     emit({ type: 'done' });
     res.end();

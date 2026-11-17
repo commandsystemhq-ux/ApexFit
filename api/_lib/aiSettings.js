@@ -192,7 +192,9 @@ export async function testModel(model) {
 }
 
 function describeFailure(error) {
-  if (error instanceof ModelError) return { ok: false, status: error.status, error: error.message, detail: error.detail || '' };
+  if (error instanceof ModelError) {
+    return { ok: false, status: error.status, error: error.message, detail: error.detail || '', providerStatus: error.providerStatus, requestUrl: error.requestUrl };
+  }
   if (error instanceof ConfigError) return { ok: false, status: 400, error: error.message, detail: '' };
   throw error;
 }
@@ -261,6 +263,29 @@ export async function handleAiRequest({ body = {}, user, store: storeOrFactory, 
   }
 
   throw new HttpError(400, 'Unknown action.');
+}
+
+// ------------------------------------------------- what Jack says when the AI fails
+
+export const JACK_UNAVAILABLE = 'Jack is unavailable right now. Please try again later.';
+
+// The provider's own status and explanation, with the address that was called, for the platform owner.
+export function formatProviderFailure(error) {
+  const status = error.providerStatus ? `HTTP ${error.providerStatus}` : 'no answer';
+  const detail = error.detail ? `: ${error.detail}` : '';
+  const where = error.requestUrl ? ` [${error.requestUrl}]` : '';
+  return `${error.message} (${status}${detail})${where}`;
+}
+
+// What the person talking to Jack is told. Coaches, assistant trainers and clients never learn which provider is
+// in use or why it failed; the platform owner (PLATFORM_ADMIN_EMAILS) gets the real reason to fix it.
+export function describeJackFailure(error, { admin = false } = {}) {
+  if (error instanceof ModelError) {
+    if (admin) return formatProviderFailure(error);
+    return error.status === 429 ? error.message : JACK_UNAVAILABLE;
+  }
+  if (error instanceof ConfigError) return admin ? error.message : JACK_UNAVAILABLE;
+  return admin ? `Jack ran into a problem: ${error?.message || 'unknown error'}` : 'Jack ran into a problem. Please try again.';
 }
 
 // ------------------------------------------------------ the model Jack uses for everyone

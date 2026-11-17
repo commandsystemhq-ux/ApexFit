@@ -11,17 +11,27 @@ import { normalizeAzureEndpoint } from '../../src/services/aiProviders.js';
 //   { role: 'tool', toolCallId, name, content }
 
 export class ModelError extends Error {
-  // `detail` is the provider's own explanation. It is only meant for the account owner's "Test connection"
-  // screen and is never shown to clients; secrets are removed from it before it is stored here.
-  constructor(status, message, detail = '') {
+  // `detail` is the provider's own explanation, `providerStatus` its HTTP status (null when there was no answer) and
+  // `requestUrl` the address that was called. They are only meant for the platform owner (the AI admin screen and
+  // the owner's own chat with Jack) and never reach coaches or clients. Secrets are removed from `detail`; the
+  // address never contains one (keys travel in headers).
+  constructor(status, message, detail = '', { providerStatus = null, requestUrl = '' } = {}) {
     super(message);
     this.status = status;
     this.detail = detail;
+    this.providerStatus = providerStatus;
+    this.requestUrl = requestUrl;
   }
 }
 
 const REQUEST_TIMEOUT_MS = 45_000;
 const DETAIL_LIMIT = 300;
+
+function redactText(text, redact) {
+  let result = text;
+  for (const secret of redact) if (secret && secret.length >= 4) result = result.split(secret).join('***');
+  return result.slice(0, DETAIL_LIMIT);
+}
 
 async function readErrorDetail(response, redact) {
   let data = null;
@@ -32,9 +42,7 @@ async function readErrorDetail(response, redact) {
   }
   const raw = [data?.error?.message, typeof data?.error === 'string' ? data.error : '', data?.message, data?.Message, data?.error_description]
     .find((value) => typeof value === 'string' && value.trim());
-  let text = (raw || '').replace(/\s+/g, ' ').trim();
-  for (const secret of redact) if (secret && secret.length >= 4) text = text.split(secret).join('***');
-  return text.slice(0, DETAIL_LIMIT);
+  return redactText((raw || '').replace(/\s+/g, ' ').trim(), redact);
 }
 
 // `sign(payload, headers)` may return the final headers (Amazon Bedrock signs the exact bytes it sends).
@@ -49,14 +57,16 @@ async function postJson(fetchImpl, url, headers, body, { redact = [], sign } = {
       body: payload,
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
-  } catch {
-    throw new ModelError(504, 'The AI service did not respond in time.');
+  } catch (cause) {
+    const reason = String(cause?.cause?.code || cause?.cause?.message || cause?.name || cause?.message || 'no answer');
+    throw new ModelError(504, 'The AI service did not respond in time.', redactText(reason, redact), { requestUrl: url });
   }
   if (!response.ok) {
     const detail = await readErrorDetail(response, redact);
-    if (response.status === 401 || response.status === 403) throw new ModelError(503, 'The AI provider rejected the configured credentials.', detail);
-    if (response.status === 429) throw new ModelError(429, 'The AI service is busy. Try again in a moment.', detail);
-    throw new ModelError(502, 'The AI service returned an error.', detail);
+    const where = { providerStatus: response.status, requestUrl: url };
+    if (response.status === 401 || response.status === 403) throw new ModelError(503, 'The AI provider rejected the configured credentials.', detail, where);
+    if (response.status === 429) throw new ModelError(429, 'The AI service is busy. Try again in a moment.', detail, where);
+    throw new ModelError(502, 'The AI service returned an error.', detail, where);
   }
   return response.json();
 }
@@ -192,12 +202,20 @@ export function createGeminiModel({ apiKey, model = 'gemini-2.0-flash', baseUrl 
 
 // ------------------------------------------------------------- Microsoft Azure AI Foundry
 
-const AZURE_OPENAI_API_VERSION = '2024-10-21';
+const AZURE_OPENAI_API_VERSION = '2024-08-01-preview';
 const AZURE_INFERENCE_API_VERSION = '2024-05-01-preview';
 
-// Foundry offers two doors. OpenAI models (and any "…openai.azure.com" resource) are called through
-// /openai/deployments/<name>; other models (DeepSeek, Llama, Mistral, Phi…) through the Azure AI model
-// inference API at /models/chat/completions. A full ".../chat/completions" address is used exactly as given.
+const AZURE_OPENAI_HOST = /\.openai\.azure\.(com|us|cn)$/;
+const AZURE_SERVICES_HOST = /\.services\.ai\.azure\.(com|us|cn)$/;
+const AZURE_SERVERLESS_HOST = /\.(inference|models)\.ai\.azure\.com$/;
+
+// Foundry is reached in two ways, chosen from the endpoint's host:
+//   *.openai.azure.com       Azure OpenAI:  /openai/deployments/<deployment>/chat/completions?api-version=2024-08-01-preview
+//   *.services.ai.azure.com  Foundry:       /models/chat/completions?api-version=2024-05-01-preview  (model = deployment in the body)
+// (*.cognitiveservices.azure.com can be either: OpenAI model names use the first way, the rest the second.)
+// Only the host of the endpoint is used. A trailing slash, or a path pasted along with it (/openai, /models,
+// /openai/deployments/<name>, /api/projects/<name>), is dropped so segments are never repeated. Two forms are
+// kept exactly as given: a complete ".../chat/completions" address, and the OpenAI v1 base ".../openai/v1".
 export function azureChatUrl(endpoint, model) {
   const normalized = normalizeAzureEndpoint(endpoint);
   if (!normalized) throw new ConfigError('The Azure AI Foundry endpoint must be an https address on an Azure domain (for example https://my-resource.services.ai.azure.com).');
@@ -209,28 +227,26 @@ export function azureChatUrl(endpoint, model) {
     if (!url.searchParams.has('api-version') && !/\/openai\/v1\//.test(path)) url.searchParams.set('api-version', AZURE_INFERENCE_API_VERSION);
     return url.toString();
   }
-  const serverless = /\.(inference|models)\.ai\.azure\.com$/.test(host);
-  if (serverless) return `${url.origin}${path || '/v1'}/chat/completions`;
+  if (AZURE_SERVERLESS_HOST.test(host)) return `${url.origin}${path || '/v1'}/chat/completions`;
   if (/\/openai\/v1$/.test(path)) return `${url.origin}${path}/chat/completions`;
 
-  const openAiHost = /\.openai\.azure\.(com|us|cn)$/.test(host);
-  if (openAiHost || /^(gpt|o\d|chatgpt)/i.test(model)) {
-    return `${url.origin}/openai/deployments/${encodeURIComponent(model)}/chat/completions?api-version=${AZURE_OPENAI_API_VERSION}`;
-  }
-  const base = path.endsWith('/models') ? path : `${path}/models`;
-  return `${url.origin}${base}/chat/completions?api-version=${AZURE_INFERENCE_API_VERSION}`;
+  const openAiStyle = AZURE_OPENAI_HOST.test(host) || (!AZURE_SERVICES_HOST.test(host) && /^(gpt|o\d|chatgpt)/i.test(model));
+  if (openAiStyle) return `${url.origin}/openai/deployments/${encodeURIComponent(model)}/chat/completions?api-version=${AZURE_OPENAI_API_VERSION}`;
+  return `${url.origin}/models/chat/completions?api-version=${AZURE_INFERENCE_API_VERSION}`;
 }
 
 export function createAzureFoundryModel({ endpoint, apiKey, model, fetchImpl = fetch }) {
   if (!model) throw new ConfigError('Azure AI Foundry needs a deployment or model name.');
   const chatUrl = azureChatUrl(endpoint, model);
-  const serverless = /\.(inference|models)\.ai\.azure\.com$/.test(new URL(chatUrl).hostname);
+  const { hostname, pathname } = new URL(chatUrl);
+  // Azure OpenAI takes the key in api-key only; Foundry also accepts it as a bearer token, so both are sent.
+  const azureOpenAi = AZURE_OPENAI_HOST.test(hostname) || /\/openai\/deployments\//.test(pathname);
   return createOpenAiModel({
     apiKey,
     model,
     chatUrl,
     provider: 'azure_foundry',
-    headers: serverless ? { 'api-key': apiKey, Authorization: `Bearer ${apiKey}` } : { 'api-key': apiKey },
+    headers: azureOpenAi ? { 'api-key': apiKey } : { 'api-key': apiKey, Authorization: `Bearer ${apiKey}` },
     // Reasoning deployments (o-series, gpt-5) only accept the default temperature.
     temperature: /^(o\d|gpt-5)/i.test(model) ? null : 0.3,
     removeThinking: true,

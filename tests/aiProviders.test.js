@@ -5,12 +5,13 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { signRequest, uriEncode } from '../api/_lib/awsSigV4.js';
 import { ConfigError } from '../api/_lib/config.js';
 import { HttpError } from '../api/_lib/http.js';
-import { runJack } from '../api/_lib/jackAgent.js';
+import { parseJackRequest, runJack } from '../api/_lib/jackAgent.js';
 import {
   ModelError, azureChatUrl, bedrockHost, createAzureFoundryModel, createBedrockModel, createModelFromConfig, createModelFromEnv, envProviderConfigs, toConverseMessages,
 } from '../api/_lib/jackModels.js';
 import {
-  assertPlatformAdmin, createAiStore, decryptCredentials, encryptCredentials, environmentSummary, handleAiRequest, isPlatformAdmin, platformAdminEmails, resolveJackModel,
+  JACK_UNAVAILABLE, assertPlatformAdmin, createAiStore, decryptCredentials, describeJackFailure, encryptCredentials, environmentSummary, formatProviderFailure, handleAiRequest, isPlatformAdmin,
+  platformAdminEmails, resolveJackModel,
 } from '../api/_lib/aiSettings.js';
 import { buildSystemPrompt } from '../api/_lib/jackKnowledge.js';
 import { normalizeAzureEndpoint, validateAiSettings } from '../src/services/aiProviders.js';
@@ -180,18 +181,71 @@ test('Bedrock refuses incomplete or suspicious configuration', () => {
 
 // ------------------------------------------------------ Microsoft Azure AI Foundry
 
-test('Azure AI Foundry: the chat address follows the kind of resource and model', () => {
-  const urlFor = (endpoint, model) => azureChatUrl(endpoint, model);
-  assert.equal(urlFor('https://res.openai.azure.com/', 'gpt-4o'), 'https://res.openai.azure.com/openai/deployments/gpt-4o/chat/completions?api-version=2024-10-21');
-  assert.equal(urlFor('https://res.openai.azure.com', 'my deployment'.replace(' ', '-')), 'https://res.openai.azure.com/openai/deployments/my-deployment/chat/completions?api-version=2024-10-21');
-  assert.equal(urlFor('https://res.services.ai.azure.com', 'gpt-4o'), 'https://res.services.ai.azure.com/openai/deployments/gpt-4o/chat/completions?api-version=2024-10-21');
-  assert.equal(urlFor('https://res.services.ai.azure.com', 'DeepSeek-R1'), 'https://res.services.ai.azure.com/models/chat/completions?api-version=2024-05-01-preview');
-  assert.equal(urlFor('https://res.services.ai.azure.com/', 'Llama-3.3-70B-Instruct'), 'https://res.services.ai.azure.com/models/chat/completions?api-version=2024-05-01-preview');
-  assert.equal(urlFor('https://res.services.ai.azure.com/models', 'Llama-3.3-70B-Instruct'), 'https://res.services.ai.azure.com/models/chat/completions?api-version=2024-05-01-preview');
-  assert.equal(urlFor('https://res.openai.azure.com/openai/v1', 'gpt-4o'), 'https://res.openai.azure.com/openai/v1/chat/completions');
-  assert.equal(urlFor('https://res.services.ai.azure.com/models/chat/completions', 'x'), 'https://res.services.ai.azure.com/models/chat/completions?api-version=2024-05-01-preview');
-  assert.equal(urlFor('https://res.services.ai.azure.com/models/chat/completions?api-version=2025-01-01', 'x'), 'https://res.services.ai.azure.com/models/chat/completions?api-version=2025-01-01');
-  assert.equal(urlFor('https://llama-abc.eastus2.models.ai.azure.com', 'Llama'), 'https://llama-abc.eastus2.models.ai.azure.com/v1/chat/completions');
+const OPENAI_STYLE = (host, deployment) => `https://${host}/openai/deployments/${deployment}/chat/completions?api-version=2024-08-01-preview`;
+const FOUNDRY_STYLE = (host) => `https://${host}/models/chat/completions?api-version=2024-05-01-preview`;
+
+test('Azure OpenAI endpoints (*.openai.azure.com) call /openai/deployments/<deployment>/chat/completions', () => {
+  const host = 'res.openai.azure.com';
+  for (const endpoint of [
+    `https://${host}`,
+    `https://${host}/`,
+    `https://${host}//`,
+    `https://${host}/openai`,
+    `https://${host}/openai/`,
+    `https://${host}/openai/deployments/gpt-4o`,
+    `https://${host}/openai/deployments/gpt-4o/`,
+    `  https://${host}/openai/  `,
+    `https://RES.OpenAI.Azure.com/openai`,
+    `https://${host}/openai?api-version=2023-05-15`,
+  ]) {
+    assert.equal(azureChatUrl(endpoint, 'gpt-4o'), OPENAI_STYLE(host, 'gpt-4o'), endpoint);
+  }
+  assert.equal(azureChatUrl(`https://${host}`, 'my-4o-deployment'), OPENAI_STYLE(host, 'my-4o-deployment'), 'any deployment name, not only gpt-*');
+  assert.equal(azureChatUrl(`https://${host}`, 'DeepSeek-R1'), OPENAI_STYLE(host, 'DeepSeek-R1'));
+});
+
+test('Azure AI Services / Foundry endpoints (*.services.ai.azure.com) call /models/chat/completions with the model in the body', () => {
+  const host = 'res.services.ai.azure.com';
+  for (const model of ['gpt-4o', 'DeepSeek-R1', 'Llama-3.3-70B-Instruct', 'o3-mini']) {
+    for (const endpoint of [
+      `https://${host}`,
+      `https://${host}/`,
+      `https://${host}//`,
+      `https://${host}/models`,
+      `https://${host}/models/`,
+      `https://${host}/openai`,
+      `https://${host}/openai/`,
+      `https://${host}/openai/deployments/${model}`,
+      `https://${host}/api/projects/my-project`,
+      `https://${host}/api/projects/my-project/`,
+    ]) {
+      assert.equal(azureChatUrl(endpoint, model), FOUNDRY_STYLE(host), `${model} ${endpoint}`);
+    }
+  }
+});
+
+test('Azure endpoint cleaning never repeats a path segment', () => {
+  const urls = [
+    azureChatUrl('https://a.openai.azure.com/openai/', 'gpt-4o'),
+    azureChatUrl('https://a.services.ai.azure.com/models/', 'DeepSeek-R1'),
+    azureChatUrl('https://a.services.ai.azure.com/openai/', 'gpt-4o'),
+    azureChatUrl('https://a.cognitiveservices.azure.com/openai/', 'gpt-4o'),
+    azureChatUrl('https://a.cognitiveservices.azure.com/', 'Llama-3.3-70B-Instruct'),
+  ];
+  for (const url of urls) {
+    const segments = new URL(url).pathname.split('/').filter(Boolean);
+    assert.equal(new Set(segments).size, segments.length, url);
+    assert.ok(!url.includes('//chat') && !url.includes('/openai/openai') && !url.includes('/models/models'), url);
+  }
+  assert.equal(urls[3], OPENAI_STYLE('a.cognitiveservices.azure.com', 'gpt-4o'), 'OpenAI model names on a multi-service host use the OpenAI path');
+  assert.equal(urls[4], FOUNDRY_STYLE('a.cognitiveservices.azure.com'), 'other models use the Foundry path');
+});
+
+test('Azure addresses given in full are used as they are', () => {
+  assert.equal(azureChatUrl('https://res.openai.azure.com/openai/v1', 'gpt-4o'), 'https://res.openai.azure.com/openai/v1/chat/completions');
+  assert.equal(azureChatUrl('https://res.services.ai.azure.com/models/chat/completions', 'x'), 'https://res.services.ai.azure.com/models/chat/completions?api-version=2024-05-01-preview');
+  assert.equal(azureChatUrl('https://res.services.ai.azure.com/models/chat/completions?api-version=2025-01-01', 'x'), 'https://res.services.ai.azure.com/models/chat/completions?api-version=2025-01-01');
+  assert.equal(azureChatUrl('https://llama-abc.eastus2.models.ai.azure.com', 'Llama'), 'https://llama-abc.eastus2.models.ai.azure.com/v1/chat/completions');
 });
 
 test('Azure AI Foundry only talks to Microsoft domains over https', () => {
@@ -228,7 +282,7 @@ test('Azure AI Foundry: sends tools with the api-key header and reads tool calls
   const [request] = fetchImpl.requests;
   assert.equal(request.url, 'https://my-resource.services.ai.azure.com/models/chat/completions?api-version=2024-05-01-preview');
   assert.equal(request.headers['api-key'], AZURE_SETTINGS.apiKey);
-  assert.equal('Authorization' in request.headers, false);
+  assert.equal(request.headers.Authorization, `Bearer ${AZURE_SETTINGS.apiKey}`, 'Foundry gets the key both ways');
   assert.equal(request.body.model, 'DeepSeek-R1');
   assert.equal(request.body.temperature, 0.3);
   assert.deepEqual(request.body.messages.map((message) => message.role), ['system', 'user', 'assistant', 'tool']);
@@ -237,6 +291,17 @@ test('Azure AI Foundry: sends tools with the api-key header and reads tool calls
   assert.equal(request.body.tool_choice, 'auto');
   assert.deepEqual(result, { text: 'Hello there', toolCalls: [{ id: 'call_9', name: 'get_my_schedule', args: { day: 'today' } }] });
   assert.equal(model.provider, 'azure_foundry');
+});
+
+test('Azure OpenAI sends the key in api-key only, with the deployment in the address and the model in the body', async () => {
+  const fetchImpl = mockFetch(reply({ choices: [{ message: { content: 'ok' } }] }));
+  await createAzureFoundryModel({ endpoint: 'https://res.openai.azure.com/openai/', apiKey: AZURE_SETTINGS.apiKey, model: 'gpt-4o', fetchImpl })
+    .complete({ system: 's', messages: [{ role: 'user', content: 'hi' }], tools: [] });
+  const [request] = fetchImpl.requests;
+  assert.equal(request.url, OPENAI_STYLE('res.openai.azure.com', 'gpt-4o'));
+  assert.equal(request.headers['api-key'], AZURE_SETTINGS.apiKey);
+  assert.equal('Authorization' in request.headers, false);
+  assert.equal(request.body.model, 'gpt-4o');
 });
 
 test('Azure AI Foundry: reasoning deployments get no temperature, content parts are joined, serverless also sends a bearer token', async () => {
@@ -679,7 +744,7 @@ test('every kind of user gets the same model, and its first request goes to the 
     assert.equal(fetchImpl.requests[0].headers['api-key'], AZURE_SETTINGS.apiKey);
     urls.push(fetchImpl.requests[0].url);
   }
-  assert.deepEqual([...new Set(urls)], ['https://my-resource.services.ai.azure.com/openai/deployments/gpt-4o/chat/completions?api-version=2024-10-21']);
+  assert.deepEqual([...new Set(urls)], ['https://my-resource.services.ai.azure.com/models/chat/completions?api-version=2024-05-01-preview']);
 });
 
 test('the environment names for Azure: the deployment variable wins over the older model variable', () => {
@@ -722,10 +787,73 @@ test('no coach, trainer or client screen, route or Jack text offers or mentions 
 
 test('Jack hides the provider\'s own error text from everyone who talks to it', () => {
   const source = read('api/jack.js');
-  assert.match(source, /Jack is unavailable right now/);
+  assert.match(read('api/_lib/aiSettings.js'), /Jack is unavailable right now/);
   assert.doesNotMatch(source, /role === 'coach' \? error\.message/);
   assert.doesNotMatch(source, /message: error\.detail|emit\(\{ type: 'error', message: error\.message/);
-  assert.match(source, /resolveJackModel\(\{ admin \}\)/, 'one model for the whole platform, no user passed in');
+  assert.match(source, /resolveJackModel\(\{ admin: serviceClient \}\)/, 'one model for the whole platform, no user passed in');
+  assert.doesNotMatch(source, /let admin\b|const admin = adminClient/, 'the owner flag and the database client have different names');
+});
+
+// ------------------------------- the real reason: for the platform owner only
+
+test('provider failures carry the provider\'s status, message and address, but never a secret', async () => {
+  const fetchImpl = mockFetch(reply({ error: { code: 'DeploymentNotFound', message: `The API deployment for this resource does not exist. key=${AZURE_SETTINGS.apiKey}` } }, 404));
+  const model = createAzureFoundryModel({ endpoint: 'https://res.openai.azure.com', apiKey: AZURE_SETTINGS.apiKey, model: 'gpt-4o', fetchImpl });
+  await assert.rejects(model.complete({ system: 's', messages: [{ role: 'user', content: 'hi' }], tools: [] }), (error) => {
+    assert.equal(error.status, 502);
+    assert.equal(error.providerStatus, 404);
+    assert.equal(error.requestUrl, OPENAI_STYLE('res.openai.azure.com', 'gpt-4o'));
+    assert.match(error.detail, /DeploymentNotFound|deployment for this resource does not exist/);
+    for (const text of [error.message, error.detail, error.requestUrl]) assert.ok(!text.includes(AZURE_SETTINGS.apiKey));
+    return true;
+  });
+
+  const unauthorized = createAzureFoundryModel({ ...AZURE_SETTINGS, fetchImpl: mockFetch(reply({ error: { message: 'Access denied due to invalid subscription key.' } }, 401)) });
+  await assert.rejects(unauthorized.complete({ system: 's', messages: [{ role: 'user', content: 'hi' }], tools: [] }), (error) => error.status === 503 && error.providerStatus === 401);
+
+  const offline = createAzureFoundryModel({ ...AZURE_SETTINGS, fetchImpl: async () => { throw Object.assign(new TypeError('fetch failed'), { cause: { code: 'ENOTFOUND' } }); } });
+  await assert.rejects(offline.complete({ system: 's', messages: [{ role: 'user', content: 'hi' }], tools: [] }), (error) => error.status === 504 && error.providerStatus === null && error.detail === 'ENOTFOUND' && error.requestUrl.startsWith('https://my-resource.services.ai.azure.com/'));
+});
+
+test('the platform owner is shown the real error; coaches, trainers and clients only that Jack is unavailable', () => {
+  const failure = new ModelError(502, 'The AI service returned an error.', 'The API deployment for this resource does not exist.', { providerStatus: 404, requestUrl: OPENAI_STYLE('res.openai.azure.com', 'gpt-4o') });
+  const forOwner = describeJackFailure(failure, { admin: true });
+  assert.equal(forOwner, `The AI service returned an error. (HTTP 404: The API deployment for this resource does not exist.) [${OPENAI_STYLE('res.openai.azure.com', 'gpt-4o')}]`);
+  assert.equal(formatProviderFailure(new ModelError(504, 'The AI service did not respond in time.', 'ENOTFOUND')), 'The AI service did not respond in time. (no answer: ENOTFOUND)');
+
+  for (const admin of [false, undefined]) {
+    const text = describeJackFailure(failure, { admin });
+    assert.equal(text, JACK_UNAVAILABLE);
+    assert.ok(!/404|deployment|azure|openai/i.test(text));
+  }
+  assert.equal(describeJackFailure(failure), JACK_UNAVAILABLE, 'hidden unless the caller is proven to be the owner');
+  assert.match(describeJackFailure(new ModelError(429, 'The AI service is busy. Try again in a moment.'), {}), /busy/);
+
+  const notConfigured = new ConfigError('Jack is not configured. Set OPENAI_API_KEY…');
+  assert.match(describeJackFailure(notConfigured, { admin: true }), /not configured/);
+  assert.equal(describeJackFailure(notConfigured, { admin: false }), JACK_UNAVAILABLE);
+  assert.match(describeJackFailure(new Error('boom'), { admin: true }), /boom/);
+  assert.doesNotMatch(describeJackFailure(new Error('boom'), { admin: false }), /boom/);
+});
+
+test('Jack\'s route decides who is the owner from the verified session, and only that decides what is revealed', async () => {
+  for (const route of ['jack', 'ai']) assert.equal(typeof (await import(`../api/${route}.js`)).default, 'function', `api/${route}.js loads`);
+  const source = read('api/jack.js');
+  assert.match(source, /const admin = isPlatformAdmin\(user\)/, 'the verified Supabase user, never the request body');
+  assert.match(source, /describeJackFailure\(error, \{ admin \}\)/);
+  assert.doesNotMatch(source, /body\.admin|request\.admin|access\.admin/);
+  // The request parser ignores anything claiming to be an admin.
+  const parsed = parseJackRequest({ messages: [{ role: 'user', content: 'hi' }], admin: true, isAdmin: true, role: 'super_admin' }, {});
+  assert.ok(!('admin' in parsed) && !('isAdmin' in parsed) && !('role' in parsed));
+});
+
+test('Test connection tells the owner the provider\'s status and the address that failed', async () => {
+  const store = memoryStore();
+  const notFound = mockFetch(reply({ error: { message: 'Resource not found' } }, 404));
+  const result = await request(store, { action: 'test', provider: 'azure_foundry', settings: { endpoint: 'https://res.openai.azure.com/openai/', model: 'gpt-4o', apiKey: AZURE_SETTINGS.apiKey } }, { fetchImpl: notFound });
+  assert.deepEqual([result.body.ok, result.body.providerStatus, result.body.detail, result.body.requestUrl], [false, 404, 'Resource not found', OPENAI_STYLE('res.openai.azure.com', 'gpt-4o')]);
+  assert.ok(!JSON.stringify(result.body).includes(AZURE_SETTINGS.apiKey));
+  assert.equal(notFound.requests[0].url, OPENAI_STYLE('res.openai.azure.com', 'gpt-4o'), 'the cleaned address is the one that was called');
 });
 
 // -------------------------------------------------------------------- translations
