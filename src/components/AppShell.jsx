@@ -8,6 +8,7 @@ import TeamInvitationNotice from './TeamInvitationNotice.jsx';
 import UserAvatar from './UserAvatar.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
+import { useChatUnread } from '../hooks/useChatUnread.js';
 import { displayNameFor } from '../services/profileUtils.js';
 import { PAGES, homePathFor, navigationFor, pageForPath, roleOf } from '../routes.js';
 
@@ -23,6 +24,8 @@ export default function AppShell() {
   const role = roleOf(profile);
   const sections = navigationFor(role);
   const page = pageForPath(location.pathname);
+  const unreadChat = useChatUnread(user?.id, role === 'coach' || role === 'client');
+  const chatPageId = role === 'client' ? 'coachHub' : 'messages';
 
   useEffect(() => {
     setMenuOpen(false);
@@ -42,6 +45,7 @@ export default function AppShell() {
                 <NavLink key={id} to={PAGES[id].path} className={({ isActive }) => `nav-link ${isActive ? 'is-active' : ''}`}>
                   <span className="nav-icon" aria-hidden="true">{PAGES[id].icon}</span>
                   <span>{t(PAGES[id].titleKey)}</span>
+                  {id === chatPageId && unreadChat > 0 && <span className="nav-badge" aria-label={`${unreadChat} ${t('chatUnread')}`}>{unreadChat > 99 ? '99+' : unreadChat}</span>}
                 </NavLink>
               ))}
             </div>

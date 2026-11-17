@@ -17,6 +17,8 @@ export const WRITE_TOOLS = [
   'schedule_video_session',
   'invite_trainer',
   'log_nutrition_summary',
+  'send_client_chat_message',
+  'send_coach_chat_message',
 ];
 
 const COACH_PROMPTS = {
@@ -28,7 +30,7 @@ const COACH_PROMPTS = {
   programTemplates: ['jackQ_coachAssign', 'jackQ_coachTemplates', 'jackQ_coachWorkflow', 'jackQ_coachTour'],
   workoutBuilder: ['jackQ_coachTemplates', 'jackQ_coachAssign', 'jackQ_coachTour'],
   workflows: ['jackQ_coachWorkflow', 'jackQ_coachFollowUp', 'jackQ_coachAbsent', 'jackQ_coachTour'],
-  messages: ['jackQ_coachAbsent', 'jackQ_coachSummary', 'jackQ_coachPost'],
+  messages: ['jackQ_coachChat', 'jackQ_coachAbsent', 'jackQ_coachSummary', 'jackQ_coachPost'],
   community: ['jackQ_coachPost', 'jackQ_coachSummary', 'jackQ_coachTour'],
   store: ['jackQ_coachStore', 'jackQ_coachSales', 'jackQ_coachGroupProgram', 'jackQ_coachTour'],
   sessions: ['jackQ_coachSession', 'jackQ_coachGroup', 'jackQ_coachSummary', 'jackQ_coachTour'],
@@ -55,7 +57,7 @@ const CLIENT_PROMPTS = {
   myGroups: ['jackQ_clientGroups', 'jackQ_clientSchedule', 'jackQ_clientDone'],
   myStore: ['jackQ_clientStore', 'jackQ_clientSessions', 'jackQ_clientGroups'],
   mySessions: ['jackQ_clientSessions', 'jackQ_clientSchedule', 'jackQ_clientGroups'],
-  coachHub: ['jackQ_clientJoin', 'jackQ_clientSchedule', 'jackQ_clientTour'],
+  coachHub: ['jackQ_clientChat', 'jackQ_clientJoin', 'jackQ_clientSchedule', 'jackQ_clientTour'],
   community: ['jackQ_clientPoints', 'jackQ_clientDone', 'jackQ_clientTour'],
   leaderboard: ['jackQ_clientPoints', 'jackQ_clientDone', 'jackQ_clientTour'],
 };

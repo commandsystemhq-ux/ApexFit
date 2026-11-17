@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Button from '../components/Button.jsx';
+import ChatWorkspace from '../components/ChatWorkspace.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import { listMyClients } from '../services/coachClientService.js';
 import { clientLabel, groupSentMessages } from '../services/coachingUtils.js';
 import { listSentMessages, sendCoachMessage } from '../services/messageService.js';
 
-export default function MessagesPage({ onNavigate }) {
+// One-way notes and videos to one client or to everyone at once.
+function BroadcastPanel({ onNavigate }) {
   const { locale, t } = useLocale();
   const [clients, setClients] = useState([]);
   const [history, setHistory] = useState([]);
@@ -70,7 +73,6 @@ export default function MessagesPage({ onNavigate }) {
 
   return (
     <>
-      <PageHeader eyebrow="APEXFIT" title={t('messagesTitle')} description={t('messagesDescription')} />
       {loadError && <div className="notice notice-error" role="alert">{t('messagesLoadError')} {loadError}</div>}
       {loading && <div className="empty-state" role="status">{t('loadingProgress')}</div>}
       {!loading && !loadError && clients.length === 0 && (
@@ -131,6 +133,42 @@ export default function MessagesPage({ onNavigate }) {
           </section>
         </div>
       )}
+    </>
+  );
+}
+
+export default function MessagesPage({ onNavigate }) {
+  const { t } = useLocale();
+  const [params] = useSearchParams();
+  const withClient = params.get('with');
+  const [tab, setTab] = useState('chats');
+  const tabs = [{ id: 'chats', label: 'chatTab' }, { id: 'broadcast', label: 'chatBroadcastTab' }];
+
+  return (
+    <>
+      <PageHeader eyebrow="APEXFIT" title={t('messagesTitle')} description={t('messagesDescription')} />
+      <nav className="client-feature-tabs" aria-label={t('messagesTitle')}>
+        {tabs.map((item) => (
+          <button key={item.id} className={`client-feature-tab ${tab === item.id ? 'is-active' : ''}`} type="button" aria-pressed={tab === item.id} onClick={() => setTab(item.id)}>
+            {t(item.label)}
+          </button>
+        ))}
+      </nav>
+      {tab === 'chats' && (
+        <ChatWorkspace
+          initialPartnerId={withClient}
+          emptyState={(
+            <section className="panel">
+              <div className="dashboard-empty">
+                <h3>{t('emptyClients')}</h3>
+                <p>{t('messagesNeedClients')}</p>
+                <Button variant="primary" onClick={() => onNavigate('clients')}>{t('inviteClient')}</Button>
+              </div>
+            </section>
+          )}
+        />
+      )}
+      {tab === 'broadcast' && <BroadcastPanel onNavigate={onNavigate} />}
     </>
   );
 }

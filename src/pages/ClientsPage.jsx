@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Button from '../components/Button.jsx';
 import ClientCompliancePanel from '../components/ClientCompliancePanel.jsx';
 import ClientHealthPanel from '../components/ClientHealthPanel.jsx';
@@ -22,8 +23,9 @@ const GOAL_LABELS = {
 };
 const EQUIPMENT_LABELS = { full_gym: 'fullGym', home_gym: 'equipHomeGym', bodyweight_only: 'equipBodyweight' };
 
-export default function ClientsPage({ onNavigate, onNotify }) {
+export default function ClientsPage({ onNotify }) {
   const { locale, t } = useLocale();
+  const navigate = useNavigate();
   const [clients, setClients] = useState([]);
   const [invites, setInvites] = useState([]);
   const [team, setTeam] = useState([]);
@@ -143,7 +145,7 @@ export default function ClientsPage({ onNavigate, onNotify }) {
                 </div>
                 <div className="client-row-actions">
                   <button className="text-action" type="button" aria-expanded={expandedId === client.client_id} onClick={() => toggleIntake(client.client_id)}>{t('viewOnboarding')}</button>
-                  <button className="text-action" type="button" onClick={() => onNavigate('messages')}>{t('messages')}</button>
+                  <button className="text-action" type="button" onClick={() => navigate(`/messages?with=${client.client_id}`)}>{t('messages')}</button>
                   <button className="text-action" type="button" onClick={() => toggleStatus(client)}>{client.status === 'active' ? t('archiveClient') : t('restoreClient')}</button>
                 </div>
                 {expandedId === client.client_id && (

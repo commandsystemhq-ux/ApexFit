@@ -4,7 +4,7 @@ import { VIDEO_TYPES, normalizeMessageDraft } from './coachingUtils.js';
 import { notifyClients } from './pushService.js';
 
 const VIDEO_BUCKET = 'apexfit-coach-videos';
-const MESSAGE_FIELDS = 'id,batch_id,client_id,kind,body,video_path,created_at,read_at';
+const MESSAGE_FIELDS = 'id,batch_id,coach_id,client_id,kind,body,video_path,created_at,read_at';
 
 export async function sendCoachMessage({ clientIds, sendToAll, body, videoFile }) {
   const draft = normalizeMessageDraft({ body, videoFile, sendToAll, clientIds });
@@ -36,12 +36,13 @@ export async function sendCoachMessage({ clientIds, sendToAll, body, videoFile }
   return data;
 }
 
-export async function listSentMessages(limit = 300) {
-  const { data, error } = await requireSupabase()
+export async function listSentMessages(limit = 300, clientId = null) {
+  let query = requireSupabase()
     .from('coach_messages')
     .select(MESSAGE_FIELDS)
-    .order('created_at', { ascending: false })
-    .limit(limit);
+    .order('created_at', { ascending: false });
+  if (clientId) query = query.eq('client_id', clientId);
+  const { data, error } = await query.limit(limit);
   if (error) throw error;
   return data || [];
 }

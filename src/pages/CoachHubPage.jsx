@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import ClientBilling from '../components/ClientBilling.jsx';
 import ClientCoachLink from '../components/ClientCoachLink.jsx';
-import ClientInbox from '../components/ClientInbox.jsx';
+import ChatWorkspace from '../components/ChatWorkspace.jsx';
 import ClientSessions from '../components/ClientSessions.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
@@ -9,7 +9,7 @@ import { useLocale } from '../contexts/LocaleContext.jsx';
 import { listMyCoaches } from '../services/coachClientService.js';
 
 const SECTIONS = [
-  { id: 'inbox', label: 'inboxTab', icon: '✉' },
+  { id: 'inbox', label: 'chatTab', icon: '✉' },
   { id: 'sessions', label: 'sessionsTab', icon: '◷' },
   { id: 'billing', label: 'billingTab', icon: '◈' },
   { id: 'coach', label: 'coachTab', icon: '☺' },
@@ -49,7 +49,7 @@ export default function CoachHubPage() {
               </button>
             ))}
           </nav>
-          {active === 'inbox' && <ClientInbox />}
+          {active === 'inbox' && linked !== false && <ChatWorkspace />}
           {active === 'sessions' && <ClientSessions />}
           {active === 'billing' && <ClientBilling clientId={user.id} />}
           {active === 'coach' && <ClientCoachLink onLinked={() => setLinked(true)} />}

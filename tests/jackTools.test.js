@@ -65,8 +65,8 @@ beforeEach(async () => {
 
 test('each role is only offered its own tools, plus navigation', () => {
   const names = (role) => toolSpecsForRole(role).map((tool) => tool.name).sort();
-  assert.deepEqual(names('coach'), ['assign_program_to_client', 'assign_program_to_group', 'create_community_post', 'create_contract', 'create_group', 'create_store_product', 'create_workflow', 'get_client_assessment', 'get_client_wearables_and_nutrition', 'get_coach_summary', 'get_store_sales', 'invite_trainer', 'navigate_to', 'schedule_video_session']);
-  assert.deepEqual(names('client'), ['get_my_contracts', 'get_my_groups', 'get_my_health_metrics', 'get_my_schedule', 'get_my_sessions', 'get_my_store', 'log_body_metrics', 'log_nutrition_summary', 'log_workout_completion', 'navigate_to']);
+  assert.deepEqual(names('coach'), ['assign_program_to_client', 'assign_program_to_group', 'create_community_post', 'create_contract', 'create_group', 'create_store_product', 'create_workflow', 'get_client_assessment', 'get_client_wearables_and_nutrition', 'get_coach_summary', 'get_store_sales', 'invite_trainer', 'navigate_to', 'read_client_chat', 'schedule_video_session', 'send_client_chat_message']);
+  assert.deepEqual(names('client'), ['get_my_contracts', 'get_my_groups', 'get_my_health_metrics', 'get_my_schedule', 'get_my_sessions', 'get_my_store', 'log_body_metrics', 'log_nutrition_summary', 'log_workout_completion', 'navigate_to', 'read_coach_chat', 'send_coach_chat_message']);
   assert.deepEqual(names('trainer'), ['navigate_to']);
   assert.deepEqual(names('stranger'), []);
   assert.equal(toolsForRole('coach').some((tool) => tool.roles.includes('client') && tool.name !== 'navigate_to'), false);
@@ -78,10 +78,10 @@ test('a client cannot run coach tools and a coach cannot run client tools, even 
   assert.equal(forbiddenForClient.forbidden, true);
   assert.equal((await rows('select count(*)::int as n from public.workflows'))[0].n, 0);
 
-  for (const name of ['assign_program_to_client', 'create_community_post', 'get_coach_summary', 'create_group', 'assign_program_to_group', 'get_client_assessment', 'create_contract', 'create_store_product', 'get_store_sales', 'schedule_video_session', 'invite_trainer', 'get_client_wearables_and_nutrition']) {
+  for (const name of ['assign_program_to_client', 'create_community_post', 'get_coach_summary', 'create_group', 'assign_program_to_group', 'get_client_assessment', 'create_contract', 'create_store_product', 'get_store_sales', 'schedule_video_session', 'invite_trainer', 'get_client_wearables_and_nutrition', 'read_client_chat', 'send_client_chat_message']) {
     assert.equal((await executeTool(name, {}, client())).forbidden, true, name);
   }
-  for (const name of ['log_workout_completion', 'log_body_metrics', 'get_my_schedule', 'get_my_groups', 'get_my_contracts', 'get_my_sessions', 'get_my_store', 'get_my_health_metrics', 'log_nutrition_summary']) {
+  for (const name of ['log_workout_completion', 'log_body_metrics', 'get_my_schedule', 'get_my_groups', 'get_my_contracts', 'get_my_sessions', 'get_my_store', 'get_my_health_metrics', 'log_nutrition_summary', 'read_coach_chat', 'send_coach_chat_message']) {
     assert.equal((await executeTool(name, { title: 'x', weight_kg: 80 }, coach())).forbidden, true, name);
   }
   assert.equal((await executeTool('delete_everything', {}, coach())).ok, false);

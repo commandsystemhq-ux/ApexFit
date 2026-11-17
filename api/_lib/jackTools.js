@@ -1,5 +1,6 @@
 import { PAGES } from '../../src/routes.js';
 import { ENGAGEMENT_CLIENT_TOOLS, ENGAGEMENT_COACH_TOOLS } from './jackEngagementTools.js';
+import { CHAT_CLIENT_TOOLS, CHAT_COACH_TOOLS } from './jackChatTools.js';
 import { GROWTH_CLIENT_TOOLS, GROWTH_COACH_TOOLS } from './jackGrowthTools.js';
 import { HEALTH_CLIENT_TOOLS, HEALTH_COACH_TOOLS } from './jackHealthTools.js';
 import { ToolError, matchOne, requireText } from './jackShared.js';
@@ -376,10 +377,12 @@ const ALL_TOOLS = [
   ...ENGAGEMENT_COACH_TOOLS,
   ...GROWTH_COACH_TOOLS,
 ...HEALTH_COACH_TOOLS,
+...CHAT_COACH_TOOLS,
   ...CLIENT_TOOLS.filter((tool) => tool !== NAVIGATE_TOOL),
   ...ENGAGEMENT_CLIENT_TOOLS,
   ...GROWTH_CLIENT_TOOLS,
 ...HEALTH_CLIENT_TOOLS,
+...CHAT_CLIENT_TOOLS,
 ];
 
 export function toolsForRole(role) {
