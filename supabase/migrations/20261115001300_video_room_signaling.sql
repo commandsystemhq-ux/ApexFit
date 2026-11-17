@@ -49,27 +49,42 @@ revoke all on function public.can_join_video_room(text) from public, anon;
 grant execute on function public.can_join_video_room(text) to authenticated;
 
 -- Row-level security on the Realtime messages table (it exists on Supabase projects; skipped elsewhere).
+-- Supabase already enables RLS on realtime.messages and the table belongs to a system role, so enabling it is
+-- only attempted and a refusal is ignored. The policies are created separately: one failure must never hide the other.
 do $$
 begin
-  if to_regclass('realtime.messages') is not null then
-    alter table realtime.messages enable row level security;
+  if to_regclass('realtime.messages') is null then
+    raise warning 'realtime.messages was not found; enable Realtime on the project and run this migration again.';
+    return;
+  end if;
 
+  begin
+    alter table realtime.messages enable row level security;
+  exception when insufficient_privilege then
+    null;
+  end;
+
+  begin
     drop policy if exists "Video room members can receive signals" on realtime.messages;
     create policy "Video room members can receive signals"
       on realtime.messages for select
       to authenticated
       using (realtime.messages.extension = 'broadcast' and public.can_join_video_room((select realtime.topic())));
+  exception when others then
+    raise warning 'Could not create the receive policy on realtime.messages: %', sqlerrm;
+  end;
 
+  begin
     drop policy if exists "Video room members can send signals" on realtime.messages;
     create policy "Video room members can send signals"
       on realtime.messages for insert
       to authenticated
       with check (realtime.messages.extension = 'broadcast' and public.can_join_video_room((select realtime.topic())));
-  else
-    raise notice 'realtime.messages was not found; enable Realtime on the project and run this migration again.';
-  end if;
-exception
-  when insufficient_privilege then
-    raise notice 'Could not create the realtime.messages policies with this role. Run this migration in the Supabase SQL Editor.';
+  exception when others then
+    raise warning 'Could not create the send policy on realtime.messages: %', sqlerrm;
+  end;
 end;
 $$;
+
+-- Check: this must list two rows (receive + send).
+-- select policyname, cmd from pg_policies where schemaname = 'realtime' and tablename = 'messages' and policyname like 'Video room%';

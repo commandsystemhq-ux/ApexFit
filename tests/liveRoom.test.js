@@ -378,3 +378,25 @@ test('the signaling migration is part of manual-setup.sql and can be applied aga
   await db.exec(migration);
   assert.equal((await db.query("select count(*)::int as n from pg_policies where schemaname = 'realtime'")).rows[0].n, 2);
 });
+
+test('a refused "enable row level security" no longer prevents the access policies from being created', async () => {
+  // On Supabase the realtime.messages table belongs to a system role, so ALTER TABLE is refused for the SQL Editor.
+  const migration = readFileSync(new URL('../supabase/migrations/20261115001300_video_room_signaling.sql', import.meta.url), 'utf8');
+  const block = migration.slice(migration.indexOf('do $$', migration.indexOf('Row-level security on the Realtime')));
+
+  await db.exec('drop policy if exists "Video room members can receive signals" on realtime.messages; drop policy if exists "Video room members can send signals" on realtime.messages;');
+  await db.exec(`
+    create or replace function public.test_refuse_alter() returns event_trigger language plpgsql as $f$
+    begin raise exception 'must be owner of table messages' using errcode = '42501'; end;
+    $f$;
+    create event trigger test_refuse_alter on ddl_command_start when tag in ('ALTER TABLE') execute function public.test_refuse_alter();
+  `);
+  try {
+    await assert.rejects(db.exec('alter table realtime.messages enable row level security'), /must be owner/, 'the simulated refusal is active');
+    await db.exec(block);
+  } finally {
+    await db.exec('drop event trigger test_refuse_alter; drop function public.test_refuse_alter();');
+  }
+  const policies = (await db.query("select policyname from pg_policies where schemaname = 'realtime' order by 1")).rows.map((row) => row.policyname);
+  assert.deepEqual(policies, ['Video room members can receive signals', 'Video room members can send signals']);
+});

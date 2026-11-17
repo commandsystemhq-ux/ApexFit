@@ -1,6 +1,9 @@
 // The built-in ApexFit Live video room and the "no link needed" session form.
 export const liveRoomTranslations = {
   en: {
+    rmErr_unauthorized: "This account is not allowed into the room yet",
+    rmErr_unauthorizedHelp: "The server refused access to the room channel. If you are the owner of this ApexFit project, run the latest supabase/manual-setup.sql in the Supabase SQL Editor (it adds the room access rules), then press Retry.",
+    rmErrDetails: "Details",
     rmJoining: "Joining the room…",
     rmWaiting: "Waiting for the other person to join…",
     rmConnecting: "Connecting…",
@@ -51,6 +54,9 @@ export const liveRoomTranslations = {
     lrNotFound: 'We could not find this session, or it is not meant for you.', lrLoadError: 'Could not load the session.',
   },
   ar: {
+    rmErr_unauthorized: "هذا الحساب غير مسموح له بدخول الغرفة بعد",
+    rmErr_unauthorizedHelp: "رفض الخادم الوصول إلى قناة الغرفة. إذا كنت صاحب مشروع ApexFit هذا، شغّل أحدث نسخة من supabase/manual-setup.sql في Supabase SQL Editor (تضيف قواعد الوصول للغرفة) ثم اضغط إعادة المحاولة.",
+    rmErrDetails: "التفاصيل",
     rmJoining: "جارٍ الانضمام إلى الغرفة…",
     rmWaiting: "في انتظار انضمام الطرف الآخر…",
     rmConnecting: "جارٍ الاتصال…",
@@ -101,6 +107,9 @@ export const liveRoomTranslations = {
     lrNotFound: 'لم نجد هذه الجلسة، أو أنها ليست موجّهة إليك.', lrLoadError: 'تعذر تحميل الجلسة.',
   },
   de: {
+    rmErr_unauthorized: "Dieses Konto darf den Raum noch nicht betreten",
+    rmErr_unauthorizedHelp: "Der Server hat den Zugriff auf den Raumkanal verweigert. Wenn du Inhaber dieses ApexFit-Projekts bist, führe die neueste supabase/manual-setup.sql im Supabase SQL Editor aus (sie fügt die Zugriffsregeln hinzu) und versuche es erneut.",
+    rmErrDetails: "Details",
     rmJoining: "Raum wird betreten…",
     rmWaiting: "Warte auf den anderen Teilnehmer…",
     rmConnecting: "Verbindung wird aufgebaut…",
@@ -151,6 +160,9 @@ export const liveRoomTranslations = {
     lrNotFound: 'Diese Sitzung wurde nicht gefunden oder ist nicht für dich bestimmt.', lrLoadError: 'Die Sitzung konnte nicht geladen werden.',
   },
   fr: {
+    rmErr_unauthorized: "Ce compte n’a pas encore accès à la salle",
+    rmErr_unauthorizedHelp: "Le serveur a refusé l’accès au canal de la salle. Si vous êtes propriétaire de ce projet ApexFit, exécutez le dernier supabase/manual-setup.sql dans le Supabase SQL Editor (il ajoute les règles d’accès) puis réessayez.",
+    rmErrDetails: "Détails",
     rmJoining: "Connexion à la salle…",
     rmWaiting: "En attente de l’autre personne…",
     rmConnecting: "Connexion en cours…",
@@ -201,6 +213,9 @@ export const liveRoomTranslations = {
     lrNotFound: 'Cette séance est introuvable ou ne vous est pas destinée.', lrLoadError: 'Impossible de charger la séance.',
   },
   es: {
+    rmErr_unauthorized: "Esta cuenta aún no puede entrar a la sala",
+    rmErr_unauthorizedHelp: "El servidor rechazó el acceso al canal de la sala. Si eres el propietario de este proyecto ApexFit, ejecuta el último supabase/manual-setup.sql en el Supabase SQL Editor (añade las reglas de acceso) y pulsa Reintentar.",
+    rmErrDetails: "Detalles",
     rmJoining: "Entrando a la sala…",
     rmWaiting: "Esperando a que se una la otra persona…",
     rmConnecting: "Conectando…",

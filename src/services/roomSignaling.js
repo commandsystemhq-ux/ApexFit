@@ -1,5 +1,11 @@
 import { SIGNAL_EVENTS, channelTopic } from './webrtcRoom.js';
 
+// Realtime answers "Unauthorized: You do not have permissions to read from this Channel topic" when the access
+// policies (migration 20261115001300) are missing or refuse the user.
+export function isAuthorizationFailure(error) {
+  return /unauthori[sz]ed|not authori[sz]ed|permission|forbidden|row-level security|policy/i.test(String(error?.message ?? error ?? ''));
+}
+
 // Carries the WebRTC setup messages over a *private* Supabase Realtime Broadcast channel. Row-level security on
 // realtime.messages (see migration 20261115001300) lets only the people a session is for listen or send.
 export function createSupabaseSignaling(client, sessionId, { timeoutMs = 15_000 } = {}) {
@@ -37,7 +43,12 @@ export function createSupabaseSignaling(client, sessionId, { timeoutMs = 15_000 
             }
           } else if (['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED'].includes(status)) {
             clearTimeout(timer);
-            if (!opened) reject(error || new Error(`Could not join the room (${status}).`));
+            if (!opened) {
+              const reason = error instanceof Error ? error : new Error(typeof error === 'string' && error ? error : error?.message || `Could not join the room (${status}).`);
+              reason.status = status;
+              reason.authorization = isAuthorizationFailure(reason);
+              reject(reason);
+            }
             else statusHandler('lost');
           }
         });

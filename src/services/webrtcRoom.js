@@ -195,7 +195,7 @@ export class VideoRoom {
     try {
       await this.signaling.connect();
     } catch (error) {
-      this.fail('signaling', error);
+      this.fail(error?.authorization ? 'unauthorized' : 'signaling', error);
       throw error;
     }
     if (this.phase === 'left') return;
@@ -277,7 +277,7 @@ export class VideoRoom {
 
   fail(kind, cause) {
     this.phase = 'error';
-    this.error = { kind, message: cause?.message || String(kind) };
+    this.error = { kind, message: String(cause?.message || kind).slice(0, 300) };
     this.emit();
   }
 

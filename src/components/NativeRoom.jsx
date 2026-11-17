@@ -39,8 +39,11 @@ export default function NativeRoom({ sessionId, userId, name, coachId, selfRole,
     const kind = snapshot.error?.kind;
     return (
       <main className="live-room-message" role="alert">
-        <h1>{t(kind === 'full' ? 'rmErr_full' : 'rmErr_signaling')}</h1>
-        <p>{t(kind === 'full' ? 'rmErr_fullHelp' : 'rmErr_signalingHelp')}</p>
+        <h1>{t(kind === 'full' ? 'rmErr_full' : kind === 'unauthorized' ? 'rmErr_unauthorized' : 'rmErr_signaling')}</h1>
+        <p>{t(kind === 'full' ? 'rmErr_fullHelp' : kind === 'unauthorized' ? 'rmErr_unauthorizedHelp' : 'rmErr_signalingHelp')}</p>
+        {kind !== 'full' && snapshot.error?.message && (
+          <p className="room-error-detail" dir="ltr"><strong>{t('rmErrDetails')}:</strong> <code>{snapshot.error.message}</code></p>
+        )}
         <Button variant="primary" onClick={retry}>{t('rmRetry')}</Button>
       </main>
     );

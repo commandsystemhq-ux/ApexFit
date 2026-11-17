@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createSupabaseSignaling } from '../src/services/roomSignaling.js';
+import { createSupabaseSignaling, isAuthorizationFailure } from '../src/services/roomSignaling.js';
 import {
   MEDIA_CONSTRAINTS, MediaAccessError, SIGNAL_EVENTS, STUN_SERVERS, VideoRoom, acquireLocalMedia, buildIceServers, channelTopic,
   classifyMediaError, parseSignal, statusKey,
@@ -760,4 +760,45 @@ test('two rooms connect end to end over the Supabase broadcast adapter', async (
   await coach.room.leave();
   await client.room.leave();
   assert.equal(realtime.channels.filter((channel) => channel.topic === `video-room-${sessionId}`).length, 0, 'both channels were removed');
+});
+
+test('authorization failures are recognised, kept with the server\'s own words, and shown with a specific message', async () => {
+  for (const message of ['Unauthorized: You do not have permissions to read from this Channel topic: video-room-x', 'permission denied for table messages', 'new row violates row-level security policy', 'Not authorized']) {
+    assert.equal(isAuthorizationFailure(new Error(message)), true, message);
+  }
+  for (const message of ['Timed out while joining the room.', 'WebSocket closed', '']) assert.equal(isAuthorizationFailure(new Error(message)), false, message);
+
+  const refusing = new FakeRealtime();
+  refusing.channel = (topic, options) => {
+    const channel = new FakeChannel(refusing, topic, options);
+    channel.subscribe = (callback) => { setTimeout(() => callback('CHANNEL_ERROR', new Error('Unauthorized: You do not have permissions to read from this Channel topic: ' + topic)), 0); return channel; };
+    refusing.channels.push(channel);
+    return channel;
+  };
+  const entry = newRoom(null, 'coach', { peer: 1, signaling: createSupabaseSignaling(refusing, id(7)) });
+  await assert.rejects(entry.room.join(cameraStream()), (error) => error.authorization === true && error.status === 'CHANNEL_ERROR');
+  assert.equal(entry.room.error.kind, 'unauthorized');
+  assert.match(entry.room.error.message, /Unauthorized: You do not have permissions/);
+  assert.equal(statusKey(entry.last), 'rmErr_unauthorized');
+
+  const timedOut = new FakeRealtime();
+  timedOut.holdSubscription = true;
+  const slow = newRoom(null, 'coach', { peer: 2, signaling: createSupabaseSignaling(timedOut, id(8), { timeoutMs: 20 }) });
+  await assert.rejects(slow.room.join(cameraStream()), /Timed out/);
+  assert.equal(slow.room.error.kind, 'signaling', 'a timeout is a connection problem, not a permission problem');
+
+  // A bare status without an error object still gives a readable reason.
+  const bare = new FakeRealtime();
+  bare.channel = (topic, options) => {
+    const channel = new FakeChannel(bare, topic, options);
+    channel.subscribe = (callback) => { setTimeout(() => callback('TIMED_OUT'), 0); return channel; };
+    bare.channels.push(channel);
+    return channel;
+  };
+  await assert.rejects(createSupabaseSignaling(bare, id(9)).connect(), /Could not join the room \(TIMED_OUT\)/);
+
+  for (const locale of supportedLocales) {
+    for (const key of ['rmErr_unauthorized', 'rmErr_unauthorizedHelp', 'rmErrDetails']) assert.ok(translations[locale][key], `${key} (${locale})`);
+  }
+  assert.match(translations.ar.rmErr_unauthorizedHelp, /manual-setup\.sql/);
 });
