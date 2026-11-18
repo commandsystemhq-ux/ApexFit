@@ -1,7 +1,5 @@
-import { callApi } from './apiClient.js';
 import { chunk } from './healthImport.js';
 import { requireSupabase } from './supabaseClient.js';
-import { getLocalDateString } from './clientTrackingUtils.js';
 
 async function rpc(name, args) {
   const { data, error } = await requireSupabase().rpc(name, args);
@@ -37,10 +35,3 @@ export const setMyNutritionTargets = ({ calories, protein, carbs, fats }) =>
 
 export const setClientNutritionTargets = (clientId, { calories, protein, carbs, fats }) =>
   rpc('set_client_nutrition_targets', { p_client_id: clientId, p_calories: calories, p_protein: protein, p_carbs: carbs, p_fats: fats });
-
-// ------------------------------------------------ cloud devices (server side)
-
-export const getWearableProviders = () => callApi('wearables/status', { body: {} });
-export const startWearableConnection = (provider) => callApi(`wearables/${provider}`, { body: { action: 'auth-url' } });
-export const syncWearable = (provider) => callApi(`wearables/${provider}`, { body: { action: 'sync', today: getLocalDateString() } });
-export const disconnectWearable = (provider) => callApi(`wearables/${provider}`, { body: { action: 'disconnect' } });

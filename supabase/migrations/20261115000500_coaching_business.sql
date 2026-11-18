@@ -1,4 +1,4 @@
--- Coaching business layer: coach-client links, messaging, packages and invoices, sessions, push, Google Calendar.
+-- Coaching business layer: coach-client links, messaging, packages and invoices, sessions, push.
 
 -- Helpers used by row-level security policies
 create or replace function public.is_active_coach()
@@ -762,8 +762,6 @@ create table if not exists public.coach_sessions (
   notes text not null default '' check (length(notes) <= 1000),
   status text not null default 'scheduled' check (status in ('scheduled', 'completed', 'canceled')),
   credit_id uuid references public.client_package_credits (id) on delete set null,
-  google_event_id text,
-  google_synced_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   check (ends_at > starts_at and ends_at <= starts_at + interval '12 hours'),
@@ -778,17 +776,7 @@ create trigger coach_sessions_set_updated_at
   before update on public.coach_sessions
   for each row execute function public.set_updated_at();
 
-create table if not exists public.google_calendar_connections (
-  coach_id uuid primary key references public.profiles (id) on delete cascade,
-  google_email text,
-  refresh_token_encrypted text not null,
-  calendar_id text not null default 'primary',
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
 alter table public.coach_sessions enable row level security;
-alter table public.google_calendar_connections enable row level security;
 
 drop policy if exists "Coaches can read their sessions" on public.coach_sessions;
 create policy "Coaches can read their sessions"
@@ -802,9 +790,9 @@ create policy "Clients can read their sessions"
   to authenticated
   using (client_id = (select auth.uid()) and public.is_client_account());
 
-revoke all on public.coach_sessions, public.google_calendar_connections from anon, authenticated;
+revoke all on public.coach_sessions from anon, authenticated;
 grant select on public.coach_sessions to authenticated;
-grant all on public.coach_sessions, public.google_calendar_connections to service_role;
+grant all on public.coach_sessions to service_role;
 
 create or replace function public.schedule_coach_session(
   p_client_id uuid,
@@ -904,30 +892,7 @@ begin
 end;
 $$;
 
-create or replace function public.get_my_google_calendar_status()
-returns jsonb
-language plpgsql
-stable
-security definer
-set search_path = public, pg_temp
-as $$
-declare
-  v_connection public.google_calendar_connections%rowtype;
-begin
-  if not public.is_active_coach() then
-    raise exception 'An active coach account is required';
-  end if;
-  select * into v_connection from public.google_calendar_connections where coach_id = auth.uid();
-  return jsonb_build_object(
-    'connected', found,
-    'google_email', case when found then v_connection.google_email else null end
-  );
-end;
-$$;
-
 revoke all on function public.schedule_coach_session(uuid, text, timestamptz, timestamptz, text, text) from public, anon;
 revoke all on function public.set_coach_session_status(uuid, text) from public, anon;
-revoke all on function public.get_my_google_calendar_status() from public, anon;
 grant execute on function public.schedule_coach_session(uuid, text, timestamptz, timestamptz, text, text) to authenticated;
 grant execute on function public.set_coach_session_status(uuid, text) to authenticated;
-grant execute on function public.get_my_google_calendar_status() to authenticated;

@@ -1,12 +1,11 @@
 import { addDays, parseNumber } from './healthImport.js';
 
-export const HEALTH_PROVIDERS = ['apple_health', 'fitbit', 'garmin', 'oura'];
-export const CLOUD_PROVIDERS = ['fitbit', 'garmin', 'oura'];
+export const HEALTH_PROVIDERS = ['apple_health'];
 export const METRIC_FIELDS = ['steps', 'active_calories', 'sleep_minutes', 'resting_heart_rate', 'hrv_ms', 'recovery_score'];
 
 // When two sources report the same day, each value comes from the first source in this list that has it.
 // Values typed in by hand are the fallback.
-export const METRIC_PRIORITY = ['oura', 'garmin', 'fitbit', 'apple_health', 'manual'];
+export const METRIC_PRIORITY = ['apple_health', 'manual'];
 export const NUTRITION_PRIORITY = ['manual', 'myfitnesspal_sync', 'myfitnesspal_csv'];
 
 export const ADHERENCE_BAND = { low: 90, high: 110 };
@@ -75,17 +74,10 @@ export function formatSleep(minutes) {
   return `${Math.floor(total / 60)}h ${String(total % 60).padStart(2, '0')}m`;
 }
 
-// 'connected' | 'error' | 'disconnected' | 'unconfigured'
-export function connectionState(connections, provider, configured = {}) {
+// 'connected' when data from that source has been imported, otherwise 'disconnected'.
+export function connectionState(connections, provider) {
   const connection = (connections || []).find((item) => item.provider === provider);
-  if (connection) return connection.status;
-  if (CLOUD_PROVIDERS.includes(provider) && configured[provider] === false) return 'unconfigured';
-  return 'disconnected';
-}
-
-export function isStale(connection, now = Date.now(), hours = 3) {
-  if (!connection?.last_synced_at) return true;
-  return now - new Date(connection.last_synced_at).getTime() > hours * 3_600_000;
+  return connection ? connection.status : 'disconnected';
 }
 
 // ---------------------------------------------------------------- nutrition

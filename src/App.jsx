@@ -38,7 +38,6 @@ const ProgramTemplatesPage = lazy(() => import('./pages/ProgramTemplatesPage.jsx
 const SchedulePage = lazy(() => import('./pages/SchedulePage.jsx'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage.jsx'));
 const AdminAiPage = lazy(() => import('./pages/AdminAiPage.jsx'));
-const AdminIntegrationsPage = lazy(() => import('./pages/AdminIntegrationsPage.jsx'));
 const ChecklistPage = lazy(() => import('./pages/ChecklistPage.jsx'));
 const WorkoutBuilderPage = lazy(() => import('./pages/WorkoutBuilderPage.jsx'));
 
@@ -120,7 +119,6 @@ export default function App() {
 
             <Route path={PAGES.settings.path} element={<SettingsPage />} />
 <Route path={ADMIN_PATHS.ai} element={<AdminAiPage />} />
-<Route path={ADMIN_PATHS.integrations} element={<AdminIntegrationsPage />} />
           </Route>
         </Route>
 

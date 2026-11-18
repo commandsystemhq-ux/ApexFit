@@ -1,31 +1,4 @@
--- Daily checklist (workout, meals, water, habits and own tasks) with optional Google Calendar reminders,
--- and the platform owner's own place to keep the keys of the connected services (Fitbit, Garmin, Oura, Google).
-
--- ---------------------------------------------------------------------------
--- Keys of the connected services, set by the platform owner
--- ---------------------------------------------------------------------------
--- Same rules as platform_ai_settings: the secret is encrypted by the server, and the app's roles (anon,
--- authenticated) have no access at all. Only the server, after checking PLATFORM_ADMIN_EMAILS, reads or writes it.
-
-create table if not exists public.platform_integration_settings (
-  provider text primary key check (provider in ('fitbit', 'garmin', 'oura', 'google')),
-  client_id text not null check (char_length(client_id) between 1 and 300),
-  client_secret_encrypted text not null check (char_length(client_secret_encrypted) between 1 and 4000),
-  updated_at timestamptz not null default now(),
-  updated_by uuid references public.profiles (id) on delete set null
-);
-
-alter table public.platform_integration_settings enable row level security;
-
-drop policy if exists "Service role manages the integration keys" on public.platform_integration_settings;
-create policy "Service role manages the integration keys"
-  on public.platform_integration_settings for all
-  to service_role
-  using (true)
-  with check (true);
-
-revoke all on public.platform_integration_settings from public, anon, authenticated;
-grant all on public.platform_integration_settings to service_role;
+-- Daily checklist: workout, meals, water, habits and own tasks for each day, private to the client.
 
 -- ---------------------------------------------------------------------------
 -- Daily checklist
@@ -45,11 +18,9 @@ create table if not exists public.checklist_templates (
   days_of_week smallint[] not null default '{0,1,2,3,4,5,6}'
     check (cardinality(days_of_week) between 1 and 7 and days_of_week <@ array[0, 1, 2, 3, 4, 5, 6]::smallint[]),
   remind_time time,
-  calendar_sync boolean not null default false,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  check (not calendar_sync or remind_time is not null)
+  updated_at timestamptz not null default now()
 );
 
 create index if not exists checklist_templates_client_idx on public.checklist_templates (client_id) where is_active;
@@ -67,10 +38,8 @@ create table if not exists public.checklist_entries (
   is_done boolean not null default false,
   done_at timestamptz,
   remind_time time,
-  calendar_sync boolean not null default false,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  check (not calendar_sync or remind_time is not null)
+  updated_at timestamptz not null default now()
 );
 
 -- A repeating task has at most one entry per day, however many times the day is opened.
@@ -115,8 +84,7 @@ as $$
     'progress_amount', p_entry.progress_amount,
     'is_done', p_entry.is_done,
     'done_at', p_entry.done_at,
-    'remind_time', to_char(p_entry.remind_time, 'HH24:MI'),
-    'calendar_sync', p_entry.calendar_sync
+    'remind_time', to_char(p_entry.remind_time, 'HH24:MI')
   );
 $$;
 
@@ -151,8 +119,8 @@ language sql
 security definer
 set search_path = public, pg_temp
 as $$
-  insert into public.checklist_entries (client_id, task_date, template_id, category, title, target_amount, unit, remind_time, calendar_sync)
-  select t.client_id, p_date, t.id, t.category, t.title, t.target_amount, t.unit, t.remind_time, t.calendar_sync
+  insert into public.checklist_entries (client_id, task_date, template_id, category, title, target_amount, unit, remind_time)
+  select t.client_id, p_date, t.id, t.category, t.title, t.target_amount, t.unit, t.remind_time
   from public.checklist_templates t
   where t.client_id = p_client
     and t.is_active
@@ -198,8 +166,7 @@ create or replace function public.add_checklist_task(
   p_target numeric default null,
   p_unit text default null,
   p_remind_time time default null,
-  p_repeat_days jsonb default null,
-  p_calendar_sync boolean default false
+  p_repeat_days jsonb default null
 )
 returns jsonb
 language plpgsql
@@ -229,10 +196,6 @@ begin
   if v_unit is not null and char_length(v_unit) > 20 then
     raise exception 'The unit can have up to 20 characters';
   end if;
-  if coalesce(p_calendar_sync, false) and p_remind_time is null then
-    raise exception 'Choose a time before adding the task to the calendar';
-  end if;
-
   if p_repeat_days is not null then
     if jsonb_typeof(p_repeat_days) <> 'array' or jsonb_array_length(p_repeat_days) not between 1 and 7 then
       raise exception 'Choose the days the task repeats on';
@@ -250,8 +213,8 @@ begin
     if (select count(*) from public.checklist_templates where client_id = auth.uid() and is_active) >= 50 then
       raise exception 'You can keep up to 50 repeating tasks';
     end if;
-    insert into public.checklist_templates (client_id, category, title, target_amount, unit, days_of_week, remind_time, calendar_sync)
-    values (auth.uid(), p_category, v_title, p_target, v_unit, v_days, p_remind_time, coalesce(p_calendar_sync, false))
+    insert into public.checklist_templates (client_id, category, title, target_amount, unit, days_of_week, remind_time)
+    values (auth.uid(), p_category, v_title, p_target, v_unit, v_days, p_remind_time)
     returning * into v_template;
 
     perform public.checklist_materialize(auth.uid(), p_date);
@@ -262,8 +225,8 @@ begin
   if (select count(*) from public.checklist_entries where client_id = auth.uid() and task_date = p_date) >= 100 then
     raise exception 'A day can have up to 100 tasks';
   end if;
-  insert into public.checklist_entries (client_id, task_date, category, title, target_amount, unit, remind_time, calendar_sync)
-  values (auth.uid(), p_date, p_category, v_title, p_target, v_unit, p_remind_time, coalesce(p_calendar_sync, false))
+  insert into public.checklist_entries (client_id, task_date, category, title, target_amount, unit, remind_time)
+  values (auth.uid(), p_date, p_category, v_title, p_target, v_unit, p_remind_time)
   returning * into v_entry;
   return jsonb_build_object('template_id', null, 'entry', public.checklist_entry_json(v_entry));
 end;
@@ -332,9 +295,8 @@ begin
 end;
 $$;
 
--- Sets the reminder time and whether the task is added to the calendar. For a repeating task it applies from this
--- day on and to the template.
-create or replace function public.update_checklist_calendar(p_entry_id uuid, p_remind_time time, p_sync boolean)
+-- Sets (or clears) the time of a task. For a repeating task it applies from this day on and to the template.
+create or replace function public.update_checklist_time(p_entry_id uuid, p_remind_time time)
 returns jsonb
 language plpgsql
 security definer
@@ -342,24 +304,20 @@ set search_path = public, pg_temp
 as $$
 declare
   v_entry public.checklist_entries;
-  v_sync boolean := coalesce(p_sync, false);
 begin
   perform public.checklist_require_client();
   select * into v_entry from public.checklist_entries where id = p_entry_id and client_id = auth.uid() for update;
   if not found then
     raise exception 'That task was not found';
   end if;
-  if v_sync and p_remind_time is null then
-    raise exception 'Choose a time before adding the task to the calendar';
-  end if;
 
   if v_entry.template_id is not null then
-    update public.checklist_templates set remind_time = p_remind_time, calendar_sync = v_sync, updated_at = statement_timestamp()
+    update public.checklist_templates set remind_time = p_remind_time, updated_at = statement_timestamp()
     where id = v_entry.template_id and client_id = auth.uid();
-    update public.checklist_entries set remind_time = p_remind_time, calendar_sync = v_sync, updated_at = statement_timestamp()
+    update public.checklist_entries set remind_time = p_remind_time, updated_at = statement_timestamp()
     where template_id = v_entry.template_id and client_id = auth.uid() and task_date >= v_entry.task_date;
   else
-    update public.checklist_entries set remind_time = p_remind_time, calendar_sync = v_sync, updated_at = statement_timestamp()
+    update public.checklist_entries set remind_time = p_remind_time, updated_at = statement_timestamp()
     where id = v_entry.id;
   end if;
   select * into v_entry from public.checklist_entries where id = p_entry_id;
@@ -368,7 +326,7 @@ end;
 $$;
 
 -- Removes a task. A repeating task is removed for good (its template and this day onward; earlier days stay as
--- history). The ids come back so the calendar events can be removed too.
+-- history).
 create or replace function public.delete_checklist_task(p_entry_id uuid)
 returns jsonb
 language plpgsql
@@ -385,8 +343,6 @@ begin
   end if;
 
   if v_entry.template_id is not null then
-    update public.checklist_entries set calendar_sync = false
-    where template_id = v_entry.template_id and client_id = auth.uid() and task_date < v_entry.task_date;
     delete from public.checklist_entries where template_id = v_entry.template_id and client_id = auth.uid() and task_date >= v_entry.task_date;
     delete from public.checklist_templates where id = v_entry.template_id and client_id = auth.uid();
   else
@@ -424,45 +380,21 @@ begin
 end;
 $$;
 
--- ---------------------------------------------------------------------------
--- Google Calendar connection status for any signed-in person (coaches already have their own function)
--- ---------------------------------------------------------------------------
-
-create or replace function public.get_my_calendar_connection()
-returns jsonb
-language plpgsql
-stable
-security definer
-set search_path = public, pg_temp
-as $$
-declare
-  v_connection public.google_calendar_connections%rowtype;
-begin
-  if auth.uid() is null then
-    raise exception 'Sign in to continue';
-  end if;
-  select * into v_connection from public.google_calendar_connections where coach_id = auth.uid();
-  return jsonb_build_object('connected', found, 'google_email', case when found then v_connection.google_email else null end);
-end;
-$$;
-
 revoke all on function public.checklist_entry_json(public.checklist_entries) from public, anon;
 revoke all on function public.checklist_date_ok(date, integer) from public, anon;
 revoke all on function public.checklist_require_client() from public, anon, authenticated;
 revoke all on function public.checklist_materialize(uuid, date) from public, anon, authenticated;
 revoke all on function public.get_my_checklist(date) from public, anon;
-revoke all on function public.add_checklist_task(date, text, text, numeric, text, time, jsonb, boolean) from public, anon;
+revoke all on function public.add_checklist_task(date, text, text, numeric, text, time, jsonb) from public, anon;
 revoke all on function public.set_checklist_item(uuid, boolean, numeric, numeric) from public, anon;
-revoke all on function public.update_checklist_calendar(uuid, time, boolean) from public, anon;
+revoke all on function public.update_checklist_time(uuid, time) from public, anon;
 revoke all on function public.delete_checklist_task(uuid) from public, anon;
 revoke all on function public.get_checklist_summary(date, integer) from public, anon;
-revoke all on function public.get_my_calendar_connection() from public, anon;
 grant execute on function public.checklist_entry_json(public.checklist_entries) to authenticated;
 grant execute on function public.checklist_date_ok(date, integer) to authenticated;
 grant execute on function public.get_my_checklist(date) to authenticated;
-grant execute on function public.add_checklist_task(date, text, text, numeric, text, time, jsonb, boolean) to authenticated;
+grant execute on function public.add_checklist_task(date, text, text, numeric, text, time, jsonb) to authenticated;
 grant execute on function public.set_checklist_item(uuid, boolean, numeric, numeric) to authenticated;
-grant execute on function public.update_checklist_calendar(uuid, time, boolean) to authenticated;
+grant execute on function public.update_checklist_time(uuid, time) to authenticated;
 grant execute on function public.delete_checklist_task(uuid) to authenticated;
 grant execute on function public.get_checklist_summary(date, integer) to authenticated;
-grant execute on function public.get_my_calendar_connection() to authenticated;

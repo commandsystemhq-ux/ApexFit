@@ -4,15 +4,7 @@ import PageHeader from '../components/PageHeader.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import { listMyClients } from '../services/coachClientService.js';
 import { clientLabel, isUpcoming } from '../services/coachingUtils.js';
-import {
-  disconnectGoogle,
-  getGoogleCalendarStatus,
-  listSessions,
-  scheduleSession,
-  setSessionStatus,
-  startGoogleConnect,
-  syncSessionToGoogle,
-} from '../services/scheduleService.js';
+import { listSessions, scheduleSession, setSessionStatus } from '../services/scheduleService.js';
 
 const EMPTY_FORM = { clientId: '', title: '', date: '', startTime: '09:00', endTime: '10:00', location: '', notes: '' };
 
@@ -20,7 +12,6 @@ export default function SchedulePage({ onNavigate, onNotify }) {
   const { locale, t } = useLocale();
   const [clients, setClients] = useState([]);
   const [sessions, setSessions] = useState([]);
-  const [google, setGoogle] = useState({ state: 'loading', connected: false, google_email: null });
   const [form, setForm] = useState(EMPTY_FORM);
   const [loadError, setLoadError] = useState('');
   const [formError, setFormError] = useState('');
@@ -43,48 +34,16 @@ export default function SchedulePage({ onNavigate, onNotify }) {
 
   useEffect(() => {
     refresh();
-    getGoogleCalendarStatus()
-      .then((status) => setGoogle({ state: 'ready', ...status }))
-      .catch(() => setGoogle({ state: 'ready', connected: false, google_email: null }));
-    const params = new URLSearchParams(window.location.search);
-    const result = params.get('google');
-    if (result) {
-      onNotify(t(result === 'connected' ? 'googleConnectedNotice' : 'googleFailedNotice'));
-      window.history.replaceState(null, '', `${window.location.pathname}${window.location.hash}`);
-    }
   }, []);
-
-  async function handleConnect() {
-    setBusy('google');
-    try {
-      const { url } = await startGoogleConnect();
-      window.location.assign(url);
-    } catch (error) {
-      onNotify(`${t('googleConnectError')} ${error.message}`);
-      setBusy('');
-    }
-  }
-
-  async function handleDisconnect() {
-    setBusy('google');
-    try {
-      await disconnectGoogle();
-      setGoogle({ state: 'ready', connected: false, google_email: null });
-    } catch (error) {
-      onNotify(error.message);
-    } finally {
-      setBusy('');
-    }
-  }
 
   async function handleSchedule(event) {
     event.preventDefault();
     setFormError('');
     setBusy('schedule');
     try {
-      const result = await scheduleSession(form, { googleConnected: google.connected });
+      await scheduleSession(form);
       setForm((current) => ({ ...EMPTY_FORM, clientId: current.clientId }));
-      onNotify(t(result.synced ? 'sessionScheduledSynced' : 'sessionScheduled'));
+      onNotify(t('sessionScheduled'));
       await refresh();
     } catch (error) {
       setFormError(`${t('sessionScheduleError')} ${error.message}`);
@@ -96,24 +55,11 @@ export default function SchedulePage({ onNavigate, onNotify }) {
   async function handleStatus(session, status) {
     setBusy(session.id);
     try {
-      const result = await setSessionStatus(session.id, status, { googleConnected: google.connected });
+      const result = await setSessionStatus(session.id, status);
       if (status === 'completed') onNotify(t(result.credit_used ? 'sessionCompletedCredit' : 'sessionCompleted'));
       await refresh();
     } catch (error) {
       onNotify(error.message);
-    } finally {
-      setBusy('');
-    }
-  }
-
-  async function handleResync(session) {
-    setBusy(session.id);
-    try {
-      await syncSessionToGoogle(session.id);
-      onNotify(t('googleSynced'));
-      await refresh();
-    } catch (error) {
-      onNotify(`${t('googleSyncError')} ${error.message}`);
     } finally {
       setBusy('');
     }
@@ -136,7 +82,6 @@ export default function SchedulePage({ onNavigate, onNotify }) {
           {session.status === 'scheduled' && <button className="text-action" type="button" disabled={busy === session.id} onClick={() => handleStatus(session, 'completed')}>{t('markCompleted')}</button>}
           {session.status !== 'canceled' && <button className="text-action" type="button" disabled={busy === session.id} onClick={() => handleStatus(session, 'canceled')}>{t('cancelSession')}</button>}
           {session.status !== 'scheduled' && <button className="text-action" type="button" disabled={busy === session.id} onClick={() => handleStatus(session, 'scheduled')}>{t('reopenSession')}</button>}
-          {google.connected && session.status !== 'canceled' && <button className="text-action" type="button" disabled={busy === session.id} onClick={() => handleResync(session)}>{session.google_synced_at ? t('resyncGoogle') : t('syncGoogle')}</button>}
         </div>
       </article>
     );
@@ -146,17 +91,6 @@ export default function SchedulePage({ onNavigate, onNotify }) {
     <>
       <PageHeader eyebrow="APEXFIT" title={t('schedule')} description={t('scheduleDescription')} />
       {loadError && <div className="notice notice-error" role="alert">{t('scheduleLoadError')} {loadError}</div>}
-
-      <section className="panel google-panel">
-        <div className="panel-heading">
-          <div><span className="eyebrow">Google Calendar</span><h3>{t('googleCalendarSync')}</h3></div>
-          <span className={`soft-badge ${google.connected ? 'badge-blue' : 'badge-muted'}`}>{google.state === 'loading' ? t('loadingProgress') : t(google.connected ? 'googleConnected' : 'googleNotConnected')}</span>
-        </div>
-        <p className="muted-copy">{google.connected ? `${t('googleConnectedAs')} ${google.google_email || ''}` : t('googleHelp')}</p>
-        {google.state === 'ready' && (google.connected
-          ? <Button variant="secondary" onClick={handleDisconnect} disabled={busy === 'google'}>{t('googleDisconnect')}</Button>
-          : <Button variant="primary" onClick={handleConnect} disabled={busy === 'google'}>{t('googleConnect')}</Button>)}
-      </section>
 
       <div className="client-feature-grid">
         <section className="panel schedule-form-panel">

@@ -63,7 +63,7 @@ export default function AppShell() {
         <header className="topbar">
           <div className="topbar-title-wrap">
             <button className="menu-toggle" onClick={() => setMenuOpen(true)} aria-label={t('openNavigation')}>☰</button>
-            <h1 className="topbar-title">{t(page?.titleKey || (location.pathname === ADMIN_PATHS.ai ? 'adminAiTitle' : location.pathname === ADMIN_PATHS.integrations ? 'adminIntTitle' : 'dashboard'))}</h1>
+            <h1 className="topbar-title">{t(page?.titleKey || (location.pathname === ADMIN_PATHS.ai ? 'adminAiTitle' : 'dashboard'))}</h1>
           </div>
           <div className="topbar-actions">
             <LanguageToggle />

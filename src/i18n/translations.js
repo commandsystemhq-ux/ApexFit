@@ -9,7 +9,6 @@ import { healthTranslations } from './healthTranslations.js';
 import { jackTranslations } from './jackTranslations.js';
 import { liveRoomTranslations } from './liveRoomTranslations.js';
 import { platformTranslations } from './platformTranslations.js';
-import { platformIntegrationTranslations } from './platformIntegrationTranslations.js';
 import { priority2Translations } from './priority2Translations.js';
 import { workflowTranslations } from './workflowTranslations.js';
 
@@ -624,5 +623,5 @@ for (const locale of supportedLocales) {
 }
 
 for (const locale of supportedLocales) {
-  Object.assign(translations[locale], checklistTranslations[locale], platformIntegrationTranslations[locale]);
+  Object.assign(translations[locale], checklistTranslations[locale]);
 }

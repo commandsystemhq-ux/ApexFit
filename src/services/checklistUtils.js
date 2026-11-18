@@ -14,7 +14,7 @@ export function parseAmount(value) {
 }
 
 export function emptyTaskForm(category = 'custom') {
-  return { category, title: '', target: category === 'water' ? '2500' : '', unit: category === 'water' ? 'ml' : '', time: '', repeat: 'daily', days: [...ALL_DAYS], calendar: false };
+  return { category, title: '', target: category === 'water' ? '2500' : '', unit: category === 'water' ? 'ml' : '', time: '', repeat: 'daily', days: [...ALL_DAYS] };
 }
 
 export function validateTaskForm(form) {
@@ -42,12 +42,11 @@ export function validateTaskForm(form) {
     if (repeatDays.length === 0) errors.days = 'chkErrDays';
   }
 
-  if (form.calendar && !time) errors.calendar = 'chkErrCalendarTime';
 
   return {
     valid: Object.keys(errors).length === 0,
     errors,
-    payload: { category, title, target: target ?? null, unit: unit || null, remindTime: time || null, repeatDays, calendarSync: Boolean(form.calendar) && Boolean(time) },
+    payload: { category, title, target: target ?? null, unit: unit || null, remindTime: time || null, repeatDays },
   };
 }
 
@@ -119,24 +118,9 @@ export function streakOf(summary) {
 // A starter set, in the person's language.
 export function suggestedTasks(t) {
   return [
-    { category: 'workout', title: t('chkSuggestWorkout'), target: '', unit: '', time: '', repeat: 'daily', days: [...ALL_DAYS], calendar: false },
-    { category: 'meal', title: t('chkSuggestMeals'), target: '', unit: '', time: '', repeat: 'daily', days: [...ALL_DAYS], calendar: false },
-    { category: 'water', title: t('chkSuggestWater'), target: '2500', unit: 'ml', time: '', repeat: 'daily', days: [...ALL_DAYS], calendar: false },
-    { category: 'habit', title: t('chkSuggestSleep'), target: '', unit: '', time: '', repeat: 'daily', days: [...ALL_DAYS], calendar: false },
+    { category: 'workout', title: t('chkSuggestWorkout'), target: '', unit: '', time: '', repeat: 'daily', days: [...ALL_DAYS] },
+    { category: 'meal', title: t('chkSuggestMeals'), target: '', unit: '', time: '', repeat: 'daily', days: [...ALL_DAYS] },
+    { category: 'water', title: t('chkSuggestWater'), target: '2500', unit: 'ml', time: '', repeat: 'daily', days: [...ALL_DAYS] },
+    { category: 'habit', title: t('chkSuggestSleep'), target: '', unit: '', time: '', repeat: 'daily', days: [...ALL_DAYS] },
   ];
-}
-
-// -------------------------------------------------------------------- calendar choices
-
-// Which calendar events must be removed or refreshed after the database changed a task.
-export function calendarIdsFor(entry) {
-  return entry.template_id ? { templateIds: [entry.template_id], entryIds: [] } : { templateIds: [], entryIds: [entry.id] };
-}
-
-export function browserTimeZone() {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-  } catch {
-    return 'UTC';
-  }
 }

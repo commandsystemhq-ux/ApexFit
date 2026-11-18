@@ -6,7 +6,7 @@ import { addUser, createTestDatabase, createUserClient } from './helpers/pgliteS
 
 // The daily checklist in the real schema, with row-level security and function permissions enforced.
 
-const MIGRATION = new URL('../supabase/migrations/20261115001800_checklist_and_integration_keys.sql', import.meta.url);
+const MIGRATION = new URL('../supabase/migrations/20261115001800_daily_checklist.sql', import.meta.url);
 const MANUAL_SETUP = new URL('../supabase/manual-setup.sql', import.meta.url);
 
 const ids = {
@@ -36,7 +36,7 @@ async function fails(promise, pattern) {
 }
 
 const add = (userId, overrides = {}) => as(userId).rpc('add_checklist_task', {
-  p_date: today, p_category: 'custom', p_title: 'Stretch', p_target: null, p_unit: null, p_remind_time: null, p_repeat_days: null, p_calendar_sync: false, ...overrides,
+  p_date: today, p_category: 'custom', p_title: 'Stretch', p_target: null, p_unit: null, p_remind_time: null, p_repeat_days: null, ...overrides,
 });
 const list = async (userId, date = today) => (await ok(as(userId).rpc('get_my_checklist', { p_date: date }))).items;
 const setItem = (userId, id, args = {}) => as(userId).rpc('set_checklist_item', { p_entry_id: id, p_done: null, p_progress: null, p_add: null, ...args });
@@ -105,7 +105,6 @@ test('new tasks are validated', async () => {
   await fails(add(ids.sara, { p_target: 0 }), /target/);
   await fails(add(ids.sara, { p_target: 100001 }), /target/);
   await fails(add(ids.sara, { p_unit: 'u'.repeat(21) }), /unit/);
-  await fails(add(ids.sara, { p_calendar_sync: true }), /time before/);
   await fails(add(ids.sara, { p_repeat_days: [] }), /days/);
   await fails(add(ids.sara, { p_repeat_days: [7] }), /days/);
   await fails(add(ids.sara, { p_repeat_days: [-1] }), /days/);
@@ -227,10 +226,10 @@ test('removing a one-off task removes only that task', async () => {
 });
 
 test('removing a repeating task stops it from this day on and keeps the past as history', async () => {
-  const created = await ok(add(ids.sara, { p_title: 'Daily', p_remind_time: '08:00', p_calendar_sync: true, p_repeat_days: ALL_DAYS }));
+  const created = await ok(add(ids.sara, { p_title: 'Daily', p_remind_time: '08:00', p_repeat_days: ALL_DAYS }));
   const templateId = created.template_id;
   // A past day that was already done, and tomorrow's copy.
-  await db.query("insert into public.checklist_entries (client_id, task_date, template_id, category, title, is_done, remind_time, calendar_sync) values ($1, $2, $3, 'custom', 'Daily', true, '08:00', true)", [ids.sara, await day(-3), templateId]);
+  await db.query("insert into public.checklist_entries (client_id, task_date, template_id, category, title, is_done, remind_time) values ($1, $2, $3, 'custom', 'Daily', true, '08:00')", [ids.sara, await day(-3), templateId]);
   await list(ids.sara, await day(1));
 
   const removed = await ok(as(ids.sara).rpc('delete_checklist_task', { p_entry_id: created.entry.id }));
@@ -239,40 +238,31 @@ test('removing a repeating task stops it from this day on and keeps the past as 
   assert.deepEqual(await list(ids.sara), []);
   assert.deepEqual(await list(ids.sara, await day(1)), []);
 
-  const [history] = await rows('select title, is_done, template_id, calendar_sync from public.checklist_entries');
-  assert.deepEqual(history, { title: 'Daily', is_done: true, template_id: null, calendar_sync: false }, 'the past stays, but is no longer synced to the calendar');
+  const [history] = await rows('select title, is_done, template_id from public.checklist_entries');
+  assert.deepEqual(history, { title: 'Daily', is_done: true, template_id: null }, 'the past stays as history');
 });
 
-// ---------------------------------------------------------- reminders and calendar
+// ------------------------------------------------------------------------- times
 
-test('a reminder time and the calendar choice are saved on the task and its repeats', async () => {
+test('a task\'s time is saved on the task and its repeats, and can be cleared', async () => {
   const created = await ok(add(ids.sara, { p_title: 'Lift', p_category: 'workout', p_repeat_days: ALL_DAYS }));
   await list(ids.sara, await day(1));
 
-  await fails(as(ids.sara).rpc('update_checklist_calendar', { p_entry_id: created.entry.id, p_remind_time: null, p_sync: true }), /time before/);
-  const updated = await ok(as(ids.sara).rpc('update_checklist_calendar', { p_entry_id: created.entry.id, p_remind_time: '17:30', p_sync: true }));
-  assert.deepEqual([updated.remind_time, updated.calendar_sync], ['17:30', true]);
+  const updated = await ok(as(ids.sara).rpc('update_checklist_time', { p_entry_id: created.entry.id, p_remind_time: '17:30' }));
+  assert.equal(updated.remind_time, '17:30');
+  assert.deepEqual(Object.keys(updated).sort(), ['category', 'done_at', 'id', 'is_done', 'progress_amount', 'remind_time', 'target_amount', 'task_date', 'template_id', 'title', 'unit']);
 
-  const [template] = await rows('select remind_time::text as t, calendar_sync from public.checklist_templates');
-  assert.deepEqual(template, { t: '17:30:00', calendar_sync: true });
-  assert.deepEqual((await list(ids.sara, await day(1)))[0].remind_time, '17:30', 'later days follow');
+  const [template] = await rows('select remind_time::text as t from public.checklist_templates');
+  assert.deepEqual(template, { t: '17:30:00' });
+  assert.equal((await list(ids.sara, await day(1)))[0].remind_time, '17:30', 'later days follow');
 
-  const off = await ok(as(ids.sara).rpc('update_checklist_calendar', { p_entry_id: created.entry.id, p_remind_time: '17:30', p_sync: false }));
-  assert.equal(off.calendar_sync, false);
-  const cleared = await ok(as(ids.sara).rpc('update_checklist_calendar', { p_entry_id: created.entry.id, p_remind_time: null, p_sync: false }));
+  const cleared = await ok(as(ids.sara).rpc('update_checklist_time', { p_entry_id: created.entry.id, p_remind_time: null }));
   assert.equal(cleared.remind_time, null);
 
-  await fails(as(ids.omar).rpc('update_checklist_calendar', { p_entry_id: created.entry.id, p_remind_time: '10:00', p_sync: false }), /not found/);
-});
-
-test('the calendar connection can be read by clients and coaches, only for themselves', async () => {
-  assert.deepEqual(await ok(as(ids.sara).rpc('get_my_calendar_connection')), { connected: false, google_email: null });
-  await db.query("insert into public.google_calendar_connections (coach_id, google_email, refresh_token_encrypted) values ($1, 'sara@gmail.com', 'cipher')", [ids.sara]);
-  assert.deepEqual(await ok(as(ids.sara).rpc('get_my_calendar_connection')), { connected: true, google_email: 'sara@gmail.com' });
-  assert.deepEqual(await ok(as(ids.omar).rpc('get_my_calendar_connection')), { connected: false, google_email: null });
-  assert.deepEqual(await ok(as(ids.coach).rpc('get_my_calendar_connection')), { connected: false, google_email: null });
-  const direct = await as(ids.sara).sql('select refresh_token_encrypted from public.google_calendar_connections');
-  assert.ok(direct.error, 'the stored token is never readable by the app');
+  const oneOff = await ok(add(ids.sara, { p_title: 'Call' }));
+  assert.equal((await ok(as(ids.sara).rpc('update_checklist_time', { p_entry_id: oneOff.entry.id, p_remind_time: '09:15' }))).remind_time, '09:15');
+  await fails(as(ids.omar).rpc('update_checklist_time', { p_entry_id: created.entry.id, p_remind_time: '10:00' }), /not found/);
+  await fails(as(ids.coach).rpc('update_checklist_time', { p_entry_id: created.entry.id, p_remind_time: '10:00' }), /client account/);
 });
 
 // ----------------------------------------------------------------------- security
@@ -305,28 +295,6 @@ test('each client sees only their own checklist, and nobody writes the tables di
   for (const name of ['checklist_materialize', 'checklist_require_client']) {
     assert.ok((await as(ids.sara).rpc(name, name === 'checklist_materialize' ? { p_client: ids.omar, p_date: today } : {})).error, `${name} is not callable`);
   }
-});
-
-test('the keys of the connected services are closed to every user of the app', async () => {
-  await db.query("insert into public.platform_integration_settings (provider, client_id, client_secret_encrypted) values ('fitbit', 'abc123', 'cipher')");
-  for (const user of [ids.coach, ids.sara, ids.omar]) {
-    for (const statement of [
-      'select * from public.platform_integration_settings',
-      'select client_secret_encrypted from public.platform_integration_settings',
-      "insert into public.platform_integration_settings (provider, client_id, client_secret_encrypted) values ('oura', 'x', 'y')",
-      "update public.platform_integration_settings set client_id = 'stolen'",
-      'delete from public.platform_integration_settings',
-    ]) {
-      const result = await as(user).sql(statement);
-      assert.ok(result.error, `${user}: ${statement}`);
-      assert.match(result.error.message, /permission denied/);
-    }
-  }
-  const [table] = await rows("select relrowsecurity from pg_class where oid = 'public.platform_integration_settings'::regclass");
-  assert.equal(table.relrowsecurity, true);
-  assert.deepEqual(await rows("select grantee from information_schema.role_table_grants where table_name = 'platform_integration_settings' and grantee in ('anon', 'authenticated', 'PUBLIC')"), []);
-  await assert.rejects(db.query("insert into public.platform_integration_settings (provider, client_id, client_secret_encrypted) values ('mystery', 'x', 'y')"), /check/);
-  await assert.rejects(db.query("insert into public.platform_integration_settings (provider, client_id, client_secret_encrypted) values ('fitbit', 'x', 'y')"), /duplicate key|unique/);
 });
 
 // ---------------------------------------------------------------------- Jack

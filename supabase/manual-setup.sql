@@ -1022,7 +1022,7 @@ grant execute on function public.get_my_one_rep_max_history() to authenticated;
 
 -- ===== 20261115000500_coaching_business.sql =====
 
--- Coaching business layer: coach-client links, messaging, packages and invoices, sessions, push, Google Calendar.
+-- Coaching business layer: coach-client links, messaging, packages and invoices, sessions, push.
 
 -- Helpers used by row-level security policies
 create or replace function public.is_active_coach()
@@ -1786,8 +1786,6 @@ create table if not exists public.coach_sessions (
   notes text not null default '' check (length(notes) <= 1000),
   status text not null default 'scheduled' check (status in ('scheduled', 'completed', 'canceled')),
   credit_id uuid references public.client_package_credits (id) on delete set null,
-  google_event_id text,
-  google_synced_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   check (ends_at > starts_at and ends_at <= starts_at + interval '12 hours'),
@@ -1802,17 +1800,7 @@ create trigger coach_sessions_set_updated_at
   before update on public.coach_sessions
   for each row execute function public.set_updated_at();
 
-create table if not exists public.google_calendar_connections (
-  coach_id uuid primary key references public.profiles (id) on delete cascade,
-  google_email text,
-  refresh_token_encrypted text not null,
-  calendar_id text not null default 'primary',
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
 alter table public.coach_sessions enable row level security;
-alter table public.google_calendar_connections enable row level security;
 
 drop policy if exists "Coaches can read their sessions" on public.coach_sessions;
 create policy "Coaches can read their sessions"
@@ -1826,9 +1814,9 @@ create policy "Clients can read their sessions"
   to authenticated
   using (client_id = (select auth.uid()) and public.is_client_account());
 
-revoke all on public.coach_sessions, public.google_calendar_connections from anon, authenticated;
+revoke all on public.coach_sessions from anon, authenticated;
 grant select on public.coach_sessions to authenticated;
-grant all on public.coach_sessions, public.google_calendar_connections to service_role;
+grant all on public.coach_sessions to service_role;
 
 create or replace function public.schedule_coach_session(
   p_client_id uuid,
@@ -1928,33 +1916,10 @@ begin
 end;
 $$;
 
-create or replace function public.get_my_google_calendar_status()
-returns jsonb
-language plpgsql
-stable
-security definer
-set search_path = public, pg_temp
-as $$
-declare
-  v_connection public.google_calendar_connections%rowtype;
-begin
-  if not public.is_active_coach() then
-    raise exception 'An active coach account is required';
-  end if;
-  select * into v_connection from public.google_calendar_connections where coach_id = auth.uid();
-  return jsonb_build_object(
-    'connected', found,
-    'google_email', case when found then v_connection.google_email else null end
-  );
-end;
-$$;
-
 revoke all on function public.schedule_coach_session(uuid, text, timestamptz, timestamptz, text, text) from public, anon;
 revoke all on function public.set_coach_session_status(uuid, text) from public, anon;
-revoke all on function public.get_my_google_calendar_status() from public, anon;
 grant execute on function public.schedule_coach_session(uuid, text, timestamptz, timestamptz, text, text) to authenticated;
 grant execute on function public.set_coach_session_status(uuid, text) to authenticated;
-grant execute on function public.get_my_google_calendar_status() to authenticated;
 
 -- ===== 20261115000600_community_gamification.sql =====
 
@@ -6597,9 +6562,9 @@ $$;
 
 -- ===== 20261115001400_wearables_nutrition.sql =====
 
--- Wearables (Apple Health, Fitbit, Garmin, Oura) and nutrition tracking (MyFitnessPal exports and manual entries).
--- Rows are read through row-level security. Clients write through security definer functions that validate
--- every value; OAuth tokens are written only by the server (service role) and are never readable by the browser.
+-- Smart-device data (Apple Health exports and manual entries) and nutrition tracking (MyFitnessPal exports and
+-- manual entries). Rows are read through row-level security. Clients write through security definer functions that
+-- validate every value.
 
 -- Who may read a client's health data: the client, their active coach, and an assistant trainer who has the
 -- "view health data" (view_assessments) permission for that client.
@@ -6633,18 +6598,12 @@ grant execute on function public.can_view_client_health(uuid) to authenticated;
 create table if not exists public.wearable_connections (
   id uuid primary key default gen_random_uuid(),
   client_id uuid not null references public.profiles (id) on delete cascade,
-  provider text not null check (provider in ('apple_health', 'fitbit', 'garmin', 'oura')),
+  provider text not null check (provider = 'apple_health'),
   status text not null default 'connected' check (status in ('connected', 'disconnected', 'error')),
-  access_token_encrypted text check (access_token_encrypted is null or char_length(access_token_encrypted) <= 4000),
-  refresh_token_encrypted text check (refresh_token_encrypted is null or char_length(refresh_token_encrypted) <= 4000),
-  token_expires_at timestamptz,
-  external_user_id text check (external_user_id is null or char_length(external_user_id) <= 100),
   last_error text check (last_error is null or char_length(last_error) <= 300),
   last_synced_at timestamptz,
   created_at timestamptz not null default now(),
-  unique (client_id, provider),
-  -- A connected cloud account always holds a token; Apple Health is imported from a file and has none.
-  check (provider = 'apple_health' or status <> 'connected' or access_token_encrypted is not null or refresh_token_encrypted is not null)
+  unique (client_id, provider)
 );
 
 create index if not exists wearable_connections_client_idx on public.wearable_connections (client_id);
@@ -6653,14 +6612,13 @@ create table if not exists public.wearable_daily_metrics (
   id uuid primary key default gen_random_uuid(),
   client_id uuid not null references public.profiles (id) on delete cascade,
   recorded_date date not null,
-  provider text not null check (provider in ('apple_health', 'fitbit', 'garmin', 'oura', 'manual')),
+  provider text not null check (provider in ('apple_health', 'manual')),
   steps integer check (steps between 0 and 200000),
   active_calories integer check (active_calories between 0 and 20000),
   sleep_minutes integer check (sleep_minutes between 0 and 1440),
   resting_heart_rate integer check (resting_heart_rate between 20 and 250),
   hrv_ms numeric(6, 2) check (hrv_ms between 0 and 500),
   recovery_score integer check (recovery_score between 0 and 100),
-  raw_payload jsonb check (raw_payload is null or (jsonb_typeof(raw_payload) = 'object' and octet_length(raw_payload::text) <= 8000)),
   synced_at timestamptz not null default now(),
   -- One row per client, day and source: syncing again updates the day instead of adding a copy.
   unique (client_id, recorded_date, provider),
@@ -6731,8 +6689,7 @@ create policy "Health data is readable by the client and their care team"
 
 revoke all on public.wearable_connections, public.wearable_daily_metrics, public.nutrition_daily_logs, public.nutrition_targets
   from anon, authenticated;
--- Column grants keep the encrypted OAuth tokens out of reach of every browser session.
-grant select (id, client_id, provider, status, external_user_id, last_error, last_synced_at, created_at)
+grant select (id, client_id, provider, status, last_error, last_synced_at, created_at)
   on public.wearable_connections to authenticated;
 grant select (id, client_id, recorded_date, provider, steps, active_calories, sleep_minutes, resting_heart_rate, hrv_ms, recovery_score, synced_at)
   on public.wearable_daily_metrics to authenticated;
@@ -6792,7 +6749,7 @@ $$;
 
 -- Saves up to 400 days of device metrics for one client and source. A value that is missing in a new sync keeps
 -- the value saved earlier for that day.
-create or replace function public.wearable_metrics_upsert(p_client_id uuid, p_provider text, p_metrics jsonb, p_allow_raw boolean)
+create or replace function public.wearable_metrics_upsert(p_client_id uuid, p_provider text, p_metrics jsonb)
 returns integer
 language plpgsql
 security definer
@@ -6807,7 +6764,6 @@ declare
   v_rhr integer;
   v_hrv numeric;
   v_recovery integer;
-  v_raw jsonb;
   v_count integer := 0;
 begin
   if jsonb_typeof(p_metrics) is distinct from 'array' or jsonb_array_length(p_metrics) not between 1 and 400 then
@@ -6830,15 +6786,10 @@ begin
       raise exception 'Each day needs at least one value (%)', v_date;
     end if;
 
-    v_raw := case when p_allow_raw and jsonb_typeof(v_row -> 'raw') = 'object' then v_row -> 'raw' else null end;
-    if v_raw is not null and octet_length(v_raw::text) > 8000 then
-      raise exception 'The raw data of % is too large', v_date;
-    end if;
-
     insert into public.wearable_daily_metrics (
-      client_id, recorded_date, provider, steps, active_calories, sleep_minutes, resting_heart_rate, hrv_ms, recovery_score, raw_payload
+      client_id, recorded_date, provider, steps, active_calories, sleep_minutes, resting_heart_rate, hrv_ms, recovery_score
     )
-    values (p_client_id, v_date, p_provider, v_steps, v_calories, v_sleep, v_rhr, v_hrv, v_recovery, v_raw)
+    values (p_client_id, v_date, p_provider, v_steps, v_calories, v_sleep, v_rhr, v_hrv, v_recovery)
     on conflict (client_id, recorded_date, provider) do update
     set steps = coalesce(excluded.steps, wearable_daily_metrics.steps),
         active_calories = coalesce(excluded.active_calories, wearable_daily_metrics.active_calories),
@@ -6846,7 +6797,6 @@ begin
         resting_heart_rate = coalesce(excluded.resting_heart_rate, wearable_daily_metrics.resting_heart_rate),
         hrv_ms = coalesce(excluded.hrv_ms, wearable_daily_metrics.hrv_ms),
         recovery_score = coalesce(excluded.recovery_score, wearable_daily_metrics.recovery_score),
-        raw_payload = coalesce(excluded.raw_payload, wearable_daily_metrics.raw_payload),
         synced_at = statement_timestamp();
     v_count := v_count + 1;
   end loop;
@@ -6856,7 +6806,7 @@ $$;
 
 revoke all on function public.health_number(jsonb, text, numeric, numeric) from public, anon, authenticated;
 revoke all on function public.health_date(jsonb, text, integer, integer) from public, anon, authenticated;
-revoke all on function public.wearable_metrics_upsert(uuid, text, jsonb, boolean) from public, anon, authenticated;
+revoke all on function public.wearable_metrics_upsert(uuid, text, jsonb) from public, anon, authenticated;
 
 -- ---------------------------------------------------------------------------
 -- Functions for clients
@@ -6879,7 +6829,7 @@ begin
     raise exception 'Only Apple Health imports and manual entries can be saved from the app';
   end if;
 
-  v_saved := public.wearable_metrics_upsert(auth.uid(), p_provider, p_metrics, false);
+  v_saved := public.wearable_metrics_upsert(auth.uid(), p_provider, p_metrics);
 
   if p_provider = 'apple_health' then
     insert into public.wearable_connections (client_id, provider, status, last_synced_at, last_error)
@@ -6903,7 +6853,7 @@ begin
   if auth.uid() is null or not public.is_client_account() then
     raise exception 'A client account is required';
   end if;
-  if p_provider is null or p_provider not in ('apple_health', 'fitbit', 'garmin', 'oura', 'manual') then
+  if p_provider is null or p_provider not in ('apple_health', 'manual') then
     raise exception 'Unsupported source';
   end if;
   delete from public.wearable_daily_metrics where client_id = auth.uid() and provider = p_provider;
@@ -7170,28 +7120,6 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------------
--- Functions for the server (service role only)
--- ---------------------------------------------------------------------------
-
--- OAuth syncs (Fitbit, Garmin, Oura) save normalized days here. Raw provider data may be attached per day.
-create or replace function public.service_save_wearable_metrics(p_client_id uuid, p_provider text, p_metrics jsonb)
-returns integer
-language plpgsql
-security definer
-set search_path = public, pg_temp
-as $$
-begin
-  if p_provider is null or p_provider not in ('fitbit', 'garmin', 'oura') then
-    raise exception 'Unsupported provider';
-  end if;
-  if not exists (select 1 from public.profiles where id = p_client_id and role = 'client') then
-    raise exception 'Client was not found';
-  end if;
-  return public.wearable_metrics_upsert(p_client_id, p_provider, p_metrics, true);
-end;
-$$;
-
--- ---------------------------------------------------------------------------
 -- Grants
 -- ---------------------------------------------------------------------------
 
@@ -7211,9 +7139,6 @@ grant execute on function public.delete_nutrition_log(date, text) to authenticat
 grant execute on function public.set_my_nutrition_targets(integer, numeric, numeric, numeric) to authenticated;
 grant execute on function public.set_client_nutrition_targets(uuid, integer, numeric, numeric, numeric) to authenticated;
 grant execute on function public.get_health_overview(uuid, integer) to authenticated;
-
-revoke all on function public.service_save_wearable_metrics(uuid, text, jsonb) from public, anon, authenticated;
-grant execute on function public.service_save_wearable_metrics(uuid, text, jsonb) to service_role;
 
 -- ===== 20261115001500_realtime_chat.sql =====
 
@@ -7505,36 +7430,9 @@ create policy "Service role manages the platform AI settings"
 revoke all on public.platform_ai_settings from public, anon, authenticated;
 grant all on public.platform_ai_settings to service_role;
 
--- ===== 20261115001800_checklist_and_integration_keys.sql =====
+-- ===== 20261115001800_daily_checklist.sql =====
 
--- Daily checklist (workout, meals, water, habits and own tasks) with optional Google Calendar reminders,
--- and the platform owner's own place to keep the keys of the connected services (Fitbit, Garmin, Oura, Google).
-
--- ---------------------------------------------------------------------------
--- Keys of the connected services, set by the platform owner
--- ---------------------------------------------------------------------------
--- Same rules as platform_ai_settings: the secret is encrypted by the server, and the app's roles (anon,
--- authenticated) have no access at all. Only the server, after checking PLATFORM_ADMIN_EMAILS, reads or writes it.
-
-create table if not exists public.platform_integration_settings (
-  provider text primary key check (provider in ('fitbit', 'garmin', 'oura', 'google')),
-  client_id text not null check (char_length(client_id) between 1 and 300),
-  client_secret_encrypted text not null check (char_length(client_secret_encrypted) between 1 and 4000),
-  updated_at timestamptz not null default now(),
-  updated_by uuid references public.profiles (id) on delete set null
-);
-
-alter table public.platform_integration_settings enable row level security;
-
-drop policy if exists "Service role manages the integration keys" on public.platform_integration_settings;
-create policy "Service role manages the integration keys"
-  on public.platform_integration_settings for all
-  to service_role
-  using (true)
-  with check (true);
-
-revoke all on public.platform_integration_settings from public, anon, authenticated;
-grant all on public.platform_integration_settings to service_role;
+-- Daily checklist: workout, meals, water, habits and own tasks for each day, private to the client.
 
 -- ---------------------------------------------------------------------------
 -- Daily checklist
@@ -7554,11 +7452,9 @@ create table if not exists public.checklist_templates (
   days_of_week smallint[] not null default '{0,1,2,3,4,5,6}'
     check (cardinality(days_of_week) between 1 and 7 and days_of_week <@ array[0, 1, 2, 3, 4, 5, 6]::smallint[]),
   remind_time time,
-  calendar_sync boolean not null default false,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  check (not calendar_sync or remind_time is not null)
+  updated_at timestamptz not null default now()
 );
 
 create index if not exists checklist_templates_client_idx on public.checklist_templates (client_id) where is_active;
@@ -7576,10 +7472,8 @@ create table if not exists public.checklist_entries (
   is_done boolean not null default false,
   done_at timestamptz,
   remind_time time,
-  calendar_sync boolean not null default false,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  check (not calendar_sync or remind_time is not null)
+  updated_at timestamptz not null default now()
 );
 
 -- A repeating task has at most one entry per day, however many times the day is opened.
@@ -7624,8 +7518,7 @@ as $$
     'progress_amount', p_entry.progress_amount,
     'is_done', p_entry.is_done,
     'done_at', p_entry.done_at,
-    'remind_time', to_char(p_entry.remind_time, 'HH24:MI'),
-    'calendar_sync', p_entry.calendar_sync
+    'remind_time', to_char(p_entry.remind_time, 'HH24:MI')
   );
 $$;
 
@@ -7660,8 +7553,8 @@ language sql
 security definer
 set search_path = public, pg_temp
 as $$
-  insert into public.checklist_entries (client_id, task_date, template_id, category, title, target_amount, unit, remind_time, calendar_sync)
-  select t.client_id, p_date, t.id, t.category, t.title, t.target_amount, t.unit, t.remind_time, t.calendar_sync
+  insert into public.checklist_entries (client_id, task_date, template_id, category, title, target_amount, unit, remind_time)
+  select t.client_id, p_date, t.id, t.category, t.title, t.target_amount, t.unit, t.remind_time
   from public.checklist_templates t
   where t.client_id = p_client
     and t.is_active
@@ -7707,8 +7600,7 @@ create or replace function public.add_checklist_task(
   p_target numeric default null,
   p_unit text default null,
   p_remind_time time default null,
-  p_repeat_days jsonb default null,
-  p_calendar_sync boolean default false
+  p_repeat_days jsonb default null
 )
 returns jsonb
 language plpgsql
@@ -7738,10 +7630,6 @@ begin
   if v_unit is not null and char_length(v_unit) > 20 then
     raise exception 'The unit can have up to 20 characters';
   end if;
-  if coalesce(p_calendar_sync, false) and p_remind_time is null then
-    raise exception 'Choose a time before adding the task to the calendar';
-  end if;
-
   if p_repeat_days is not null then
     if jsonb_typeof(p_repeat_days) <> 'array' or jsonb_array_length(p_repeat_days) not between 1 and 7 then
       raise exception 'Choose the days the task repeats on';
@@ -7759,8 +7647,8 @@ begin
     if (select count(*) from public.checklist_templates where client_id = auth.uid() and is_active) >= 50 then
       raise exception 'You can keep up to 50 repeating tasks';
     end if;
-    insert into public.checklist_templates (client_id, category, title, target_amount, unit, days_of_week, remind_time, calendar_sync)
-    values (auth.uid(), p_category, v_title, p_target, v_unit, v_days, p_remind_time, coalesce(p_calendar_sync, false))
+    insert into public.checklist_templates (client_id, category, title, target_amount, unit, days_of_week, remind_time)
+    values (auth.uid(), p_category, v_title, p_target, v_unit, v_days, p_remind_time)
     returning * into v_template;
 
     perform public.checklist_materialize(auth.uid(), p_date);
@@ -7771,8 +7659,8 @@ begin
   if (select count(*) from public.checklist_entries where client_id = auth.uid() and task_date = p_date) >= 100 then
     raise exception 'A day can have up to 100 tasks';
   end if;
-  insert into public.checklist_entries (client_id, task_date, category, title, target_amount, unit, remind_time, calendar_sync)
-  values (auth.uid(), p_date, p_category, v_title, p_target, v_unit, p_remind_time, coalesce(p_calendar_sync, false))
+  insert into public.checklist_entries (client_id, task_date, category, title, target_amount, unit, remind_time)
+  values (auth.uid(), p_date, p_category, v_title, p_target, v_unit, p_remind_time)
   returning * into v_entry;
   return jsonb_build_object('template_id', null, 'entry', public.checklist_entry_json(v_entry));
 end;
@@ -7841,9 +7729,8 @@ begin
 end;
 $$;
 
--- Sets the reminder time and whether the task is added to the calendar. For a repeating task it applies from this
--- day on and to the template.
-create or replace function public.update_checklist_calendar(p_entry_id uuid, p_remind_time time, p_sync boolean)
+-- Sets (or clears) the time of a task. For a repeating task it applies from this day on and to the template.
+create or replace function public.update_checklist_time(p_entry_id uuid, p_remind_time time)
 returns jsonb
 language plpgsql
 security definer
@@ -7851,24 +7738,20 @@ set search_path = public, pg_temp
 as $$
 declare
   v_entry public.checklist_entries;
-  v_sync boolean := coalesce(p_sync, false);
 begin
   perform public.checklist_require_client();
   select * into v_entry from public.checklist_entries where id = p_entry_id and client_id = auth.uid() for update;
   if not found then
     raise exception 'That task was not found';
   end if;
-  if v_sync and p_remind_time is null then
-    raise exception 'Choose a time before adding the task to the calendar';
-  end if;
 
   if v_entry.template_id is not null then
-    update public.checklist_templates set remind_time = p_remind_time, calendar_sync = v_sync, updated_at = statement_timestamp()
+    update public.checklist_templates set remind_time = p_remind_time, updated_at = statement_timestamp()
     where id = v_entry.template_id and client_id = auth.uid();
-    update public.checklist_entries set remind_time = p_remind_time, calendar_sync = v_sync, updated_at = statement_timestamp()
+    update public.checklist_entries set remind_time = p_remind_time, updated_at = statement_timestamp()
     where template_id = v_entry.template_id and client_id = auth.uid() and task_date >= v_entry.task_date;
   else
-    update public.checklist_entries set remind_time = p_remind_time, calendar_sync = v_sync, updated_at = statement_timestamp()
+    update public.checklist_entries set remind_time = p_remind_time, updated_at = statement_timestamp()
     where id = v_entry.id;
   end if;
   select * into v_entry from public.checklist_entries where id = p_entry_id;
@@ -7877,7 +7760,7 @@ end;
 $$;
 
 -- Removes a task. A repeating task is removed for good (its template and this day onward; earlier days stay as
--- history). The ids come back so the calendar events can be removed too.
+-- history).
 create or replace function public.delete_checklist_task(p_entry_id uuid)
 returns jsonb
 language plpgsql
@@ -7894,8 +7777,6 @@ begin
   end if;
 
   if v_entry.template_id is not null then
-    update public.checklist_entries set calendar_sync = false
-    where template_id = v_entry.template_id and client_id = auth.uid() and task_date < v_entry.task_date;
     delete from public.checklist_entries where template_id = v_entry.template_id and client_id = auth.uid() and task_date >= v_entry.task_date;
     delete from public.checklist_templates where id = v_entry.template_id and client_id = auth.uid();
   else
@@ -7933,45 +7814,97 @@ begin
 end;
 $$;
 
--- ---------------------------------------------------------------------------
--- Google Calendar connection status for any signed-in person (coaches already have their own function)
--- ---------------------------------------------------------------------------
-
-create or replace function public.get_my_calendar_connection()
-returns jsonb
-language plpgsql
-stable
-security definer
-set search_path = public, pg_temp
-as $$
-declare
-  v_connection public.google_calendar_connections%rowtype;
-begin
-  if auth.uid() is null then
-    raise exception 'Sign in to continue';
-  end if;
-  select * into v_connection from public.google_calendar_connections where coach_id = auth.uid();
-  return jsonb_build_object('connected', found, 'google_email', case when found then v_connection.google_email else null end);
-end;
-$$;
-
 revoke all on function public.checklist_entry_json(public.checklist_entries) from public, anon;
 revoke all on function public.checklist_date_ok(date, integer) from public, anon;
 revoke all on function public.checklist_require_client() from public, anon, authenticated;
 revoke all on function public.checklist_materialize(uuid, date) from public, anon, authenticated;
 revoke all on function public.get_my_checklist(date) from public, anon;
-revoke all on function public.add_checklist_task(date, text, text, numeric, text, time, jsonb, boolean) from public, anon;
+revoke all on function public.add_checklist_task(date, text, text, numeric, text, time, jsonb) from public, anon;
 revoke all on function public.set_checklist_item(uuid, boolean, numeric, numeric) from public, anon;
-revoke all on function public.update_checklist_calendar(uuid, time, boolean) from public, anon;
+revoke all on function public.update_checklist_time(uuid, time) from public, anon;
 revoke all on function public.delete_checklist_task(uuid) from public, anon;
 revoke all on function public.get_checklist_summary(date, integer) from public, anon;
-revoke all on function public.get_my_calendar_connection() from public, anon;
 grant execute on function public.checklist_entry_json(public.checklist_entries) to authenticated;
 grant execute on function public.checklist_date_ok(date, integer) to authenticated;
 grant execute on function public.get_my_checklist(date) to authenticated;
-grant execute on function public.add_checklist_task(date, text, text, numeric, text, time, jsonb, boolean) to authenticated;
+grant execute on function public.add_checklist_task(date, text, text, numeric, text, time, jsonb) to authenticated;
 grant execute on function public.set_checklist_item(uuid, boolean, numeric, numeric) to authenticated;
-grant execute on function public.update_checklist_calendar(uuid, time, boolean) to authenticated;
+grant execute on function public.update_checklist_time(uuid, time) to authenticated;
 grant execute on function public.delete_checklist_task(uuid) to authenticated;
 grant execute on function public.get_checklist_summary(date, integer) to authenticated;
-grant execute on function public.get_my_calendar_connection() to authenticated;
+
+-- ===== 20261115001900_remove_external_integrations.sql =====
+
+-- ApexFit no longer connects to outside accounts that need developer approval: Google Calendar and the Fitbit,
+-- Garmin and Oura cloud APIs are gone. Smart-device data comes from Apple Health files and quick entries, and
+-- tasks live in the in-app checklist.
+--
+-- The migrations that used to create those pieces no longer do, so a new project never has them. This one cleans
+-- up a project that already had them. It is safe to run again, and on a new project it changes nothing.
+
+-- ---------------------------------------------------------------------------
+-- Google Calendar
+-- ---------------------------------------------------------------------------
+-- The stored calendar connections (including their encrypted tokens) are deleted with the table.
+
+drop function if exists public.get_my_google_calendar_status();
+drop function if exists public.get_my_calendar_connection();
+drop table if exists public.google_calendar_connections;
+drop table if exists public.platform_integration_settings;
+
+alter table public.coach_sessions drop column if exists google_event_id;
+alter table public.coach_sessions drop column if exists google_synced_at;
+
+-- The checklist keeps its tasks and times, but has no calendar choice any more.
+drop function if exists public.add_checklist_task(date, text, text, numeric, text, time, jsonb, boolean);
+drop function if exists public.update_checklist_calendar(uuid, time, boolean);
+alter table public.checklist_templates drop column if exists calendar_sync;
+alter table public.checklist_entries drop column if exists calendar_sync;
+
+-- ---------------------------------------------------------------------------
+-- Fitbit, Garmin and Oura
+-- ---------------------------------------------------------------------------
+-- Their connections (which held encrypted tokens) and the numbers they delivered are removed. Apple Health and
+-- manually entered numbers are untouched.
+
+delete from public.wearable_daily_metrics where provider in ('fitbit', 'garmin', 'oura');
+delete from public.wearable_connections where provider in ('fitbit', 'garmin', 'oura');
+
+drop function if exists public.service_save_wearable_metrics(uuid, text, jsonb);
+drop function if exists public.wearable_metrics_upsert(uuid, text, jsonb, boolean);
+
+do $$
+declare
+  v_name text;
+  v_changed boolean := false;
+begin
+  for v_name in
+    select conname from pg_constraint
+    where conrelid = 'public.wearable_daily_metrics'::regclass and contype = 'c' and pg_get_constraintdef(oid) like '%fitbit%'
+  loop
+    execute format('alter table public.wearable_daily_metrics drop constraint %I', v_name);
+    v_changed := true;
+  end loop;
+  if v_changed then
+    alter table public.wearable_daily_metrics add constraint wearable_daily_metrics_provider_check check (provider in ('apple_health', 'manual'));
+  end if;
+
+  v_changed := false;
+  for v_name in
+    select conname from pg_constraint
+    where conrelid = 'public.wearable_connections'::regclass and contype = 'c' and pg_get_constraintdef(oid) like '%fitbit%'
+  loop
+    execute format('alter table public.wearable_connections drop constraint %I', v_name);
+    v_changed := true;
+  end loop;
+  if v_changed then
+    alter table public.wearable_connections add constraint wearable_connections_provider_check check (provider = 'apple_health');
+  end if;
+end
+$$;
+
+alter table public.wearable_connections drop column if exists access_token_encrypted;
+alter table public.wearable_connections drop column if exists refresh_token_encrypted;
+alter table public.wearable_connections drop column if exists token_expires_at;
+alter table public.wearable_connections drop column if exists external_user_id;
+alter table public.wearable_daily_metrics drop column if exists raw_payload;

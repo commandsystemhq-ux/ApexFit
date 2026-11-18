@@ -589,9 +589,9 @@
   .food-macro-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 /* Coaching business */
-.stripe-panel, .google-panel, .invoice-list-panel { display: grid; gap: 11px; margin-bottom: 14px; }
-.stripe-panel .panel-heading, .google-panel .panel-heading { margin-bottom: 0; }
-.stripe-panel .button, .google-panel .button { width: fit-content; }
+.stripe-panel, .invoice-list-panel { display: grid; gap: 11px; margin-bottom: 14px; }
+.stripe-panel .panel-heading { margin-bottom: 0; }
+.stripe-panel .button { width: fit-content; }
 .clients-roster, .clients-invites, .message-composer, .message-history, .package-panel, .invoice-panel, .schedule-form-panel, .session-list-panel, .client-inbox { display: grid; min-width: 0; align-content: start; gap: 13px; }
 .clients-list, .invite-list, .sent-list, .inbox-list, .package-list, .invoice-list, .session-list { display: grid; gap: 9px; }
 .client-row, .package-card, .invoice-row, .session-row, .sent-item, .inbox-item { min-width: 0; padding: 11px; border: 1px solid var(--line); border-radius: 9px; background: rgba(255, 255, 255, .015); font-size: 11px; }
@@ -1214,8 +1214,3 @@ a.sidebar-profile:hover .profile-copy strong { color: #70afff; }
 .chk-week-fill { position: absolute; inset-inline: 0; bottom: 0; background: rgba(54, 132, 246, .28); }
 .chk-week-day.is-complete .chk-week-fill { background: rgba(50, 212, 154, .35); }
 .chk-week-day small { position: relative; font-size: 9px; }
-.admin-int-card { display: grid; gap: 10px; align-content: start; }
-.admin-int-redirect { display: grid; gap: 4px; }.admin-int-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
-.admin-int-card { min-width: 0; overflow: hidden; }
-.admin-int-redirect .store-share-row { flex-wrap: wrap; }
-.admin-int-redirect .store-share-row .field { flex: 1 1 100%; min-width: 0; font-size: 10px; }

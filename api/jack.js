@@ -1,11 +1,10 @@
-import { authenticate } from './_lib/auth.js';
+import { authenticate, safeAdminClient } from './_lib/auth.js';
 import { describeJackFailure, isPlatformAdmin, resolveJackModel } from './_lib/aiSettings.js';
 import { ConfigError } from './_lib/config.js';
 import { HttpError, handler, readJson } from './_lib/http.js';
 import { buildContextSummary, createRateLimiter, pageIdForRoute, parseJackRequest, runJack } from './_lib/jackAgent.js';
 import { buildSystemPrompt } from './_lib/jackKnowledge.js';
 import { ModelError } from './_lib/jackModels.js';
-import { safeAdminClient } from './_lib/platformIntegrations.js';
 
 const allowRequest = createRateLimiter({ limit: 20, windowMs: 60_000 });
 

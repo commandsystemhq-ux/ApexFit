@@ -1,6 +1,6 @@
--- Wearables (Apple Health, Fitbit, Garmin, Oura) and nutrition tracking (MyFitnessPal exports and manual entries).
--- Rows are read through row-level security. Clients write through security definer functions that validate
--- every value; OAuth tokens are written only by the server (service role) and are never readable by the browser.
+-- Smart-device data (Apple Health exports and manual entries) and nutrition tracking (MyFitnessPal exports and
+-- manual entries). Rows are read through row-level security. Clients write through security definer functions that
+-- validate every value.
 
 -- Who may read a client's health data: the client, their active coach, and an assistant trainer who has the
 -- "view health data" (view_assessments) permission for that client.
@@ -34,18 +34,12 @@ grant execute on function public.can_view_client_health(uuid) to authenticated;
 create table if not exists public.wearable_connections (
   id uuid primary key default gen_random_uuid(),
   client_id uuid not null references public.profiles (id) on delete cascade,
-  provider text not null check (provider in ('apple_health', 'fitbit', 'garmin', 'oura')),
+  provider text not null check (provider = 'apple_health'),
   status text not null default 'connected' check (status in ('connected', 'disconnected', 'error')),
-  access_token_encrypted text check (access_token_encrypted is null or char_length(access_token_encrypted) <= 4000),
-  refresh_token_encrypted text check (refresh_token_encrypted is null or char_length(refresh_token_encrypted) <= 4000),
-  token_expires_at timestamptz,
-  external_user_id text check (external_user_id is null or char_length(external_user_id) <= 100),
   last_error text check (last_error is null or char_length(last_error) <= 300),
   last_synced_at timestamptz,
   created_at timestamptz not null default now(),
-  unique (client_id, provider),
-  -- A connected cloud account always holds a token; Apple Health is imported from a file and has none.
-  check (provider = 'apple_health' or status <> 'connected' or access_token_encrypted is not null or refresh_token_encrypted is not null)
+  unique (client_id, provider)
 );
 
 create index if not exists wearable_connections_client_idx on public.wearable_connections (client_id);
@@ -54,14 +48,13 @@ create table if not exists public.wearable_daily_metrics (
   id uuid primary key default gen_random_uuid(),
   client_id uuid not null references public.profiles (id) on delete cascade,
   recorded_date date not null,
-  provider text not null check (provider in ('apple_health', 'fitbit', 'garmin', 'oura', 'manual')),
+  provider text not null check (provider in ('apple_health', 'manual')),
   steps integer check (steps between 0 and 200000),
   active_calories integer check (active_calories between 0 and 20000),
   sleep_minutes integer check (sleep_minutes between 0 and 1440),
   resting_heart_rate integer check (resting_heart_rate between 20 and 250),
   hrv_ms numeric(6, 2) check (hrv_ms between 0 and 500),
   recovery_score integer check (recovery_score between 0 and 100),
-  raw_payload jsonb check (raw_payload is null or (jsonb_typeof(raw_payload) = 'object' and octet_length(raw_payload::text) <= 8000)),
   synced_at timestamptz not null default now(),
   -- One row per client, day and source: syncing again updates the day instead of adding a copy.
   unique (client_id, recorded_date, provider),
@@ -132,8 +125,7 @@ create policy "Health data is readable by the client and their care team"
 
 revoke all on public.wearable_connections, public.wearable_daily_metrics, public.nutrition_daily_logs, public.nutrition_targets
   from anon, authenticated;
--- Column grants keep the encrypted OAuth tokens out of reach of every browser session.
-grant select (id, client_id, provider, status, external_user_id, last_error, last_synced_at, created_at)
+grant select (id, client_id, provider, status, last_error, last_synced_at, created_at)
   on public.wearable_connections to authenticated;
 grant select (id, client_id, recorded_date, provider, steps, active_calories, sleep_minutes, resting_heart_rate, hrv_ms, recovery_score, synced_at)
   on public.wearable_daily_metrics to authenticated;
@@ -193,7 +185,7 @@ $$;
 
 -- Saves up to 400 days of device metrics for one client and source. A value that is missing in a new sync keeps
 -- the value saved earlier for that day.
-create or replace function public.wearable_metrics_upsert(p_client_id uuid, p_provider text, p_metrics jsonb, p_allow_raw boolean)
+create or replace function public.wearable_metrics_upsert(p_client_id uuid, p_provider text, p_metrics jsonb)
 returns integer
 language plpgsql
 security definer
@@ -208,7 +200,6 @@ declare
   v_rhr integer;
   v_hrv numeric;
   v_recovery integer;
-  v_raw jsonb;
   v_count integer := 0;
 begin
   if jsonb_typeof(p_metrics) is distinct from 'array' or jsonb_array_length(p_metrics) not between 1 and 400 then
@@ -231,15 +222,10 @@ begin
       raise exception 'Each day needs at least one value (%)', v_date;
     end if;
 
-    v_raw := case when p_allow_raw and jsonb_typeof(v_row -> 'raw') = 'object' then v_row -> 'raw' else null end;
-    if v_raw is not null and octet_length(v_raw::text) > 8000 then
-      raise exception 'The raw data of % is too large', v_date;
-    end if;
-
     insert into public.wearable_daily_metrics (
-      client_id, recorded_date, provider, steps, active_calories, sleep_minutes, resting_heart_rate, hrv_ms, recovery_score, raw_payload
+      client_id, recorded_date, provider, steps, active_calories, sleep_minutes, resting_heart_rate, hrv_ms, recovery_score
     )
-    values (p_client_id, v_date, p_provider, v_steps, v_calories, v_sleep, v_rhr, v_hrv, v_recovery, v_raw)
+    values (p_client_id, v_date, p_provider, v_steps, v_calories, v_sleep, v_rhr, v_hrv, v_recovery)
     on conflict (client_id, recorded_date, provider) do update
     set steps = coalesce(excluded.steps, wearable_daily_metrics.steps),
         active_calories = coalesce(excluded.active_calories, wearable_daily_metrics.active_calories),
@@ -247,7 +233,6 @@ begin
         resting_heart_rate = coalesce(excluded.resting_heart_rate, wearable_daily_metrics.resting_heart_rate),
         hrv_ms = coalesce(excluded.hrv_ms, wearable_daily_metrics.hrv_ms),
         recovery_score = coalesce(excluded.recovery_score, wearable_daily_metrics.recovery_score),
-        raw_payload = coalesce(excluded.raw_payload, wearable_daily_metrics.raw_payload),
         synced_at = statement_timestamp();
     v_count := v_count + 1;
   end loop;
@@ -257,7 +242,7 @@ $$;
 
 revoke all on function public.health_number(jsonb, text, numeric, numeric) from public, anon, authenticated;
 revoke all on function public.health_date(jsonb, text, integer, integer) from public, anon, authenticated;
-revoke all on function public.wearable_metrics_upsert(uuid, text, jsonb, boolean) from public, anon, authenticated;
+revoke all on function public.wearable_metrics_upsert(uuid, text, jsonb) from public, anon, authenticated;
 
 -- ---------------------------------------------------------------------------
 -- Functions for clients
@@ -280,7 +265,7 @@ begin
     raise exception 'Only Apple Health imports and manual entries can be saved from the app';
   end if;
 
-  v_saved := public.wearable_metrics_upsert(auth.uid(), p_provider, p_metrics, false);
+  v_saved := public.wearable_metrics_upsert(auth.uid(), p_provider, p_metrics);
 
   if p_provider = 'apple_health' then
     insert into public.wearable_connections (client_id, provider, status, last_synced_at, last_error)
@@ -304,7 +289,7 @@ begin
   if auth.uid() is null or not public.is_client_account() then
     raise exception 'A client account is required';
   end if;
-  if p_provider is null or p_provider not in ('apple_health', 'fitbit', 'garmin', 'oura', 'manual') then
+  if p_provider is null or p_provider not in ('apple_health', 'manual') then
     raise exception 'Unsupported source';
   end if;
   delete from public.wearable_daily_metrics where client_id = auth.uid() and provider = p_provider;
@@ -571,28 +556,6 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------------
--- Functions for the server (service role only)
--- ---------------------------------------------------------------------------
-
--- OAuth syncs (Fitbit, Garmin, Oura) save normalized days here. Raw provider data may be attached per day.
-create or replace function public.service_save_wearable_metrics(p_client_id uuid, p_provider text, p_metrics jsonb)
-returns integer
-language plpgsql
-security definer
-set search_path = public, pg_temp
-as $$
-begin
-  if p_provider is null or p_provider not in ('fitbit', 'garmin', 'oura') then
-    raise exception 'Unsupported provider';
-  end if;
-  if not exists (select 1 from public.profiles where id = p_client_id and role = 'client') then
-    raise exception 'Client was not found';
-  end if;
-  return public.wearable_metrics_upsert(p_client_id, p_provider, p_metrics, true);
-end;
-$$;
-
--- ---------------------------------------------------------------------------
 -- Grants
 -- ---------------------------------------------------------------------------
 
@@ -613,5 +576,3 @@ grant execute on function public.set_my_nutrition_targets(integer, numeric, nume
 grant execute on function public.set_client_nutrition_targets(uuid, integer, numeric, numeric, numeric) to authenticated;
 grant execute on function public.get_health_overview(uuid, integer) to authenticated;
 
-revoke all on function public.service_save_wearable_metrics(uuid, text, jsonb) from public, anon, authenticated;
-grant execute on function public.service_save_wearable_metrics(uuid, text, jsonb) to service_role;

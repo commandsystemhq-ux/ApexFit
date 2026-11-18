@@ -12,6 +12,17 @@ export function adminClient() {
   );
 }
 
+// The service-role client, or null when it cannot be created (missing or malformed server settings). Used where a
+// missing database client should not stop the request (for example Jack falling back to the environment variables).
+export function safeAdminClient() {
+  try {
+    return adminClient();
+  } catch (error) {
+    console.error('The database client is not available:', error?.message);
+    return null;
+  }
+}
+
 export async function authenticate(req) {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';

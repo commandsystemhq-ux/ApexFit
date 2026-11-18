@@ -1,14 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
-import { decryptSecret, encryptSecret, signState, verifyState } from '../api/_lib/crypto.js';
-import { buildAuthUrl, buildCalendarEvent, eventIdForSession, parseIdTokenEmail } from '../api/_lib/googleCalendar.js';
+import { decryptSecret, encryptSecret } from '../api/_lib/crypto.js';
 import { buildCheckoutParams, computeApplicationFee } from '../api/_lib/stripeCheckout.js';
 import { NOTIFICATION_TYPES, buildPushMessage } from '../api/_lib/pushText.js';
 
 const key = randomBytes(32).toString('base64');
 
-test('stored Google tokens round-trip and reject tampering or wrong keys', () => {
+test('stored secrets round-trip and reject tampering or wrong keys', () => {
   const encrypted = encryptSecret('refresh-token', key);
   assert.notEqual(encrypted, 'refresh-token');
   assert.equal(decryptSecret(encrypted, key), 'refresh-token');
@@ -16,44 +15,6 @@ test('stored Google tokens round-trip and reject tampering or wrong keys', () =>
   assert.throws(() => decryptSecret(encrypted, randomBytes(32).toString('base64')));
   assert.throws(() => decryptSecret(`${encrypted.slice(0, -2)}AA`, key));
   assert.throws(() => encryptSecret('x', 'short'), /32 bytes/);
-});
-
-test('OAuth state is signed, expires, and cannot be forged', () => {
-  const now = Date.now();
-  const state = signState({ coachId: 'abc' }, key, 600, now);
-  assert.equal(verifyState(state, key, now + 1000).coachId, 'abc');
-  assert.equal(verifyState(state, key, now + 601_000), null);
-  assert.equal(verifyState(state, randomBytes(32).toString('base64'), now), null);
-  const [body] = state.split('.');
-  const forged = Buffer.from(JSON.stringify({ coachId: 'evil', exp: 9999999999 })).toString('base64url');
-  assert.equal(verifyState(`${forged}.${state.split('.')[1]}`, key, now), null);
-  assert.notEqual(forged, body);
-  assert.equal(verifyState('garbage', key), null);
-});
-
-test('calendar events are idempotent and carry session details', () => {
-  const id = '3f2b8a4e-1c6d-4e7f-9a0b-123456789abc';
-  assert.equal(eventIdForSession(id), '3f2b8a4e1c6d4e7f9a0b123456789abc');
-  assert.match(eventIdForSession(id), /^[a-v0-9]{5,}$/);
-  const event = buildCalendarEvent({
-    id, title: 'PT session', starts_at: '2026-12-01T10:00:00+00:00', ends_at: '2026-12-01T11:00:00+00:00',
-    location: 'Gym', notes: 'Legs', status: 'completed',
-  }, 'Sam');
-  assert.equal(event.summary, 'PT session — Sam');
-  assert.equal(event.start.dateTime, '2026-12-01T10:00:00.000Z');
-  assert.equal(event.location, 'Gym');
-  assert.match(event.description, /Legs/);
-  assert.equal(buildCalendarEvent({ id, title: 'T', starts_at: '2026-12-01T10:00:00Z', ends_at: '2026-12-01T11:00:00Z', location: '', notes: '', status: 'scheduled' }, '').summary, 'T');
-});
-
-test('Google helpers parse ID tokens and build offline consent URLs', () => {
-  const payload = Buffer.from(JSON.stringify({ email: 'coach@example.com' })).toString('base64url');
-  assert.equal(parseIdTokenEmail(`h.${payload}.s`), 'coach@example.com');
-  assert.equal(parseIdTokenEmail('broken'), null);
-  const url = new URL(buildAuthUrl({ clientId: 'cid', redirectUri: 'https://app/api/google?action=callback', state: 's' }));
-  assert.equal(url.searchParams.get('access_type'), 'offline');
-  assert.equal(url.searchParams.get('prompt'), 'consent');
-  assert.match(url.searchParams.get('scope'), /calendar\.events/);
 });
 
 test('checkout uses the stored invoice amount and routes funds to the coach account', () => {

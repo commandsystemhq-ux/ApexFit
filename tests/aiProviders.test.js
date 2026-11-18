@@ -764,7 +764,7 @@ test('no coach, trainer or client screen, route or Jack text offers or mentions 
   // The only places that may use the AI settings client: the admin page and its panel.
   const users = ['src/pages', 'src/components'].flatMap((dir) => readdirSync(new URL(`../${dir}/`, import.meta.url)).map((name) => `${dir}/${name}`))
     .filter((path) => /\.jsx?$/.test(path) && /aiSettingsService|PlatformAiPanel|aiProviders/.test(read(path)));
-  assert.deepEqual(users.sort(), ['src/components/PlatformAiPanel.jsx', 'src/pages/AdminAiPage.jsx', 'src/pages/AdminIntegrationsPage.jsx', 'src/pages/SettingsPage.jsx']);
+  assert.deepEqual(users.sort(), ['src/components/PlatformAiPanel.jsx', 'src/pages/AdminAiPage.jsx', 'src/pages/SettingsPage.jsx']);
   assert.ok(!/PlatformAiPanel|PROVIDER_FIELDS|AI_PROVIDERS/.test(read('src/pages/SettingsPage.jsx')), 'the settings page has no provider controls');
   assert.match(read('src/pages/SettingsPage.jsx'), /getAiStatus/);
   assert.ok(!/getAiSettings|saveAiSettings|testAiSettings|clearAiSettings/.test(read('src/pages/SettingsPage.jsx')));

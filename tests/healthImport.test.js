@@ -5,7 +5,7 @@ import {
   AppleHealthParser, chunk, detectSlashOrder, parseAppleHealthFile, parseCsv, parseDateValue, parseHealthSummary, parseMyFitnessPalCsv, parseNumber,
 } from '../src/services/healthImport.js';
 import {
-  buildSeries, connectionState, countSkipReasons, dayProgress, importErrorKey, isStale, mergeDailyMetrics, mergeNutritionByDay, progressOf,
+  buildSeries, connectionState, countSkipReasons, dayProgress, importErrorKey, mergeDailyMetrics, mergeNutritionByDay, progressOf,
   summarizeNutrition, summarizeSeries, validateMetricsForm, validateNutritionForm, validateTargetsForm, formatSleep, SKIP_REASON_KEYS,
 } from '../src/services/healthUtils.js';
 import { translations, supportedLocales } from '../src/i18n/translations.js';
@@ -227,20 +227,19 @@ test('long lists are sent in parts the database accepts', () => {
 
 // ------------------------------------------------------------------- merging and summaries
 
-test('the same day from several devices is merged by priority, per value', () => {
+test('the same day from Apple Health and a quick entry is merged, Apple Health first, per value', () => {
   const merged = mergeDailyMetrics([
-    { recorded_date: '2026-11-14', provider: 'apple_health', steps: 8000, sleep_minutes: 400, resting_heart_rate: 60 },
-    { recorded_date: '2026-11-14', provider: 'oura', steps: null, sleep_minutes: 430, resting_heart_rate: 52, recovery_score: 80 },
-    { recorded_date: '2026-11-14', provider: 'manual', steps: 100, hrv_ms: 45 },
+    { recorded_date: '2026-11-14', provider: 'manual', steps: 100, sleep_minutes: 380, hrv_ms: 45 },
+    { recorded_date: '2026-11-14', provider: 'apple_health', steps: 8000, sleep_minutes: 400, resting_heart_rate: 60, recovery_score: null },
   ]).get('2026-11-14');
-  assert.deepEqual([merged.steps, merged.sleep_minutes, merged.resting_heart_rate, merged.recovery_score, merged.hrv_ms], [8000, 430, 52, 80, 45]);
-  assert.deepEqual(merged.sources, ['apple_health', 'oura', 'manual']);
+  assert.deepEqual([merged.steps, merged.sleep_minutes, merged.resting_heart_rate, merged.recovery_score, merged.hrv_ms], [8000, 400, 60, null, 45]);
+  assert.deepEqual(merged.sources, ['apple_health', 'manual']);
 });
 
 test('the seven-day series keeps empty days and summarizes only what exists', () => {
   const rows = [
-    { recorded_date: '2026-11-13', provider: 'fitbit', steps: 6000, sleep_minutes: 420, resting_heart_rate: 60 },
-    { recorded_date: '2026-11-15', provider: 'fitbit', steps: 8000, sleep_minutes: 480, resting_heart_rate: 58 },
+    { recorded_date: '2026-11-13', provider: 'apple_health', steps: 6000, sleep_minutes: 420, resting_heart_rate: 60 },
+    { recorded_date: '2026-11-15', provider: 'apple_health', steps: 8000, sleep_minutes: 480, resting_heart_rate: 58 },
   ];
   const series = buildSeries(rows, TODAY, 7);
   assert.equal(series.length, 7);
@@ -253,16 +252,12 @@ test('the seven-day series keeps empty days and summarizes only what exists', ()
   assert.equal(formatSleep(null), '—');
 });
 
-test('connection state and staleness', () => {
-  const connections = [{ provider: 'fitbit', status: 'error', last_synced_at: '2026-11-15T10:00:00Z' }, { provider: 'oura', status: 'connected' }];
-  assert.equal(connectionState(connections, 'fitbit'), 'error');
-  assert.equal(connectionState(connections, 'garmin', { garmin: false }), 'unconfigured');
-  assert.equal(connectionState(connections, 'garmin', { garmin: true }), 'disconnected');
-  assert.equal(connectionState(connections, 'apple_health', { apple_health: false }), 'disconnected', 'Apple Health never needs server keys');
-  const now = Date.parse('2026-11-15T12:00:00Z');
-  assert.equal(isStale(connections[0], now), false);
-  assert.equal(isStale(connections[0], now + 4 * 3_600_000), true);
-  assert.equal(isStale(connections[1], now), true);
+test('the Apple Health card is connected once data was imported', () => {
+  const connections = [{ provider: 'apple_health', status: 'connected', last_synced_at: '2026-11-15T10:00:00Z' }];
+  assert.equal(connectionState(connections, 'apple_health'), 'connected');
+  assert.equal(connectionState([], 'apple_health'), 'disconnected');
+  assert.equal(connectionState(undefined, 'apple_health'), 'disconnected');
+  assert.equal(connectionState([{ provider: 'apple_health', status: 'disconnected' }], 'apple_health'), 'disconnected');
 });
 
 test('nutrition progress is under, on or over the goal', () => {
@@ -351,9 +346,8 @@ test('every key the forms, skip reasons and import errors can return exists in a
     ...Object.values(SKIP_REASON_KEYS),
     ...['too_large', 'too_many_rows', 'too_many_days', 'empty', 'missing_columns', 'no_days', 'bad_json', 'bad_zip', 'no_export', 'not_health_export', 'aborted', 'other'].map(importErrorKey),
     ...['hltErrDate', 'hltErrDateRange', 'hltErrNumber', 'hltErrNoValues', 'nutErrDate', 'nutErrDateRange', 'nutErrNumber', 'nutErrNotes', 'nutErrNoValues', 'nutErrCaloriesGoal'],
-    ...['apple_health', 'fitbit', 'garmin', 'oura'].flatMap((provider) => [`hltProv_${provider}`, `hltProvDesc_${provider}`]),
-    ...['connected', 'error', 'disconnected', 'unconfigured'].map((state) => `hltState_${state}`),
-    ...['connected', 'connected_nodata', 'denied', 'failed'].map((result) => `hltResult_${result}`),
+    `hltProv_apple_health`, `hltProvDesc_apple_health`,
+    ...['connected', 'disconnected'].map((state) => `hltState_${state}`),
     ...['on', 'under', 'over'].map((status) => `nutStatus_${status}`),
     ...['manual', 'myfitnesspal_csv', 'myfitnesspal_sync'].map((source) => `nutSource_${source}`),
   ]);

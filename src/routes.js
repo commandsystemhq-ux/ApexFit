@@ -39,7 +39,7 @@ export const PAGES = {
 export const AUTH_PATHS = { home: '/', login: '/login', signup: '/signup' };
 
 // Pages that are not part of any role's navigation. The platform owner's AI screen is opened by its address only.
-export const ADMIN_PATHS = { ai: '/admin/ai', integrations: '/admin/integrations' };
+export const ADMIN_PATHS = { ai: '/admin/ai' };
 
 const COACH_NAVIGATION = [
   { group: 'main', items: ['dashboard', 'generator', 'workoutBuilder', 'programTemplates', 'exerciseLibrary', 'messages', 'workflows'] },

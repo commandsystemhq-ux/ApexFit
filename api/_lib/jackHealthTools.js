@@ -77,7 +77,7 @@ export const HEALTH_CLIENT_TOOLS = [
     parameters: () => ({ type: 'object', properties: {} }),
     async run(_args, ctx) {
       const overview = await overviewFor(ctx, null);
-      const connected = ['apple_health', 'fitbit', 'garmin', 'oura'].filter((provider) => connectionState(overview.connections, provider) === 'connected');
+      const connected = ['apple_health'].filter((provider) => connectionState(overview.connections, provider) === 'connected');
       return { result: { connected_devices: connected, ...describe(overview, ctx.today) } };
     },
   },

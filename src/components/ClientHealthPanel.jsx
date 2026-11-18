@@ -5,7 +5,7 @@ import { NutritionSummaryView } from './NutritionViews.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import { getLocalDateString } from '../services/clientTrackingUtils.js';
 import { getHealthOverview, setClientNutritionTargets } from '../services/healthService.js';
-import { CLOUD_PROVIDERS, HEALTH_PROVIDERS, targetsToForm, validateTargetsForm } from '../services/healthUtils.js';
+import { HEALTH_PROVIDERS, targetsToForm, validateTargetsForm } from '../services/healthUtils.js';
 
 const GOAL_FIELDS = [
   { key: 'calories', labelKey: 'nutCalories' },
@@ -71,7 +71,7 @@ export default function ClientHealthPanel({ clientId, canSetTargets = false }) {
       <h4>{t('hltCoachTitle')}</h4>
       {sources.length > 0 && (
         <p className="contract-badges">
-          {sources.map((provider) => <span className="soft-badge badge-cyan" key={provider}>{t(`hltProv_${provider}`)}{CLOUD_PROVIDERS.includes(provider) && !connected.includes(provider) ? ` · ${t('hltState_disconnected')}` : ''}</span>)}
+          {sources.map((provider) => <span className="soft-badge badge-cyan" key={provider}>{t(`hltProv_${provider}`)}</span>)}
         </p>
       )}
       <HealthMetricsView metrics={overview.metrics} today={today} />

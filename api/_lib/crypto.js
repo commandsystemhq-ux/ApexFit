@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 import { ConfigError } from './config.js';
 
 function keyBytes(base64Key) {
@@ -23,27 +23,4 @@ export function decryptSecret(payload, base64Key) {
   const decipher = createDecipheriv('aes-256-gcm', keyBytes(base64Key), decode(iv));
   decipher.setAuthTag(decode(tag));
   return Buffer.concat([decipher.update(decode(encrypted)), decipher.final()]).toString('utf8');
-}
-
-function sign(body, base64Key) {
-  return createHmac('sha256', keyBytes(base64Key)).update(`oauth-state:${body}`).digest();
-}
-
-export function signState(payload, base64Key, ttlSeconds = 600, now = Date.now()) {
-  const body = encode(JSON.stringify({ ...payload, exp: Math.floor(now / 1000) + ttlSeconds }));
-  return `${body}.${encode(sign(body, base64Key))}`;
-}
-
-export function verifyState(token, base64Key, now = Date.now()) {
-  const [body, signature] = String(token).split('.');
-  if (!body || !signature) return null;
-  const expected = sign(body, base64Key);
-  const provided = decode(signature);
-  if (provided.length !== expected.length || !timingSafeEqual(provided, expected)) return null;
-  try {
-    const payload = JSON.parse(decode(body).toString('utf8'));
-    return typeof payload.exp === 'number' && payload.exp * 1000 > now ? payload : null;
-  } catch {
-    return null;
-  }
 }

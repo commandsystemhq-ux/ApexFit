@@ -103,6 +103,7 @@ test('the same day can come from several providers, and only one row exists per 
 test('metrics are validated and only Apple Health or manual data can be written by the app', async () => {
   await fails(save(ids.sara, 'fitbit', [{ date: today, steps: 1 }]), /Only Apple Health/);
   await fails(save(ids.sara, 'oura', [{ date: today, steps: 1 }]), /Only Apple Health/);
+  await fails(save(ids.sara, 'garmin', [{ date: today, steps: 1 }]), /Only Apple Health/);
   await fails(save(ids.sara, 'apple_health', []), /between 1 and 400/);
   await fails(save(ids.sara, 'apple_health', Array.from({ length: 401 }, () => ({ date: today, steps: 1 }))), /between 1 and 400/);
   await fails(save(ids.sara, 'apple_health', [{ date: today }]), /at least one value/);
@@ -116,45 +117,32 @@ test('metrics are validated and only Apple Health or manual data can be written 
   assert.equal(await count('select count(*) as n from public.wearable_daily_metrics'), 0);
 });
 
-test('tokens never reach the app and the client cannot write the tables directly', async () => {
-  await db.query(
-    `insert into public.wearable_connections (client_id, provider, status, access_token_encrypted, refresh_token_encrypted, external_user_id)
-     values ($1, 'fitbit', 'connected', 'enc:access', 'enc:refresh', 'FB123')`,
-    [ids.sara],
-  );
-  const listed = await ok(as(ids.sara).from('wearable_connections').select('provider,status,external_user_id'));
-  assert.deepEqual(listed.map((row) => row.provider), ['fitbit']);
-  for (const column of ['access_token_encrypted', 'refresh_token_encrypted']) {
-    const result = await as(ids.sara).from('wearable_connections').select(column);
-    assert.ok(result.error, `${column} must not be readable`);
-  }
-  assert.ok((await as(ids.sara).from('wearable_connections').select('*')).error, 'select * would include the token columns');
+test('the client cannot write the tables directly', async () => {
+  await ok(save(ids.sara, 'apple_health', [{ date: today, steps: 100 }]));
   const refused = [
-    "insert into public.wearable_connections (client_id, provider, status) values ('" + ids.sara + "', 'oura', 'connected')",
+    "insert into public.wearable_connections (client_id, provider, status) values ('" + ids.omar + "', 'apple_health', 'connected')",
     "insert into public.wearable_daily_metrics (client_id, recorded_date, provider, steps) values ('" + ids.sara + "', current_date, 'manual', 1)",
     "insert into public.nutrition_daily_logs (client_id, log_date, source, calories_consumed) values ('" + ids.sara + "', current_date, 'manual', 1)",
     "insert into public.nutrition_targets (client_id, calories) values ('" + ids.sara + "', 2000)",
     "update public.wearable_connections set status = 'disconnected'",
     "delete from public.wearable_connections",
+    "delete from public.wearable_daily_metrics",
   ];
   for (const statement of refused) assert.ok((await as(ids.sara).sql(statement)).error, statement);
   assert.equal(await count('select count(*) as n from public.wearable_connections'), 1);
   assert.equal((await rows('select status from public.wearable_connections'))[0].status, 'connected');
 });
 
-test('the server function is for the service role only and can store raw provider data', async () => {
-  await fails(as(ids.sara).rpc('service_save_wearable_metrics', { p_client_id: ids.sara, p_provider: 'fitbit', p_metrics: [{ date: today, steps: 1 }] }), /permission denied/);
-  await fails(as(ids.coachA).rpc('service_save_wearable_metrics', { p_client_id: ids.sara, p_provider: 'fitbit', p_metrics: [{ date: today, steps: 1 }] }), /permission denied/);
-
-  const saved = (await db.query(
-    'select public.service_save_wearable_metrics($1, $2, $3::jsonb) as saved',
-    [ids.sara, 'fitbit', JSON.stringify([{ date: today, steps: 7000, raw: { source: 'fitbit' } }])],
-  )).rows[0].saved;
-  assert.equal(Number(saved?.saved ?? saved), 1);
-  const [row] = await rows("select steps, raw_payload from public.wearable_daily_metrics where provider = 'fitbit' and client_id = $1", [ids.sara]);
-  assert.deepEqual(row, { steps: 7000, raw_payload: { source: 'fitbit' } });
-  // The same function with the app-only provider list is refused for unknown providers.
-  await assert.rejects(db.query('select public.service_save_wearable_metrics($1, $2, $3::jsonb)', [ids.sara, 'whoop', JSON.stringify([{ date: today, steps: 1 }])]), /Unsupported provider/);
+test('only Apple Health and manual numbers exist: no outside accounts, no tokens, no server-side sync', async () => {
+  assert.deepEqual(await rows("select column_name from information_schema.columns where table_name in ('wearable_connections', 'wearable_daily_metrics') and column_name ~ 'token|external|raw_'"), []);
+  assert.equal(await count("select count(*) as n from pg_proc where pronamespace = 'public'::regnamespace and proname in ('service_save_wearable_metrics')"), 0);
+  assert.equal(await count("select count(*) as n from pg_proc where proname = 'wearable_metrics_upsert' and pronargs = 4"), 0);
+  // Even the database owner cannot store a number from a service that is gone.
+  for (const provider of ['fitbit', 'garmin', 'oura']) {
+    await assert.rejects(db.query("insert into public.wearable_daily_metrics (client_id, recorded_date, provider, steps) values ($1, current_date, $2, 1)", [ids.sara, provider]), /check/, provider);
+    await assert.rejects(db.query("insert into public.wearable_connections (client_id, provider, status) values ($1, $2, 'connected')", [ids.sara, provider]), /check/, provider);
+  }
+  await fails(as(ids.sara).rpc('service_save_wearable_metrics', { p_client_id: ids.sara, p_provider: 'fitbit', p_metrics: [{ date: today, steps: 1 }] }), /does not exist|Could not find|function/i);
 });
 
 test('deleting Apple Health data removes the days and the connection', async () => {
