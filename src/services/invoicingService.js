@@ -1,11 +1,10 @@
-import { callApi } from './apiClient.js';
 import { getCurrentUserId } from './clientIdentity.js';
 import { normalizeInvoiceForm, normalizePackageForm } from './coachingUtils.js';
 import { notifyClients } from './pushService.js';
 import { requireSupabase } from './supabaseClient.js';
 
 const PACKAGE_FIELDS = 'id,coach_id,name,description,session_count,price_cents,currency,is_active,created_at';
-const INVOICE_FIELDS = 'id,invoice_number,coach_id,client_id,description,sessions_included,amount_cents,currency,status,due_date,paid_at,created_at';
+const INVOICE_FIELDS = 'id,invoice_number,coach_id,client_id,description,sessions_included,amount_cents,currency,status,due_date,paid_at,created_at,payment_reported_at,paid_method,payment_reference';
 
 export async function listPackages() {
   const { data, error } = await requireSupabase()
@@ -77,6 +76,19 @@ export async function voidInvoice(invoiceId) {
   if (error) throw error;
 }
 
-export const getStripeConnectStatus = () => callApi('stripe', { body: { action: 'connect-status' } });
-export const startStripeOnboarding = () => callApi('stripe', { body: { action: 'connect-onboard' } });
-export const startInvoiceCheckout = (invoiceId) => callApi('stripe', { body: { action: 'checkout', invoiceId } });
+// How the coach gets paid (bank transfer and/or a custom method), and what a client of that coach sees.
+async function rpc(name, args = {}) {
+  const { data, error } = await requireSupabase().rpc(name, args);
+  if (error) throw error;
+  return data;
+}
+
+export const getMyPaymentMethods = () => rpc('get_my_payment_methods');
+export const savePaymentMethods = (payload) => rpc('save_payment_methods', payload);
+export const getCoachPaymentInfo = (coachId) => rpc('get_coach_payment_info', { p_coach_id: coachId });
+
+// Invoices are paid outside the app: the client says they paid, the coach confirms.
+export const reportInvoicePayment = (invoiceId) => rpc('report_invoice_payment', { p_invoice_id: invoiceId });
+export const confirmInvoicePayment = (invoiceId, method, reference) => rpc('confirm_invoice_payment', {
+  p_invoice_id: invoiceId, p_method: method, p_reference: reference || null,
+});

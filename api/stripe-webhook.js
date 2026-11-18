@@ -8,7 +8,8 @@ export const config = { api: { bodyParser: false } };
 
 const PAID_EVENTS = new Set(['checkout.session.completed', 'checkout.session.async_payment_succeeded']);
 
-// Store purchases carry the order id; the database checks the amount and currency before delivering the program.
+// Only program-store purchases are paid through Stripe. They carry the order id; the database checks the amount and
+// currency before delivering the program.
 async function completeStoreOrder(admin, session) {
   const orderId = session.metadata?.store_order_id;
   if (!orderId || session.payment_status !== 'paid') return false;
@@ -25,19 +26,8 @@ async function completeStoreOrder(admin, session) {
   return true;
 }
 
-async function markInvoicePaid(admin, session) {
-  if (await completeStoreOrder(admin, session)) return;
-  const invoiceId = session.metadata?.invoice_id;
-  if (!invoiceId || session.payment_status !== 'paid') return;
-
-  const { error } = await admin.rpc('mark_invoice_paid', {
-    p_invoice_id: invoiceId,
-    p_checkout_session_id: session.id,
-    p_payment_intent_id: typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id ?? null,
-    p_amount_cents: session.amount_total,
-    p_currency: session.currency,
-  });
-  if (error) throw error;
+async function handlePaidSession(admin, session) {
+  await completeStoreOrder(admin, session);
 }
 
 export default handler(['POST'], async (req, res) => {
@@ -54,7 +44,7 @@ export default handler(['POST'], async (req, res) => {
 
   const admin = adminClient();
   if (PAID_EVENTS.has(event.type)) {
-    await markInvoicePaid(admin, event.data.object);
+    await handlePaidSession(admin, event.data.object);
   } else if (event.type === 'account.updated') {
     const account = event.data.object;
     const { error } = await admin

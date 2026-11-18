@@ -1,18 +1,19 @@
 import { useEffect, useState } from 'react';
 import Button from '../components/Button.jsx';
 import PageHeader from '../components/PageHeader.jsx';
+import PaymentMethodsPanel from '../components/PaymentMethodsPanel.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import { listMyClients } from '../services/coachClientService.js';
 import { CURRENCIES, clientLabel, formatMoney } from '../services/coachingUtils.js';
+import { PAID_METHODS, invoiceStage } from '../services/paymentMethodsUtils.js';
 import {
   createInvoice,
   createPackage,
+  confirmInvoicePayment,
   createPackageInvoice,
-  getStripeConnectStatus,
   listInvoices,
   listPackages,
   setPackageActive,
-  startStripeOnboarding,
   voidInvoice,
 } from '../services/invoicingService.js';
 
@@ -24,7 +25,8 @@ export default function InvoicingPage({ onNavigate, onNotify }) {
   const [clients, setClients] = useState([]);
   const [packages, setPackages] = useState([]);
   const [invoices, setInvoices] = useState([]);
-  const [stripeStatus, setStripeStatus] = useState({ state: 'loading' });
+  const [paymentsConfigured, setPaymentsConfigured] = useState(true);
+  const [confirming, setConfirming] = useState(null);
   const [loadError, setLoadError] = useState('');
   const [packageForm, setPackageForm] = useState(EMPTY_PACKAGE);
   const [invoiceForm, setInvoiceForm] = useState(EMPTY_INVOICE);
@@ -49,18 +51,19 @@ export default function InvoicingPage({ onNavigate, onNotify }) {
 
   useEffect(() => {
     refresh();
-    getStripeConnectStatus()
-      .then((status) => setStripeStatus({ state: 'ready', ...status }))
-      .catch((error) => setStripeStatus({ state: 'error', message: error.message }));
   }, []);
 
-  async function handleConnect() {
-    setBusy('stripe');
+  async function handleConfirm(event) {
+    event.preventDefault();
+    setBusy('confirm');
     try {
-      const { url } = await startStripeOnboarding();
-      window.location.assign(url);
+      await confirmInvoicePayment(confirming.id, confirming.method, confirming.reference);
+      setConfirming(null);
+      onNotify(t('invoiceMarkedPaid'));
+      await refresh();
     } catch (error) {
-      onNotify(`${t('stripeConnectError')} ${error.message}`);
+      onNotify(error.message);
+    } finally {
       setBusy('');
     }
   }
@@ -119,7 +122,6 @@ export default function InvoicingPage({ onNavigate, onNotify }) {
     }
   }
 
-  const stripeReady = stripeStatus.state === 'ready' && stripeStatus.charges_enabled;
   const updateInvoice = (field, value) => setInvoiceForm((current) => ({ ...current, [field]: value }));
   const updatePackage = (field, value) => setPackageForm((current) => ({ ...current, [field]: value }));
 
@@ -128,21 +130,8 @@ export default function InvoicingPage({ onNavigate, onNotify }) {
       <PageHeader eyebrow="APEXFIT" title={t('invoicing')} description={t('invoicingDescription')} />
       {loadError && <div className="notice notice-error" role="alert">{t('invoicingLoadError')} {loadError}</div>}
 
-      <section className="panel stripe-panel">
-        <div className="panel-heading">
-          <div><span className="eyebrow">Stripe</span><h3>{t('paymentsSetup')}</h3></div>
-          <span className={`soft-badge ${stripeReady ? 'badge-blue' : 'badge-muted'}`}>
-            {stripeStatus.state === 'loading' ? t('loadingProgress') : t(stripeReady ? 'paymentsReady' : 'paymentsNotReady')}
-          </span>
-        </div>
-        <p className="muted-copy">{t('paymentsHelp')}</p>
-        {stripeStatus.state === 'error' && <div className="notice notice-info" role="status">{t('stripeUnavailable')} {stripeStatus.message}</div>}
-        {stripeStatus.state === 'ready' && !stripeReady && (
-          <Button variant="primary" onClick={handleConnect} disabled={busy === 'stripe'}>
-            {stripeStatus.connected ? t('stripeContinueOnboarding') : t('stripeConnect')}
-          </Button>
-        )}
-      </section>
+      <PaymentMethodsPanel onChange={setPaymentsConfigured} />
+      {!paymentsConfigured && <div className="notice notice-info" role="status">{t('payMethodsMissing')}</div>}
 
       <div className="client-feature-grid">
         <section className="panel package-panel">
@@ -227,8 +216,26 @@ export default function InvoicingPage({ onNavigate, onNotify }) {
                 <small>{clientLabel(clientsById.get(invoice.client_id))} · {new Date(invoice.created_at).toLocaleDateString(locale)}</small>
               </div>
               <strong>{formatMoney(invoice.amount_cents, invoice.currency, locale)}</strong>
-              <span className={`soft-badge invoice-${invoice.status}`}>{t(`invoice_${invoice.status}`)}</span>
+              <span className={`soft-badge invoice-${invoiceStage(invoice)}`}>{t(`invoice_${invoiceStage(invoice)}`)}</span>
+              {invoice.status === 'open' && <button className="text-action" type="button" onClick={() => setConfirming({ id: invoice.id, method: 'bank_transfer', reference: '' })}>{t('confirmPayment')}</button>}
               {invoice.status === 'open' && <button className="text-action" type="button" onClick={() => handleVoid(invoice.id)}>{t('voidInvoice')}</button>}
+              {invoice.status === 'paid' && invoice.paid_method && <small className="invoice-paid-via">{t(`paidVia_${invoice.paid_method}`)}{invoice.payment_reference ? ` \u00B7 ${invoice.payment_reference}` : ''}</small>}
+              {confirming?.id === invoice.id && (
+                <form className="invoice-confirm" onSubmit={handleConfirm}>
+                  <label className="form-label">{t('paidVia')}
+                    <select className="field" value={confirming.method} onChange={(event) => setConfirming({ ...confirming, method: event.target.value })}>
+                      {PAID_METHODS.map((method) => <option key={method} value={method}>{t(`paidVia_${method}`)}</option>)}
+                    </select>
+                  </label>
+                  <label className="form-label">{t('paymentReference')}
+                    <input className="field" maxLength={120} value={confirming.reference} onChange={(event) => setConfirming({ ...confirming, reference: event.target.value })} placeholder={t('paymentReferencePlaceholder')} />
+                  </label>
+                  <div className="template-actions">
+                    <Button variant="primary" size="small" type="submit" disabled={busy === 'confirm'}>{t('confirmPaymentReceived')}</Button>
+                    <Button variant="secondary" size="small" type="button" onClick={() => setConfirming(null)}>{t('chkCancel')}</Button>
+                  </div>
+                </form>
+              )}
             </article>
           ))}
         </div>

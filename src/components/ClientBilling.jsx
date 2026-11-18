@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import Button from './Button.jsx';
+import PaymentInstructions from './PaymentInstructions.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import { formatMoney } from '../services/coachingUtils.js';
+import { invoiceStage } from '../services/paymentMethodsUtils.js';
 import {
   createPackageInvoice,
   listInvoices,
   listPackages,
-  startInvoiceCheckout,
+  reportInvoicePayment,
 } from '../services/invoicingService.js';
 
 export default function ClientBilling({ clientId }) {
@@ -17,6 +19,7 @@ export default function ClientBilling({ clientId }) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
   const [notice, setNotice] = useState('');
+  const [openInvoice, setOpenInvoice] = useState('');
 
   async function refresh() {
     try {
@@ -33,22 +36,18 @@ export default function ClientBilling({ clientId }) {
 
   useEffect(() => {
     refresh();
-    const params = new URLSearchParams(window.location.search);
-    const result = params.get('checkout');
-    if (result) {
-      setNotice(t(result === 'success' ? 'checkoutSuccess' : 'checkoutCanceled'));
-      window.history.replaceState(null, '', `${window.location.pathname}${window.location.hash}`);
-    }
   }, []);
 
-  async function pay(invoiceId) {
+  async function reportPaid(invoiceId) {
     setBusy(invoiceId);
     setError('');
     try {
-      const { url } = await startInvoiceCheckout(invoiceId);
-      window.location.assign(url);
-    } catch (payError) {
-      setError(`${t('checkoutError')} ${payError.message}`);
+      await reportInvoicePayment(invoiceId);
+      setNotice(t('payReported'));
+      await refresh();
+    } catch (reportError) {
+      setError(`${t('payReportError')} ${reportError.message}`);
+    } finally {
       setBusy('');
     }
   }
@@ -58,9 +57,12 @@ export default function ClientBilling({ clientId }) {
     setError('');
     try {
       const invoiceId = await createPackageInvoice(clientId, packageItem.id);
-      await pay(invoiceId);
+      setNotice(t('payInvoiceCreated'));
+      setOpenInvoice(invoiceId);
+      await refresh();
     } catch (buyError) {
-      setError(`${t('checkoutError')} ${buyError.message}`);
+      setError(`${t('payBuyError')} ${buyError.message}`);
+    } finally {
       setBusy('');
     }
   }
@@ -98,8 +100,18 @@ export default function ClientBilling({ clientId }) {
                 <small>{new Date(invoice.created_at).toLocaleDateString(locale)}{invoice.due_date ? ` · ${t('dueDate')}: ${invoice.due_date}` : ''}</small>
               </div>
               <strong>{formatMoney(invoice.amount_cents, invoice.currency, locale)}</strong>
-              <span className={`soft-badge invoice-${invoice.status}`}>{t(`invoice_${invoice.status}`)}</span>
-              {invoice.status === 'open' && <Button variant="primary" size="small" disabled={busy === invoice.id} onClick={() => pay(invoice.id)}>{t('payNow')}</Button>}
+              <span className={`soft-badge invoice-${invoiceStage(invoice)}`}>{t(invoice.status === 'open' && invoice.payment_reported_at ? 'invoice_waiting' : `invoice_${invoice.status}`)}</span>
+              {invoice.status === 'open' && (
+                <Button variant="primary" size="small" onClick={() => setOpenInvoice(openInvoice === invoice.id ? '' : invoice.id)} aria-expanded={openInvoice === invoice.id}>{t('howToPay')}</Button>
+              )}
+              {invoice.status === 'open' && openInvoice === invoice.id && (
+                <div className="invoice-pay">
+                  <PaymentInstructions coachId={invoice.coach_id} invoiceNumber={invoice.invoice_number} />
+                  {invoice.payment_reported_at
+                    ? <div className="notice notice-info" role="status">{t('payWaitingConfirm')}</div>
+                    : <Button variant="secondary" size="small" disabled={busy === invoice.id} onClick={() => reportPaid(invoice.id)}>{t('payIPaid')}</Button>}
+                </div>
+              )}
             </article>
           ))}
         </div>
