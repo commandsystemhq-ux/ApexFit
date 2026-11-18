@@ -299,3 +299,12 @@ revoke all on function public.apply_subscription_event(text, text, text, timesta
 grant execute on function public.apply_subscription_event(text, text, text, timestamptz, uuid, text, text, text, text, text, timestamptz, boolean, timestamptz, timestamptz) to service_role;
 revoke all on function public.get_my_access_status() from public, anon;
 grant execute on function public.get_my_access_status() to authenticated;
+
+-- The server (service role) must be able to read and write every table, as Supabase's own defaults used to grant.
+-- Projects created recently do not grant it automatically, which showed up as "permission denied for table
+-- coach_subscriptions" (code 42501) when the billing endpoint looked up a coach's subscription.
+grant usage on schema public to service_role;
+grant all on all tables in schema public to service_role;
+grant all on all sequences in schema public to service_role;
+alter default privileges in schema public grant all on tables to service_role;
+alter default privileges in schema public grant all on sequences to service_role;

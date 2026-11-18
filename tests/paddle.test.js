@@ -417,6 +417,21 @@ test('coaches and clients cannot write billing data or call the gateway function
   assert.ok((await mine.sql("insert into public.billing_events (provider, event_id, event_type, occurred_at) values ('p', 'e', 't', now())")).error);
 });
 
+test('the server role can read and write every table, so billing lookups are never refused', async () => {
+  const tables = (await rows("select tablename from pg_tables where schemaname = 'public'")).map((row) => row.tablename);
+  assert.ok(tables.includes('coach_subscriptions') && tables.includes('profiles') && tables.includes('billing_events'));
+  const refused = [];
+  for (const table of tables) {
+    const [{ ok }] = await rows("select has_table_privilege('service_role', format('public.%I', $1::text), 'SELECT,INSERT,UPDATE,DELETE') as ok", [table]);
+    if (!ok) refused.push(table);
+  }
+  assert.deepEqual(refused, []);
+  // And a table created by a later migration is covered without another grant.
+  await db.exec('create table public.zz_future_table (id int)');
+  assert.equal((await rows("select has_table_privilege('service_role', 'public.zz_future_table', 'SELECT,INSERT') as ok"))[0].ok, true);
+  await db.exec('drop table public.zz_future_table');
+});
+
 test('each coach sees only their own subscription, and clients none', async () => {
   await apply({});
   assert.equal((await as(ids.coach).sql('select user_id from public.coach_subscriptions')).rows.length, 1);
