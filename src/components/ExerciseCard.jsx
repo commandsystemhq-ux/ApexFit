@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import Button from './Button.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import { getExerciseVideoSource } from '../services/exerciseCatalogUtils.js';
+import { useExerciseBundle } from '../hooks/useExerciseBundle.js';
 import { displayName, localizedInstructions, localizedName, textDirection } from '../services/exerciseI18n.js';
 
 // "Push-Up / تمرين الضغط": the English name, then the name in the chosen language. Each part keeps its own direction.
-function ExerciseTitle({ exercise, locale }) {
-  const local = localizedName(exercise, locale);
+function ExerciseTitle({ exercise, locale, bundle }) {
+  const local = localizedName(exercise, locale, bundle);
   return (
     <>
       <bdi dir="ltr" lang="en">{exercise.name}</bdi>
@@ -19,7 +20,8 @@ function ExerciseDemoDialog({ exercise, onClose }) {
   const closeButton = useRef(null);
   const source = getExerciseVideoSource(exercise.demo_video_url);
   const { t, locale } = useLocale();
-  const fullName = displayName(exercise, locale);
+  const bundle = useExerciseBundle(locale);
+  const fullName = displayName(exercise, locale, bundle);
 
   useEffect(() => {
     closeButton.current?.focus();
@@ -39,7 +41,7 @@ function ExerciseDemoDialog({ exercise, onClose }) {
     >
       <section className="video-dialog" role="dialog" aria-modal="true" aria-label={fullName}>
         <div className="video-dialog-heading">
-          <h2><ExerciseTitle exercise={exercise} locale={locale} /></h2>
+          <h2><ExerciseTitle exercise={exercise} locale={locale} bundle={bundle} /></h2>
           <button ref={closeButton} className="icon-button" type="button" onClick={onClose} aria-label={t('close')}>×</button>
         </div>
         {source?.kind === 'iframe' && (
@@ -66,12 +68,13 @@ export default function ExerciseCard({ exercise, onAdd, addLabel }) {
   const [demoOpen, setDemoOpen] = useState(false);
   const { t, locale } = useLocale();
   const videoSource = getExerciseVideoSource(exercise.demo_video_url);
-  const steps = localizedInstructions(exercise, locale);
+  const bundle = useExerciseBundle(locale);
+  const steps = localizedInstructions(exercise, locale, bundle);
 
   return (
     <article className="exercise-card">
       <div className="exercise-card-heading">
-        <h3 className="exercise-title"><ExerciseTitle exercise={exercise} locale={locale} /></h3>
+        <h3 className="exercise-title"><ExerciseTitle exercise={exercise} locale={locale} bundle={bundle} /></h3>
         <span className="soft-badge badge-blue">{t(`category_${exercise.category}`)}</span>
       </div>
       {exercise.thumbnail_url && (
@@ -94,7 +97,6 @@ export default function ExerciseCard({ exercise, onAdd, addLabel }) {
       {steps.steps.length > 0 && (
         <details className="exercise-instructions">
           <summary>{t('exerciseInstructions')}</summary>
-          {!steps.translated && <p className="exercise-steps-note">{t('exerciseStepsEnglish')}</p>}
           <ol dir={textDirection(steps.locale)} lang={steps.locale}>{steps.steps.map((instruction, index) => <li key={`${index}-${instruction}`}>{instruction}</li>)}</ol>
         </details>
       )}

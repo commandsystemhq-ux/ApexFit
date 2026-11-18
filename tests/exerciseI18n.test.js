@@ -148,7 +148,6 @@ test('steps follow the interface language and fall back to English with a flag',
 test('the search box tells users they can write in either language, in every language', () => {
   for (const locale of ['en', 'ar', 'de', 'fr', 'es']) {
     assert.ok(translations[locale].searchExercisePlaceholder.length > 25, locale);
-    assert.ok(translations[locale].exerciseStepsEnglish, locale);
   }
   assert.match(translations.ar.searchExercisePlaceholder, /ضغط/);
 });
@@ -190,6 +189,53 @@ test('the translated names shipped with the catalog cover every exercise in all 
   assert.ok(Object.values(arabic).filter((name) => /[\u0600-\u06FF]/.test(name)).length > catalog.length * 0.95);
   const merged = mergeExerciseTranslations(catalog, { names: { ar: arabic } }).map(normalizeExerciseRecord);
   assert.equal(merged.length, catalog.length);
+});
+
+// ------------------------------------------------------------------ translations shipped with the app
+
+const LOCALES = ['ar', 'de', 'fr', 'es'];
+const readJson = (name) => JSON.parse(readFileSync(new URL(`../data/exercise-translations/${name}`, import.meta.url), 'utf8'));
+const CATALOG = JSON.parse(readFileSync(new URL('../data/free-exercise-db-apexfit.json', import.meta.url), 'utf8'));
+
+test('every exercise has its steps translated, step for step, in all four languages', () => {
+  const withSteps = CATALOG.filter((record) => record.instructions.length > 0);
+  assert.ok(withSteps.length > 800);
+  for (const locale of LOCALES) {
+    const steps = readJson(`instructions.${locale}.json`);
+    const problems = [];
+    for (const record of withSteps) {
+      const translated = steps[record.slug];
+      if (!Array.isArray(translated) || translated.length !== record.instructions.length) problems.push(`${record.slug}: wrong step count`);
+      else if (translated.some((step, index) => typeof step !== 'string' || !step.trim() || step.length > 2000 || (step === record.instructions[index] && step.length > 40))) problems.push(`${record.slug}: bad or untranslated step`);
+    }
+    assert.deepEqual(problems.slice(0, 5), [], `${locale}: ${problems.length} problems`);
+    assert.equal(Object.keys(steps).length, withSteps.length, `${locale}: unknown slugs`);
+  }
+});
+
+test('the Arabic steps are written in Arabic and the other languages are not left in English', () => {
+  const arabic = readJson('instructions.ar.json');
+  const lines = Object.values(arabic).flat();
+  const withArabic = lines.filter((line) => (line.match(/[\u0600-\u06FF]/g) || []).length >= 3);
+  assert.ok(withArabic.length / lines.length > 0.98, 'Arabic share');
+  for (const locale of ['de', 'fr', 'es']) {
+    const text = Object.values(readJson(`instructions.${locale}.json`)).flat();
+    const english = text.filter((line) => /\b(the|your|and|with|until)\b/i.test(line) && /\b(the|your)\b/i.test(line)).length;
+    assert.ok(english / text.length < 0.02, `${locale} still has English sentences: ${english}`);
+  }
+});
+
+test('the shipped translations are used when the database has none, and the database wins when it has some', () => {
+  const bundle = { names: { 'push-up': 'تمرين الضغط' }, steps: { 'push-up': ['استلقِ.', 'ادفع.'] } };
+  const bare = { slug: 'push-up', name: 'Push-Up', instructions: ['Lie.', 'Push.'] };
+  assert.equal(displayName(bare, 'ar', bundle), 'Push-Up / تمرين الضغط');
+  assert.deepEqual(localizedInstructions(bare, 'ar', bundle), { steps: ['استلقِ.', 'ادفع.'], locale: 'ar', translated: true });
+  assert.equal(displayName(bare, 'ar', null), 'Push-Up');
+  const edited = { ...bare, name_i18n: { ar: 'ضغط' }, instructions_i18n: { ar: ['خطوة.'] } };
+  assert.equal(displayName(edited, 'ar', bundle), 'Push-Up / ضغط');
+  assert.deepEqual(localizedInstructions(edited, 'ar', bundle).steps, ['خطوة.']);
+  assert.deepEqual(localizedInstructions(bare, 'en', bundle).steps, ['Lie.', 'Push.']);
+  assert.deepEqual(localizedInstructions({ ...bare, instructions_i18n: { ar: [''] } }, 'ar', bundle).steps, ['استلقِ.', 'ادفع.']);
 });
 
 // ------------------------------------------------------------------ instruction translation script

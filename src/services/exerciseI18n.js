@@ -23,25 +23,30 @@ export function searchTokens(term) {
   return normalizeSearchText(String(term ?? '').slice(0, 100)).split(' ').filter(Boolean).slice(0, 6);
 }
 
-export function localizedName(exercise, locale) {
+// `bundle` is the translation set shipped with the app for the current language ({ names: { slug: name }, steps: { slug: [steps] } },
+// see exerciseBundle.js). Values stored in the database win; the bundle fills in whatever the database does not have.
+export function localizedName(exercise, locale, bundle = null) {
   if (!exercise || locale === 'en') return '';
-  const name = exercise.name_i18n?.[locale];
+  const name = exercise.name_i18n?.[locale] || bundle?.names?.[exercise.slug];
   return typeof name === 'string' && name.trim() && name.trim().toLowerCase() !== String(exercise.name || '').trim().toLowerCase() ? name.trim() : '';
 }
 
 // "Push-Up / تمرين الضغط" (the English name always comes first, then the name in the chosen language when there is one).
-export function displayName(exercise, locale) {
+export function displayName(exercise, locale, bundle = null) {
   if (!exercise?.name) return '';
-  const local = localizedName(exercise, locale);
+  const local = localizedName(exercise, locale, bundle);
   return local ? `${exercise.name} / ${local}` : exercise.name;
 }
 
-// The steps in the chosen language, or the English steps when that language has none yet.
-export function localizedInstructions(exercise, locale) {
+const validSteps = (steps) => Array.isArray(steps) && steps.length > 0 && steps.every((step) => typeof step === 'string' && step.trim());
+
+// The steps in the chosen language: from the database, else from the translations shipped with the app, else the English steps.
+export function localizedInstructions(exercise, locale, bundle = null) {
   const english = Array.isArray(exercise?.instructions) ? exercise.instructions : [];
-  const translated = locale === 'en' ? null : exercise?.instructions_i18n?.[locale];
-  if (Array.isArray(translated) && translated.length > 0 && translated.every((step) => typeof step === 'string')) {
-    return { steps: translated, locale, translated: true };
+  if (locale !== 'en') {
+    for (const steps of [exercise?.instructions_i18n?.[locale], bundle?.steps?.[exercise?.slug]]) {
+      if (validSteps(steps)) return { steps, locale, translated: true };
+    }
   }
   return { steps: english, locale: 'en', translated: locale === 'en' };
 }

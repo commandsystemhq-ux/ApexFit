@@ -3,6 +3,7 @@ import Button from '../components/Button.jsx';
 import ExerciseCard from '../components/ExerciseCard.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
+import { useExerciseBundle } from '../hooks/useExerciseBundle.js';
 import { displayName } from '../services/exerciseI18n.js';
 import { searchExercises } from '../services/exerciseService.js';
 import { BUILDER_HANDOFF_KEY, getWorkoutProgram, listMyWorkoutPrograms, saveWorkoutProgram } from '../services/workoutProgramService.js';
@@ -27,6 +28,7 @@ function createProgramExercise(exercise) {
 
 export default function WorkoutBuilderPage({ onNotify }) {
   const { t, locale } = useLocale();
+  const bundle = useExerciseBundle(locale);
   const [programId, setProgramId] = useState(null);
   const [programs, setPrograms] = useState([]);
   const [selectedProgramId, setSelectedProgramId] = useState('');
@@ -333,7 +335,7 @@ export default function WorkoutBuilderPage({ onNotify }) {
                     >
                       <div className="builder-exercise-heading">
                         <span className="drag-handle" aria-hidden="true">⠿</span>
-                        <strong dir="auto">{exercise.exercise ? displayName(exercise.exercise, locale) : t('unavailableExercise')}</strong>
+                        <strong dir="auto">{exercise.exercise ? displayName(exercise.exercise, locale, bundle) : t('unavailableExercise')}</strong>
                         <button className="icon-button builder-remove" type="button" aria-label={`${t('removeExercise')}: ${exercise.exercise?.name || ''}`} onClick={() => removeExercise(exercise.clientId)}>×</button>
                       </div>
                       <div className="builder-exercise-fields">

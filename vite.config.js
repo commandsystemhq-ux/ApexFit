@@ -4,6 +4,8 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   build: {
+    // The translated exercise steps (about 650 kB per language) are loaded on demand, one language at a time, so only the language in use is downloaded.
+    chunkSizeWarningLimit: 900,
     rollupOptions: {
       output: {
         // The five-language dictionaries are large and change rarely, so they get their own cacheable chunk.
