@@ -9,7 +9,7 @@ const PROGRAM_DETAIL_FIELDS = `
     id,name,order_index,
     exercises:training_program_exercises(
       id,exercise_id,order_index,sets,reps,rest_seconds,notes,
-      exercise:exercises(id,slug,name,category,primary_muscles,equipment,difficulty,demo_video_url,thumbnail_url)
+      exercise:exercises(id,slug,name,name_i18n,category,primary_muscles,equipment,difficulty,demo_video_url,thumbnail_url)
     )
   )
 `;

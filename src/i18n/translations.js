@@ -270,7 +270,7 @@ const workoutTranslations = {
   en: {
     exerciseLibrary: 'Exercise library', exerciseLibraryDescription: 'Search and filter the published exercise catalog, including real demo videos.',
     exerciseInstructions: 'Instructions',
-    searchExercises: 'Search exercises', searchExercisePlaceholder: 'Search by exercise name', category: 'Category',
+    searchExercises: 'Search exercises', searchExercisePlaceholder: 'Search in English or your language (push-up, ضغط, Kniebeuge...)', category: 'Category',
     allCategories: 'All categories', equipment: 'Equipment', allEquipment: 'All equipment', muscleGroup: 'Muscle group',
     allMuscles: 'All muscle groups', difficulty: 'Difficulty', allDifficulties: 'All levels', noExerciseResults: 'No exercises match these filters.',
     emptyExerciseLibrary: 'No published exercises are available yet. Import a verified exercise catalog to populate this library.',
@@ -300,7 +300,7 @@ const workoutTranslations = {
   ar: {
     exerciseLibrary: 'مكتبة التمارين', exerciseLibraryDescription: 'ابحث في كتالوج التمارين المنشورة وصفِّ النتائج، بما فيها فيديوهات العرض الحقيقية.',
     exerciseInstructions: 'طريقة الأداء',
-    searchExercises: 'ابحث عن تمرين', searchExercisePlaceholder: 'ابحث باسم التمرين', category: 'الفئة',
+    searchExercises: 'ابحث عن تمرين', searchExercisePlaceholder: 'ابحث بالعربية أو الإنجليزية (ضغط، Push-up...)', category: 'الفئة',
     allCategories: 'كل الفئات', equipment: 'المعدات', allEquipment: 'كل المعدات', muscleGroup: 'مجموعة العضلات',
     allMuscles: 'كل مجموعات العضلات', difficulty: 'المستوى', allDifficulties: 'كل المستويات', noExerciseResults: 'لا توجد تمارين تطابق عوامل التصفية هذه.',
     emptyExerciseLibrary: 'لا توجد تمارين منشورة بعد. استورد كتالوج تمارين موثوقاً لإضافتها إلى المكتبة.',
@@ -330,7 +330,7 @@ const workoutTranslations = {
   de: {
     exerciseLibrary: 'Übungsbibliothek', exerciseLibraryDescription: 'Durchsuche und filtere den veröffentlichten Übungskatalog mit echten Demonstrationsvideos.',
     exerciseInstructions: 'Anleitung',
-    searchExercises: 'Übungen suchen', searchExercisePlaceholder: 'Nach Übungsname suchen', category: 'Kategorie',
+    searchExercises: 'Übungen suchen', searchExercisePlaceholder: 'Auf Deutsch oder Englisch suchen (Kniebeuge, squat...)', category: 'Kategorie',
     allCategories: 'Alle Kategorien', equipment: 'Ausrüstung', allEquipment: 'Alle Ausrüstung', muscleGroup: 'Muskelgruppe',
     allMuscles: 'Alle Muskelgruppen', difficulty: 'Schwierigkeit', allDifficulties: 'Alle Stufen', noExerciseResults: 'Keine Übungen entsprechen diesen Filtern.',
     emptyExerciseLibrary: 'Es sind noch keine Übungen veröffentlicht. Importiere einen geprüften Übungskatalog.',
@@ -360,7 +360,7 @@ const workoutTranslations = {
   fr: {
     exerciseLibrary: 'Bibliothèque d’exercices', exerciseLibraryDescription: 'Recherchez et filtrez le catalogue publié, avec de vraies vidéos de démonstration.',
     exerciseInstructions: 'Instructions',
-    searchExercises: 'Rechercher des exercices', searchExercisePlaceholder: 'Rechercher par nom', category: 'Catégorie',
+    searchExercises: 'Rechercher des exercices', searchExercisePlaceholder: 'Chercher en français ou en anglais (pompe, push-up...)', category: 'Catégorie',
     allCategories: 'Toutes les catégories', equipment: 'Équipement', allEquipment: 'Tout l’équipement', muscleGroup: 'Groupe musculaire',
     allMuscles: 'Tous les groupes musculaires', difficulty: 'Difficulté', allDifficulties: 'Tous les niveaux', noExerciseResults: 'Aucun exercice ne correspond à ces filtres.',
     emptyExerciseLibrary: 'Aucun exercice publié pour le moment. Importez un catalogue vérifié pour remplir la bibliothèque.',
@@ -390,7 +390,7 @@ const workoutTranslations = {
   es: {
     exerciseLibrary: 'Biblioteca de ejercicios', exerciseLibraryDescription: 'Busca y filtra el catálogo publicado, con vídeos de demostración reales.',
     exerciseInstructions: 'Instrucciones',
-    searchExercises: 'Buscar ejercicios', searchExercisePlaceholder: 'Buscar por nombre', category: 'Categoría',
+    searchExercises: 'Buscar ejercicios', searchExercisePlaceholder: 'Buscar en español o inglés (sentadilla, squat...)', category: 'Categoría',
     allCategories: 'Todas las categorías', equipment: 'Equipamiento', allEquipment: 'Todo el equipamiento', muscleGroup: 'Grupo muscular',
     allMuscles: 'Todos los grupos musculares', difficulty: 'Dificultad', allDifficulties: 'Todos los niveles', noExerciseResults: 'Ningún ejercicio coincide con estos filtros.',
     emptyExerciseLibrary: 'Aún no hay ejercicios publicados. Importa un catálogo verificado para completar la biblioteca.',

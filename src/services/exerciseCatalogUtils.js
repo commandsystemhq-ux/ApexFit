@@ -43,6 +43,46 @@ function cleanOptionalHttpsUrl(value, field) {
   return url.href;
 }
 
+const TRANSLATION_LOCALES = ['ar', 'de', 'fr', 'es'];
+
+function cleanNameTranslations(value) {
+  if (value === undefined) return undefined;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new TypeError('name_i18n must be an object.');
+  const result = {};
+  for (const locale of TRANSLATION_LOCALES) {
+    if (value[locale] !== undefined && value[locale] !== null && value[locale] !== '') result[locale] = cleanString(value[locale], `name_i18n.${locale}`, 160);
+  }
+  return result;
+}
+
+function cleanInstructionTranslations(value) {
+  if (value === undefined) return undefined;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new TypeError('instructions_i18n must be an object.');
+  const result = {};
+  for (const locale of TRANSLATION_LOCALES) {
+    if (value[locale] !== undefined && value[locale] !== null) result[locale] = cleanStringList(value[locale], `instructions_i18n.${locale}`, 100, 2000);
+  }
+  return result;
+}
+
+// Adds the translated names and steps found in the translation files ({ names: { ar: { slug: name } }, instructions: { ar: { slug: [steps] } } })
+// to each catalog record. Every record gets both objects (empty when it has no translation) so a batch has uniform columns.
+export function mergeExerciseTranslations(records, { names = {}, instructions = {} } = {}) {
+  const any = TRANSLATION_LOCALES.some((locale) => names[locale] || instructions[locale]);
+  if (!any) return records;
+  return records.map((record) => {
+    const name_i18n = {};
+    const instructions_i18n = {};
+    for (const locale of TRANSLATION_LOCALES) {
+      const name = names[locale]?.[record.slug];
+      if (typeof name === 'string' && name.trim()) name_i18n[locale] = name.trim();
+      const steps = instructions[locale]?.[record.slug];
+      if (Array.isArray(steps) && steps.length > 0) instructions_i18n[locale] = steps;
+    }
+    return { ...record, name_i18n, instructions_i18n };
+  });
+}
+
 export function normalizeExerciseRecord(record) {
   if (!record || typeof record !== 'object' || Array.isArray(record)) {
     throw new TypeError('Each exercise record must be an object.');
@@ -68,7 +108,12 @@ export function normalizeExerciseRecord(record) {
     throw new TypeError('equipment contains a value not supported by the exercise filters.');
   }
 
+  const nameTranslations = cleanNameTranslations(record.name_i18n);
+  const instructionTranslations = cleanInstructionTranslations(record.instructions_i18n);
+
   return {
+    ...(nameTranslations ? { name_i18n: nameTranslations } : {}),
+    ...(instructionTranslations ? { instructions_i18n: instructionTranslations } : {}),
     slug,
     name: cleanString(record.name, 'name', 160),
     category,

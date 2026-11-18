@@ -186,6 +186,17 @@ Migration `20261115001100_store_team_video.sql` (included in `supabase/manual-se
 - **Jack.** For clients: `get_my_checklist` (tasks, done, progress, what is left) and `update_checklist_item` (tick/untick a task found by name, or add/set an amount such as "I drank 500 ml").
 - **Tests.** `tests/checklist.test.js` (the real schema in an in-process Postgres: materializing, weekdays, water progress, date windows, removal, closed tables, Jack's tools) and `tests/checklistLogic.test.js` (form rules, progress arithmetic, translations).
 
+## Exercise library in five languages
+
+Migration `20261115002100_exercise_translations.sql` (included in `manual-setup.sql`; run it again to apply) adds `name_i18n`, `instructions_i18n` and `search_text` to `exercises`.
+
+- **Names.** Every card shows the English name first and the name in the interface language next to it (`Push-Up / تمرين الضغط`), each part with its own text direction. The same display is used in the workout builder and the client workout logger.
+- **Steps.** The "how to do it" steps follow the interface language (right-to-left in Arabic). A language with no translated steps for an exercise shows the English steps with a short note.
+- **Smart search.** The search box matches English and translated names together. Text is normalised the same way in the browser and in the database (`normalize_search_text`): case, accents, Arabic letter variants (أ إ آ ى ة), Arabic diacritics, the leading "ال" and punctuation are ignored, and every typed word must match. "push up", "Push-Up", "ضغط", "الضغط" and "Liegestütz" all find the push-up. A trigger keeps `search_text` current.
+- **Data.** `data/exercise-translations/names.<ar|de|fr|es>.json` hold a name for all 876 exercises (written by an AI assistant and worth a trainer's review; edit the files and import again to change any). `npm run import:exercises -- data/free-exercise-db-apexfit.json` now also loads every `names.*.json` and `instructions.*.json` file in that folder.
+- **Translated steps.** The steps themselves are not shipped; generate them with the AI provider you already configured for Jack: `npm run translate:exercises -- ar` (or `de`, `fr`, `es`, `all`). It reads the same variables as Jack (`OPENAI_API_KEY`, `GEMINI_API_KEY`, `AZURE_FOUNDRY_*`, `AWS_*` + `BEDROCK_MODEL_ID`, `JACK_PROVIDER`), checks that each exercise keeps the same number of steps, saves after every batch, and can be stopped and run again. Then run the import to publish them. It uses your AI provider's quota.
+- **Tests.** `tests/exerciseI18n.test.js` (browser and database normalisation agree, bilingual search in the real schema, display and fallbacks, import merging, completeness of the shipped names, the translation script with a mocked model).
+
 ## Accountability, progress reports, Jack history and meal photos
 
 Migration `20261115002000_accountability_reports_jack_history.sql` (included in `manual-setup.sql`; run it again to apply) adds everything below. It is safe to run more than once.

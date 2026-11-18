@@ -2,11 +2,24 @@ import { useEffect, useRef, useState } from 'react';
 import Button from './Button.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import { getExerciseVideoSource } from '../services/exerciseCatalogUtils.js';
+import { displayName, localizedInstructions, localizedName, textDirection } from '../services/exerciseI18n.js';
+
+// "Push-Up / تمرين الضغط": the English name, then the name in the chosen language. Each part keeps its own direction.
+function ExerciseTitle({ exercise, locale }) {
+  const local = localizedName(exercise, locale);
+  return (
+    <>
+      <bdi dir="ltr" lang="en">{exercise.name}</bdi>
+      {local && <> <span className="exercise-name-sep" aria-hidden="true">/</span> <bdi className="exercise-name-local" dir={textDirection(locale)} lang={locale}>{local}</bdi></>}
+    </>
+  );
+}
 
 function ExerciseDemoDialog({ exercise, onClose }) {
   const closeButton = useRef(null);
   const source = getExerciseVideoSource(exercise.demo_video_url);
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
+  const fullName = displayName(exercise, locale);
 
   useEffect(() => {
     closeButton.current?.focus();
@@ -24,16 +37,16 @@ function ExerciseDemoDialog({ exercise, onClose }) {
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <section className="video-dialog" role="dialog" aria-modal="true" aria-label={exercise.name}>
+      <section className="video-dialog" role="dialog" aria-modal="true" aria-label={fullName}>
         <div className="video-dialog-heading">
-          <h2>{exercise.name}</h2>
+          <h2><ExerciseTitle exercise={exercise} locale={locale} /></h2>
           <button ref={closeButton} className="icon-button" type="button" onClick={onClose} aria-label={t('close')}>×</button>
         </div>
         {source?.kind === 'iframe' && (
           <iframe
             className="exercise-video"
             src={source.src}
-            title={exercise.name}
+            title={fullName}
             allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             referrerPolicy="strict-origin-when-cross-origin"
             allowFullScreen
@@ -51,13 +64,14 @@ function ExerciseDemoDialog({ exercise, onClose }) {
 
 export default function ExerciseCard({ exercise, onAdd, addLabel }) {
   const [demoOpen, setDemoOpen] = useState(false);
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const videoSource = getExerciseVideoSource(exercise.demo_video_url);
+  const steps = localizedInstructions(exercise, locale);
 
   return (
     <article className="exercise-card">
       <div className="exercise-card-heading">
-        <h3>{exercise.name}</h3>
+        <h3 className="exercise-title"><ExerciseTitle exercise={exercise} locale={locale} /></h3>
         <span className="soft-badge badge-blue">{t(`category_${exercise.category}`)}</span>
       </div>
       {exercise.thumbnail_url && (
@@ -77,10 +91,11 @@ export default function ExerciseCard({ exercise, onAdd, addLabel }) {
       <div className="exercise-card-muscles">
         {(exercise.primary_muscles || []).map((muscle) => <span key={muscle}>{t(`muscle_${muscle}`)}</span>)}
       </div>
-      {exercise.instructions?.length > 0 && (
+      {steps.steps.length > 0 && (
         <details className="exercise-instructions">
           <summary>{t('exerciseInstructions')}</summary>
-          <ol>{exercise.instructions.map((instruction, index) => <li key={`${index}-${instruction}`}>{instruction}</li>)}</ol>
+          {!steps.translated && <p className="exercise-steps-note">{t('exerciseStepsEnglish')}</p>}
+          <ol dir={textDirection(steps.locale)} lang={steps.locale}>{steps.steps.map((instruction, index) => <li key={`${index}-${instruction}`}>{instruction}</li>)}</ol>
         </details>
       )}
       <div className="exercise-card-actions">

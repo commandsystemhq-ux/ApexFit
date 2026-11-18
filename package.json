@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "prepare:exercise-catalog": "node scripts/prepare-free-exercise-db.mjs",
     "import:exercises": "node scripts/import-exercise-catalog.mjs",
+    "translate:exercises": "node scripts/translate-exercise-instructions.mjs",
     "test": "node --test"
   },
   "dependencies": {

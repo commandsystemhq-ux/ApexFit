@@ -3,6 +3,7 @@ import Button from './Button.jsx';
 import ExerciseCard from './ExerciseCard.jsx';
 import ProgressBar from './ProgressBar.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
+import { displayName } from '../services/exerciseI18n.js';
 import { searchExercises } from '../services/exerciseService.js';
 import { listClientWorkoutSessions, saveClientWorkout } from '../services/clientWorkoutService.js';
 import { getLocalDateString, summarizeWorkoutSets } from '../services/clientTrackingUtils.js';
@@ -31,7 +32,7 @@ function groupSessionSets(sets) {
 }
 
 export default function ClientWorkoutLogger() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const today = getLocalDateString();
   const [workoutDate, setWorkoutDate] = useState(today);
   const [title, setTitle] = useState('');
@@ -198,7 +199,7 @@ export default function ClientWorkoutLogger() {
             <article className="client-workout-entry" key={entry.clientId}>
               <header className="client-workout-entry-heading">
                 <span className="soft-badge badge-muted">{exerciseIndex + 1}</span>
-                <strong>{entry.exercise.name}</strong>
+                <strong dir="auto">{displayName(entry.exercise, locale)}</strong>
                 <button className="icon-button builder-remove" type="button" onClick={() => removeEntry(entry.clientId)} aria-label={`${t('removeExercise')}: ${entry.exercise.name}`}>×</button>
               </header>
               <div className="client-set-list">
@@ -250,7 +251,7 @@ export default function ClientWorkoutLogger() {
                 <div className="client-history-heading"><strong>{session.title}</strong><time dateTime={session.workout_date}>{session.workout_date}</time></div>
                 {groupSessionSets(session.sets).map((group) => (
                   <div className="client-history-exercise" key={`${session.id}-${group.order}`}>
-                    <strong>{group.exercise?.name || t('unavailableExercise')}</strong>
+                    <strong dir="auto">{group.exercise ? displayName(group.exercise, locale) : t('unavailableExercise')}</strong>
                     <span>{group.sets.map((set) => `${set.actual_reps} ${t('repetitions')}${set.actual_weight_kg === null ? '' : ` · ${set.actual_weight_kg} kg`}`).join('  /  ')}</span>
                   </div>
                 ))}

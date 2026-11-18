@@ -1289,3 +1289,9 @@ a.sidebar-profile:hover .profile-copy strong { color: #70afff; }
   .rate-bar { grid-column: 1 / -1; order: 3; }
   .task-manage { grid-template-columns: 1fr; }
 }
+/* Exercise names in two languages */
+.exercise-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 5px; }
+.exercise-name-sep { color: var(--subtle); }
+.exercise-name-local { color: #9fc7f5; }
+.exercise-steps-note { margin: 6px 0 0; color: var(--amber); font-size: 10px; }
+.exercise-instructions ol[dir='rtl'] { padding-inline-start: 20px; }

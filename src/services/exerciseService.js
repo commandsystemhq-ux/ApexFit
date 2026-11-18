@@ -1,6 +1,7 @@
+import { searchTokens } from './exerciseI18n.js';
 import { requireSupabase } from './supabaseClient.js';
 
-const EXERCISE_FIELDS = 'id,slug,name,category,primary_muscles,equipment,difficulty,instructions,demo_video_url,thumbnail_url';
+const EXERCISE_FIELDS = 'id,slug,name,name_i18n,category,primary_muscles,equipment,difficulty,instructions,instructions_i18n,demo_video_url,thumbnail_url';
 
 export async function searchExercises({
   search = '',
@@ -21,9 +22,9 @@ export async function searchExercises({
     .from('exercises')
     .select(EXERCISE_FIELDS, { count: 'exact' })
     .eq('is_published', true);
-  const term = search.trim().slice(0, 100).replace(/[\\%_*]/g, '\\$&');
 
-  if (term) request = request.ilike('name', `%${term}%`);
+  // Every word must appear in the English name or in a translated name (Arabic, German, French or Spanish).
+  for (const token of searchTokens(search)) request = request.ilike('search_text', `%${token.replace(/[\\%_*]/g, '\\$&')}%`);
   if (category) request = request.eq('category', category);
   if (equipment) request = request.contains('equipment', [equipment]);
   if (muscle) request = request.contains('primary_muscles', [muscle]);

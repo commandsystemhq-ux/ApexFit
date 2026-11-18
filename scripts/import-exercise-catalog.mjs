@@ -1,9 +1,25 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createClient } from '@supabase/supabase-js';
-import { normalizeExerciseRecord } from '../src/services/exerciseCatalogUtils.js';
+import { mergeExerciseTranslations, normalizeExerciseRecord } from '../src/services/exerciseCatalogUtils.js';
 
 const BATCH_SIZE = 100;
+
+// data/exercise-translations/names.<locale>.json ({ slug: name }) and instructions.<locale>.json ({ slug: [steps] }), next to the catalog.
+async function readTranslations(catalogPath) {
+  const directory = path.join(path.dirname(catalogPath), 'exercise-translations');
+  const result = { names: {}, instructions: {} };
+  for (const locale of ['ar', 'de', 'fr', 'es']) {
+    for (const [kind, key] of [['names', 'names'], ['instructions', 'instructions']]) {
+      try {
+        result[key][locale] = JSON.parse(await readFile(path.join(directory, `${kind}.${locale}.json`), 'utf8'));
+      } catch (error) {
+        if (error.code !== 'ENOENT') throw new Error(`${kind}.${locale}.json: ${error.message}`);
+      }
+    }
+  }
+  return result;
+}
 
 async function main() {
   const inputPath = process.argv[2];
@@ -17,10 +33,12 @@ async function main() {
     throw new Error('Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in the local environment.');
   }
 
-  const input = JSON.parse(await readFile(path.resolve(inputPath), 'utf8'));
-  if (!Array.isArray(input) || input.length === 0) {
+  const catalogPath = path.resolve(inputPath);
+  const catalog = JSON.parse(await readFile(catalogPath, 'utf8'));
+  if (!Array.isArray(catalog) || catalog.length === 0) {
     throw new TypeError('The catalog JSON must be a non-empty array of exercise records.');
   }
+  const input = mergeExerciseTranslations(catalog, await readTranslations(catalogPath));
 
   const slugs = new Set();
   const records = input.map((row, index) => {
@@ -45,7 +63,9 @@ async function main() {
     imported += batch.length;
   }
 
-  console.log(`Imported ${imported} exercise records.`);
+  const withNames = records.filter((record) => Object.keys(record.name_i18n || {}).length > 0).length;
+  const withSteps = records.filter((record) => Object.keys(record.instructions_i18n || {}).length > 0).length;
+  console.log(`Imported ${imported} exercise records (${withNames} with translated names, ${withSteps} with translated steps).`);
 }
 
 main().catch((error) => {
