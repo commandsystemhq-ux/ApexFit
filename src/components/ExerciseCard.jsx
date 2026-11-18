@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import Button from './Button.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import { getExerciseVideoSource } from '../services/exerciseCatalogUtils.js';
+import ExerciseMedia from './ExerciseMedia.jsx';
+import { chooseMedia } from '../services/exerciseMedia.js';
 import { useExerciseBundle } from '../hooks/useExerciseBundle.js';
 import { displayName, localizedInstructions, localizedName, textDirection } from '../services/exerciseI18n.js';
 
@@ -59,6 +61,7 @@ function ExerciseDemoDialog({ exercise, onClose }) {
             {t('videoUnsupported')}
           </video>
         )}
+        {!source && <ExerciseMedia exercise={exercise} large />}
       </section>
     </div>
   );
@@ -70,6 +73,7 @@ export default function ExerciseCard({ exercise, onAdd, addLabel }) {
   const videoSource = getExerciseVideoSource(exercise.demo_video_url);
   const bundle = useExerciseBundle(locale);
   const steps = localizedInstructions(exercise, locale, bundle);
+  const hasMotion = ['video', 'gif', 'frames'].includes(chooseMedia(exercise).mode) || Boolean(exercise.animation_url);
 
   return (
     <article className="exercise-card">
@@ -77,16 +81,7 @@ export default function ExerciseCard({ exercise, onAdd, addLabel }) {
         <h3 className="exercise-title"><ExerciseTitle exercise={exercise} locale={locale} bundle={bundle} /></h3>
         <span className="soft-badge badge-blue">{t(`category_${exercise.category}`)}</span>
       </div>
-      {exercise.thumbnail_url && (
-        <img
-          className="exercise-thumbnail"
-          src={exercise.thumbnail_url}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          onError={(event) => { event.currentTarget.hidden = true; }}
-        />
-      )}
+      <ExerciseMedia exercise={exercise} />
       <div className="exercise-card-meta">
         <span>{t(`difficulty_${exercise.difficulty}`)}</span>
         {(exercise.equipment || []).map((item) => <span key={item}>{t(`equipment_${item}`)}</span>)}
@@ -104,6 +99,7 @@ export default function ExerciseCard({ exercise, onAdd, addLabel }) {
         {videoSource
           ? <Button variant="secondary" size="small" type="button" onClick={() => setDemoOpen(true)}>{t('demoVideo')}</Button>
           : exercise.demo_video_url && <span className="muted-copy">{t('videoUnavailable')}</span>}
+        {!videoSource && hasMotion && <Button variant="secondary" size="small" type="button" onClick={() => setDemoOpen(true)}>{t('exerciseViewLarger')}</Button>}
         {onAdd && <Button variant="primary" size="small" type="button" onClick={() => onAdd(exercise)}>{addLabel || t('addExercise')}</Button>}
       </div>
       {demoOpen && <ExerciseDemoDialog exercise={exercise} onClose={() => setDemoOpen(false)} />}

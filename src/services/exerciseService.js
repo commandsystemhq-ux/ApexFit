@@ -1,7 +1,7 @@
 import { searchTokens } from './exerciseI18n.js';
 import { requireSupabase } from './supabaseClient.js';
 
-const EXERCISE_FIELDS = 'id,slug,name,name_i18n,category,primary_muscles,equipment,difficulty,instructions,instructions_i18n,demo_video_url,thumbnail_url';
+const EXERCISE_FIELDS = 'id,slug,name,name_i18n,category,primary_muscles,equipment,difficulty,instructions,instructions_i18n,demo_video_url,thumbnail_url,animation_url,image_frames';
 
 export async function searchExercises({
   search = '',

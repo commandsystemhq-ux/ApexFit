@@ -1,7 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createClient } from '@supabase/supabase-js';
-import { mergeExerciseTranslations, normalizeExerciseRecord } from '../src/services/exerciseCatalogUtils.js';
+import { mergeExerciseMedia, mergeExerciseTranslations, normalizeExerciseRecord } from '../src/services/exerciseCatalogUtils.js';
+import { checkAnimationSize } from '../src/services/exerciseMedia.js';
 
 const BATCH_SIZE = 100;
 
@@ -21,6 +22,16 @@ async function readTranslations(catalogPath) {
   return result;
 }
 
+// data/exercise-media.json next to the catalog: { "<slug>": { "animation_url": "https://.../squat.mp4" } }, your own licensed GIF/MP4/WebM files.
+async function readMedia(catalogPath) {
+  try {
+    return JSON.parse(await readFile(path.join(path.dirname(catalogPath), 'exercise-media.json'), 'utf8'));
+  } catch (error) {
+    if (error.code === 'ENOENT') return {};
+    throw new Error(`exercise-media.json: ${error.message}`);
+  }
+}
+
 async function main() {
   const inputPath = process.argv[2];
   if (!inputPath) {
@@ -38,7 +49,8 @@ async function main() {
   if (!Array.isArray(catalog) || catalog.length === 0) {
     throw new TypeError('The catalog JSON must be a non-empty array of exercise records.');
   }
-  const input = mergeExerciseTranslations(catalog, await readTranslations(catalogPath));
+  const withMedia = mergeExerciseMedia(catalog, await readMedia(catalogPath));
+  const input = mergeExerciseTranslations(withMedia, await readTranslations(catalogPath));
 
   const slugs = new Set();
   const records = input.map((row, index) => {
@@ -51,6 +63,16 @@ async function main() {
       throw new Error(`Invalid catalog record ${index + 1}: ${error.message}`);
     }
   });
+
+  // Animations must be light enough not to cost users their data: every one is checked before it is published.
+  if (!process.argv.includes('--skip-media-check')) {
+    const heavy = [];
+    for (const record of records.filter((row) => row.animation_url)) {
+      const result = await checkAnimationSize(record.animation_url);
+      if (!result.ok) heavy.push(`${record.slug}: ${record.animation_url} ${result.reason}`);
+    }
+    if (heavy.length) throw new Error(`These animations are not accepted (limit 2 MB each; use --skip-media-check to override):\n${heavy.join('\n')}`);
+  }
 
   const client = createClient(projectUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
@@ -65,6 +87,8 @@ async function main() {
 
   const withNames = records.filter((record) => Object.keys(record.name_i18n || {}).length > 0).length;
   const withSteps = records.filter((record) => Object.keys(record.instructions_i18n || {}).length > 0).length;
+  const animated = records.filter((record) => record.animation_url).length;
+  console.log(`${animated} exercises have a video or GIF; ${records.filter((record) => record.image_frames.length >= 2).length} loop their start and end photos.`);
   console.log(`Imported ${imported} exercise records (${withNames} with translated names, ${withSteps} with translated steps).`);
 }
 

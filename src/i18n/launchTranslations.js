@@ -145,6 +145,9 @@ export const launchTranslations = {
     jackMealSaving: "Saving...",
     jackMealSaved: "Saved to your food log.",
     jackMealSaveError: "Could not save the meal. Try again.",
+    exerciseMediaPlay: "Play animation",
+    exerciseViewLarger: "View larger",
+
     jackQ_coachCompletion: "Which clients are falling behind on their tasks?",
     jackQ_coachSuggestTasks: "Suggest and assign tasks for the client who needs it most.",
     jackQ_coachReport: "Write a progress report for one of my clients.",
@@ -317,6 +320,9 @@ export const launchTranslations = {
     jackMealSaving: "جارٍ الحفظ...",
     jackMealSaved: "تم الحفظ في سجل الطعام.",
     jackMealSaveError: "تعذّر حفظ الوجبة. حاول مرة أخرى.",
+    exerciseMediaPlay: "تشغيل العرض المتحرك",
+    exerciseViewLarger: "عرض أكبر",
+
     jackQ_coachCompletion: "أي العملاء متأخرون في مهامهم؟",
     jackQ_coachSuggestTasks: "اقترح وكلّف بمهام للعميل الأكثر حاجة.",
     jackQ_coachReport: "اكتب تقرير تقدّم لأحد عملائي.",
@@ -489,6 +495,9 @@ export const launchTranslations = {
     jackMealSaving: "Wird gespeichert...",
     jackMealSaved: "Im Ernährungstagebuch gespeichert.",
     jackMealSaveError: "Die Mahlzeit konnte nicht gespeichert werden. Versuche es erneut.",
+    exerciseMediaPlay: "Animation abspielen",
+    exerciseViewLarger: "Größer ansehen",
+
     jackQ_coachCompletion: "Welche Kunden liegen bei ihren Aufgaben zurück?",
     jackQ_coachSuggestTasks: "Schlage Aufgaben für den Kunden vor, der sie am meisten braucht, und weise sie zu.",
     jackQ_coachReport: "Schreibe einen Fortschrittsbericht für einen meiner Kunden.",
@@ -661,6 +670,9 @@ export const launchTranslations = {
     jackMealSaving: "Enregistrement...",
     jackMealSaved: "Enregistré dans ton journal alimentaire.",
     jackMealSaveError: "Impossible d’enregistrer le repas. Réessaie.",
+    exerciseMediaPlay: "Lire l’animation",
+    exerciseViewLarger: "Agrandir",
+
     jackQ_coachCompletion: "Quels clients sont en retard sur leurs tâches ?",
     jackQ_coachSuggestTasks: "Propose et assigne des tâches au client qui en a le plus besoin.",
     jackQ_coachReport: "Rédige un bilan de progression pour l’un de mes clients.",
@@ -833,6 +845,9 @@ export const launchTranslations = {
     jackMealSaving: "Guardando...",
     jackMealSaved: "Guardado en tu registro de comidas.",
     jackMealSaveError: "No se pudo guardar la comida. Inténtalo de nuevo.",
+    exerciseMediaPlay: "Reproducir animación",
+    exerciseViewLarger: "Ver más grande",
+
     jackQ_coachCompletion: "¿Qué clientes van atrasados con sus tareas?",
     jackQ_coachSuggestTasks: "Sugiere y asigna tareas al cliente que más las necesita.",
     jackQ_coachReport: "Escribe un informe de progreso para uno de mis clientes.",

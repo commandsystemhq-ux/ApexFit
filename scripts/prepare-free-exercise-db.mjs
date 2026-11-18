@@ -75,6 +75,8 @@ function convertExercise(source) {
     return mappedMuscle;
   });
   const firstImage = source.images?.[0];
+  // The upstream photos of the start and end of the movement; shown as a looping animation by the app.
+  const frames = (source.images || []).slice(0, 4).map((image) => new URL(image, IMAGE_ROOT).href);
   const instructions = (source.instructions || []).filter(
     (instruction) => typeof instruction === 'string' && instruction.trim(),
   );
@@ -88,6 +90,7 @@ function convertExercise(source) {
     instructions,
     demo_video_url: null,
     thumbnail_url: firstImage ? new URL(firstImage, IMAGE_ROOT).href : null,
+    image_frames: frames.length >= 2 ? frames : [],
   });
 
   return normalized;
@@ -112,7 +115,8 @@ async function main() {
   await mkdir(path.dirname(OUTPUT_PATH), { recursive: true });
   await writeFile(OUTPUT_PATH, `${JSON.stringify(records, null, 2)}\n`, 'utf8');
   console.log(`Prepared ${records.length} real exercise records from free-exercise-db.`);
-  console.log('The source contains image thumbnails but no demo videos; demo_video_url values are null.');
+  console.log('The source contains photos (start and end of each movement) but no videos or GIFs; demo_video_url and animation_url stay empty.');
+  console.log('Add your own licensed animations in data/exercise-media.json, see data/README.md.');
 }
 
 main().catch((error) => {

@@ -186,6 +186,25 @@ Migration `20261115001100_store_team_video.sql` (included in `supabase/manual-se
 - **Jack.** For clients: `get_my_checklist` (tasks, done, progress, what is left) and `update_checklist_item` (tick/untick a task found by name, or add/set an amount such as "I drank 500 ml").
 - **Tests.** `tests/checklist.test.js` (the real schema in an in-process Postgres: materializing, weekdays, water progress, date windows, removal, closed tables, Jack's tools) and `tests/checklistLogic.test.js` (form rules, progress arithmetic, translations).
 
+## Looping exercise demos
+
+Migration `20261115002200_exercise_animations.sql` (included in `manual-setup.sql`; run it again to apply) adds `animation_url` (an HTTPS `.mp4`, `.webm`, `.gif` or `.webp`) and `image_frames` (up to four HTTPS photos) to `exercises`; `thumbnail_url` stays as the poster. Cards in the library, the workout builder and the workout logger, and the "View larger" window, show the best demo available:
+
+1. **Video or GIF** from `animation_url`: a video plays muted, looping and inline (`autoplay loop muted playsinline`) only while it is on screen and pauses when it leaves; a GIF is only requested when it is near the screen.
+2. **Looping photos.** The free exercise catalog has no videos or GIFs, only a photo of the start and of the end of each movement (873 of 876 exercises). Those two real photos fade into each other in a loop, which costs one extra photo of about 40 kB and no video.
+3. **Still poster** when there is nothing else.
+
+**Speed and data.** Nothing is downloaded before a card is near the screen. On a slow or "save data" connection (`navigator.connection`: `saveData`, 2g or 3g), or when the system asks for reduced motion, only the poster loads and a **Play animation** button loads the animation on request. The poster stays visible until the animation actually plays and comes back if it fails to load, so the card never goes blank. The importer refuses an animation larger than **2 MB** (it asks the file's server for its size first; `--skip-media-check` overrides). Keep clips short (2 to 4 seconds), about 480 px wide, and prefer MP4/WebM to GIF: a GIF is usually several times heavier than the same clip as video.
+
+**Adding your own animations.** The catalog's licence gives no videos, and none are invented. Host licensed clips yourself (for example in a Supabase Storage bucket or a CDN) and list them in `data/exercise-media.json`:
+
+```json
+{ "barbell-squat": { "animation_url": "https://cdn.example.com/barbell-squat.mp4" } }
+```
+
+Then run `npm run import:exercises -- data/free-exercise-db-apexfit.json`. `npm run prepare:exercise-catalog` regenerates the catalog with the `image_frames`.
+
+Tests: `tests/exerciseMedia.test.js` (what is shown in each case, light connections and reduced motion, fallback, the size limit with a mocked server, record validation, the database constraints).
 ## Exercise library in five languages
 
 Migration `20261115002100_exercise_translations.sql` (included in `manual-setup.sql`; run it again to apply) adds `name_i18n`, `instructions_i18n` and `search_text` to `exercises`.

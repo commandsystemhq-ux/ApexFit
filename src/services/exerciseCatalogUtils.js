@@ -27,6 +27,20 @@ function cleanStringList(value, field, maxItems, maxLength) {
   return [...new Set(value.map((item) => cleanString(item, field, maxLength)))];
 }
 
+const ANIMATION_PATH = /\.(gif|mp4|webm|webp)$/i;
+
+function cleanAnimationUrl(value) {
+  const href = cleanOptionalHttpsUrl(value, 'animation_url');
+  if (href && !ANIMATION_PATH.test(new URL(href).pathname)) throw new TypeError('animation_url must point to a .gif, .webp, .mp4 or .webm file.');
+  return href;
+}
+
+function cleanFrames(value) {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value) || value.length > 4) throw new TypeError('image_frames must be an array of at most 4 HTTPS URLs.');
+  return [...new Set(value.map((frame) => cleanOptionalHttpsUrl(frame, 'image_frames')).filter(Boolean))];
+}
+
 function cleanOptionalHttpsUrl(value, field) {
   if (value === undefined || value === null || value === '') return null;
   if (typeof value !== 'string') throw new TypeError(`${field} must be an HTTPS URL or null.`);
@@ -123,7 +137,17 @@ export function normalizeExerciseRecord(record) {
     instructions: cleanStringList(record.instructions ?? [], 'instructions', 100, 2000),
     demo_video_url: cleanOptionalHttpsUrl(record.demo_video_url, 'demo_video_url'),
     thumbnail_url: cleanOptionalHttpsUrl(record.thumbnail_url, 'thumbnail_url'),
+    animation_url: cleanAnimationUrl(record.animation_url),
+    image_frames: cleanFrames(record.image_frames),
   };
+}
+
+// Adds animations from a media file ({ slug: { animation_url, image_frames? } }) to catalog records. Unknown slugs are reported.
+export function mergeExerciseMedia(records, media = {}) {
+  const known = new Set(records.map((record) => record.slug));
+  const unknown = Object.keys(media).filter((slug) => !known.has(slug));
+  if (unknown.length) throw new Error(`Media file lists exercises that are not in the catalog: ${unknown.slice(0, 5).join(', ')}.`);
+  return records.map((record) => (media[record.slug] ? { ...record, ...media[record.slug] } : record));
 }
 
 export function getExerciseVideoSource(rawUrl) {
