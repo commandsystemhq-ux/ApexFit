@@ -19,6 +19,7 @@ export const WRITE_TOOLS = [
   'log_nutrition_summary',
   'send_client_chat_message',
   'send_coach_chat_message',
+  'update_checklist_item',
 ];
 
 const COACH_PROMPTS = {
@@ -50,7 +51,8 @@ const CLIENT_PROMPTS = {
   strength: ['jackQ_clientDone', 'jackQ_clientProgress', 'jackQ_clientTour'],
   food: ['jackQ_clientFood', 'jackQ_clientLogMeal', 'jackQ_clientHealth', 'jackQ_clientTour'],
   integrations: ['jackQ_clientHealth', 'jackQ_clientLogMeal', 'jackQ_clientTour'],
-  habits: ['jackQ_clientPoints', 'jackQ_clientWeight', 'jackQ_clientTour'],
+  habits: ['jackQ_clientChecklist', 'jackQ_clientPoints', 'jackQ_clientWeight', 'jackQ_clientTour'],
+  checklist: ['jackQ_clientChecklist', 'jackQ_clientWater', 'jackQ_clientDone', 'jackQ_clientTour'],
   intake: ['jackQ_clientTour', 'jackQ_clientJoin', 'jackQ_clientSchedule'],
   assessments: ['jackQ_clientAssessment', 'jackQ_clientContracts', 'jackQ_clientSchedule'],
   myContracts: ['jackQ_clientContracts', 'jackQ_clientAssessment', 'jackQ_clientGroups'],

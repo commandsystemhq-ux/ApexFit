@@ -38,6 +38,8 @@ const ProgramTemplatesPage = lazy(() => import('./pages/ProgramTemplatesPage.jsx
 const SchedulePage = lazy(() => import('./pages/SchedulePage.jsx'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage.jsx'));
 const AdminAiPage = lazy(() => import('./pages/AdminAiPage.jsx'));
+const AdminIntegrationsPage = lazy(() => import('./pages/AdminIntegrationsPage.jsx'));
+const ChecklistPage = lazy(() => import('./pages/ChecklistPage.jsx'));
 const WorkoutBuilderPage = lazy(() => import('./pages/WorkoutBuilderPage.jsx'));
 
 // Old bookmarks and notifications used hash URLs such as /#coachHub.
@@ -99,6 +101,7 @@ export default function App() {
               ))}
               <Route path={PAGES.coachHub.path} element={<CoachHubPage />} />
               <Route path={PAGES.integrations.path} element={<IntegrationsPage />} />
+<Route path={PAGES.checklist.path} element={<ChecklistPage />} />
               <Route path={PAGES.assessments.path} element={<AssessmentPage />} />
               <Route path={PAGES.myStore.path} element={<MyStorePage />} />
               <Route path={PAGES.mySessions.path} element={<MySessionsPage />} />
@@ -117,6 +120,7 @@ export default function App() {
 
             <Route path={PAGES.settings.path} element={<SettingsPage />} />
 <Route path={ADMIN_PATHS.ai} element={<AdminAiPage />} />
+<Route path={ADMIN_PATHS.integrations} element={<AdminIntegrationsPage />} />
           </Route>
         </Route>
 

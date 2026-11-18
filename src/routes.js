@@ -23,6 +23,7 @@ export const PAGES = {
   food: { path: '/food', titleKey: 'foodTab', icon: '◔', access: 'client' },
   habits: { path: '/habits', titleKey: 'habitTracker', icon: '✓', access: 'client' },
   intake: { path: '/intake', titleKey: 'intakeTab', icon: '☰', access: 'client' },
+  checklist: { path: '/checklist', titleKey: 'navChecklist', icon: '\u2611', access: 'client' },
   integrations: { path: '/integrations', titleKey: 'navIntegrations', icon: '\u25C9', access: 'client' },
   assessments: { path: '/assessments', titleKey: 'navAssessments', icon: '\u2665', access: 'client' },
   myContracts: { path: '/my-contracts', titleKey: 'navMyContracts', icon: '\u270E', access: 'client' },
@@ -38,7 +39,7 @@ export const PAGES = {
 export const AUTH_PATHS = { home: '/', login: '/login', signup: '/signup' };
 
 // Pages that are not part of any role's navigation. The platform owner's AI screen is opened by its address only.
-export const ADMIN_PATHS = { ai: '/admin/ai' };
+export const ADMIN_PATHS = { ai: '/admin/ai', integrations: '/admin/integrations' };
 
 const COACH_NAVIGATION = [
   { group: 'main', items: ['dashboard', 'generator', 'workoutBuilder', 'programTemplates', 'exerciseLibrary', 'messages', 'workflows'] },
@@ -47,7 +48,7 @@ const COACH_NAVIGATION = [
 ];
 
 const CLIENT_NAVIGATION = [
-  { group: 'clients', items: ['workouts', 'progress', 'strength', 'food', 'habits', 'integrations', 'intake', 'assessments', 'myContracts'] },
+  { group: 'clients', items: ['workouts', 'progress', 'strength', 'food', 'habits', 'checklist', 'integrations', 'intake', 'assessments', 'myContracts'] },
   { group: 'community', items: ['coachHub', 'mySessions', 'myGroups', 'myStore', 'community', 'leaderboard'] },
   { group: 'account', items: ['settings'] },
 ];

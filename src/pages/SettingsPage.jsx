@@ -37,10 +37,16 @@ export default function SettingsPage() {
             <span className="soft-badge badge-blue">{profile ? t(profile.role) : t('signedOut')}</span>
           </div>
           {platformAdmin && (
-            <div className="settings-row">
-              <div><h3>{t('adminAiLink')}</h3><p>{t('adminAiLinkHelp')}</p></div>
-              <Link className="button button-secondary" to={ADMIN_PATHS.ai}>{t('adminAiOpen')}</Link>
-            </div>
+            <>
+              <div className="settings-row">
+                <div><h3>{t('adminAiLink')}</h3><p>{t('adminAiLinkHelp')}</p></div>
+                <Link className="button button-secondary" to={ADMIN_PATHS.ai}>{t('adminAiOpen')}</Link>
+              </div>
+              <div className="settings-row">
+                <div><h3>{t('adminIntLink')}</h3><p>{t('adminIntLinkHelp')}</p></div>
+                <Link className="button button-secondary" to={ADMIN_PATHS.integrations}>{t('adminAiOpen')}</Link>
+              </div>
+            </>
           )}
           <Button variant="secondary" onClick={signOut}>{t('signOut')}</Button>
         </section>

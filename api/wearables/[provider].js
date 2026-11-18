@@ -1,18 +1,29 @@
 import { randomBytes } from 'node:crypto';
 import { adminClient, authenticate, requireRole } from '../_lib/auth.js';
-import { appUrl, env } from '../_lib/config.js';
+import { ConfigError, appUrl, env } from '../_lib/config.js';
 import { decryptSecret, encryptSecret, signState, verifyState } from '../_lib/crypto.js';
 import { HttpError, handler, readJson } from '../_lib/http.js';
+import { configuredProviders, resolveCredentials } from '../_lib/platformIntegrations.js';
 import { getLocalToday } from '../_lib/today.js';
 import {
-  ProviderError, WEARABLE_PROVIDERS, buildAuthorizeUrl, configuredProviders, createAdminStore, credentialsFor, exchangeCode,
+  ProviderError, WEARABLE_PROVIDERS, buildAuthorizeUrl, createAdminStore, exchangeCode,
   fetchExternalUserId, pkceVerifier, revokeAccess, syncWearable,
 } from '../_lib/wearables.js';
 
 const redirectUri = (provider) => `${appUrl()}/api/wearables/${provider}?action=callback`;
 
-function requireCredentials(provider) {
-  const credentials = credentialsFor(provider);
+// The keys the platform owner saved on the admin screen, else the server's environment variables.
+function serviceClient() {
+  try {
+    return adminClient();
+  } catch (error) {
+    if (error instanceof ConfigError) return null;
+    throw error;
+  }
+}
+
+async function requireCredentials(provider) {
+  const credentials = await resolveCredentials(provider, { admin: serviceClient() });
   if (!credentials) throw new HttpError(503, `${provider} is not configured on the server.`);
   return credentials;
 }
@@ -34,7 +45,7 @@ async function handleCallback(req, res, provider) {
   if (error || !code) return redirect('denied');
 
   const key = env('TOKEN_ENCRYPTION_KEY');
-  const credentials = requireCredentials(provider);
+  const credentials = await requireCredentials(provider);
   let tokens;
   try {
     tokens = await exchangeCode(provider, { code, redirectUri: redirectUri(provider), verifier: pkceVerifier(payload.nonce, key), credentials });
@@ -62,7 +73,7 @@ async function handleCallback(req, res, provider) {
 
 async function sync({ user }, provider, body) {
   const key = env('TOKEN_ENCRYPTION_KEY');
-  const credentials = requireCredentials(provider);
+  const credentials = await requireCredentials(provider);
   const store = createAdminStore(adminClient());
   const connection = await store.getConnection(user.id, provider);
   if (!connection) throw new HttpError(409, 'This device is not connected.');
@@ -78,7 +89,7 @@ async function disconnect({ user }, provider) {
   const key = env('TOKEN_ENCRYPTION_KEY');
   const store = createAdminStore(adminClient());
   const connection = await store.getConnection(user.id, provider);
-  const credentials = credentialsFor(provider);
+  const credentials = await resolveCredentials(provider, { admin: serviceClient() });
   if (connection && credentials) {
     try {
       const token = connection.refresh_token_encrypted || connection.access_token_encrypted;
@@ -103,11 +114,11 @@ export default handler(['GET', 'POST'], async (req, res) => {
   await requireRole(context.userClient, 'client');
   const body = await readJson(req);
 
-  if (provider === 'status') return res.status(200).json({ providers: configuredProviders() });
+  if (provider === 'status') return res.status(200).json({ providers: await configuredProviders({ admin: serviceClient() }) });
   if (!WEARABLE_PROVIDERS.includes(provider)) throw new HttpError(404, 'Unknown device provider.');
 
   if (body.action === 'auth-url') {
-    const credentials = requireCredentials(provider);
+    const credentials = await requireCredentials(provider);
     const key = env('TOKEN_ENCRYPTION_KEY');
     const nonce = randomBytes(16).toString('hex');
     const state = signState({ clientId: context.user.id, provider, nonce }, key);

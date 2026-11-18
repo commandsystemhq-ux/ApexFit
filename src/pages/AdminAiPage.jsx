@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import PageHeader from '../components/PageHeader.jsx';
 import PlatformAiPanel from '../components/PlatformAiPanel.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import { getAiStatus } from '../services/aiSettingsService.js';
-import { AUTH_PATHS } from '../routes.js';
+import { ADMIN_PATHS, AUTH_PATHS } from '../routes.js';
 
 // /admin/ai: the platform owner's AI provider. Anyone else is sent away as if the page did not exist.
 export default function AdminAiPage() {
@@ -24,7 +24,12 @@ export default function AdminAiPage() {
 
   return (
     <>
-      <PageHeader eyebrow="APEXFIT" title={t('adminAiTitle')} description={t('adminAiDescription')} />
+      <PageHeader
+        eyebrow="APEXFIT"
+        title={t('adminAiTitle')}
+        description={t('adminAiDescription')}
+        action={<Link className="button button-secondary" to={ADMIN_PATHS.integrations}>{t('adminIntTitle')}</Link>}
+      />
       <div className="settings-stack"><PlatformAiPanel /></div>
     </>
   );

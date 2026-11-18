@@ -6,9 +6,9 @@ import { useLocale } from '../contexts/LocaleContext.jsx';
 import { getLocalDateString } from '../services/clientTrackingUtils.js';
 import { parseAppleHealthFile, parseHealthSummary, readTextFile } from '../services/healthImport.js';
 import {
-  deleteWearableData, disconnectWearable, getHealthOverview, getWearableProviders, saveWearableMetrics, startWearableConnection, syncWearable,
+  deleteWearableData, disconnectWearable, getHealthOverview, saveWearableMetrics, startWearableConnection, syncWearable,
 } from '../services/healthService.js';
-import { CLOUD_PROVIDERS, HEALTH_PROVIDERS, connectionState, emptyMetricsForm, importErrorKey, validateMetricsForm } from '../services/healthUtils.js';
+import { HEALTH_PROVIDERS, connectionState, emptyMetricsForm, importErrorKey, validateMetricsForm } from '../services/healthUtils.js';
 
 const RESULT_KEYS = ['connected', 'connected_nodata', 'denied', 'failed'];
 const MANUAL_FIELDS = [
@@ -19,7 +19,7 @@ const MANUAL_FIELDS = [
   { key: 'hrv', labelKey: 'hltHrv', step: '0.1' },
   { key: 'recovery', labelKey: 'hltRecovery', step: '1' },
 ];
-const BADGE = { connected: 'badge-green', error: 'badge-red', disconnected: 'badge-muted', unconfigured: 'badge-muted' };
+const BADGE = { connected: 'badge-green', error: 'badge-red', disconnected: 'badge-muted' };
 
 // Apple Health file import, Fitbit / Garmin / Oura connections, a quick manual entry and the last seven days.
 export default function WearablesPanel() {
@@ -29,7 +29,6 @@ export default function WearablesPanel() {
   const fileInput = useRef(null);
   const abort = useRef(null);
   const [overview, setOverview] = useState(null);
-  const [configured, setConfigured] = useState({});
   const [loadError, setLoadError] = useState('');
   const [notice, setNotice] = useState(null);
   const [busy, setBusy] = useState('');
@@ -49,7 +48,6 @@ export default function WearablesPanel() {
 
   useEffect(() => {
     load();
-    getWearableProviders().then((data) => setConfigured(data.providers || {})).catch(() => setConfigured({}));
     return () => abort.current?.abort();
   }, [load]);
 
@@ -79,10 +77,19 @@ export default function WearablesPanel() {
     }
   }
 
-  const connect = (provider) => run(provider, async () => {
-    const { url } = await startWearableConnection(provider);
-    window.location.assign(url);
-  });
+  // Every device can be connected from here. If the platform owner has not added the service's keys yet the server
+  // answers 503, and the person is told what is missing instead of seeing a dead end.
+  async function connect(provider) {
+    setBusy(provider);
+    setNotice(null);
+    try {
+      const { url } = await startWearableConnection(provider);
+      window.location.assign(url);
+    } catch (error) {
+      setBusy('');
+      report('error', error.status === 503 ? `${t(`hltProv_${provider}`)}: ${t('hltSetupNeeded')}` : error.message);
+    }
+  }
   const sync = (provider) => run(provider, async () => {
     const result = await syncWearable(provider);
     await load();
@@ -155,7 +162,6 @@ export default function WearablesPanel() {
         </>
       );
     }
-    if (state === 'unconfigured') return null;
     if (state === 'disconnected') return <Button variant="primary" type="button" onClick={() => connect(provider)} disabled={busy !== ''}>{busy === provider ? t('hltConnecting') : t('hltConnect')}</Button>;
     return (
       <>
@@ -174,7 +180,7 @@ export default function WearablesPanel() {
 
       <div className="integration-grid">
         {HEALTH_PROVIDERS.map((provider) => {
-          const state = connectionState(connections, provider, configured);
+          const state = connectionState(connections, provider);
           const connection = connections.find((item) => item.provider === provider);
           return (
             <article className="panel integration-card" key={provider}>
@@ -183,7 +189,6 @@ export default function WearablesPanel() {
                 <span className={`soft-badge ${BADGE[state]}`}>{t(`hltState_${state}`)}</span>
               </div>
               <p className="muted-copy">{t(`hltProvDesc_${provider}`)}</p>
-              {state === 'unconfigured' && CLOUD_PROVIDERS.includes(provider) && <small className="muted-copy">{t('hltUnconfigured')}</small>}
               {connection?.last_synced_at && <small className="muted-copy">{t('hltLastSync')}: <time dateTime={connection.last_synced_at}>{dateFormat(connection.last_synced_at)}</time></small>}
               {state === 'error' && connection?.last_error && <small className="field-error" dir="auto">{connection.last_error}</small>}
               <div className="template-actions">{renderActions(provider, state)}</div>
