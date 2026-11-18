@@ -1,4 +1,5 @@
 import { aiTranslations } from './aiTranslations.js';
+import { billingTranslations } from './billingTranslations.js';
 import { businessTranslations } from './businessTranslations.js';
 import { chatTranslations } from './chatTranslations.js';
 import { checklistTranslations } from './checklistTranslations.js';
@@ -55,7 +56,6 @@ export const translations = {
     portalTitle: 'Client portal', portalDescription: 'Your coach’s shared plans and check-ins will appear here.',
     portalSignIn: 'Sign in as a client to view your portal.', portalEmpty: 'No plans have been shared with this account yet.',
     billingTitle: 'Your subscription', billingDescription: 'Coach access includes a 3-day free trial, then $39 per month.',
-    billingProviderNotice: 'Secure subscription checkout is not configured yet.',
     landingPlatform: 'Platform', landingPricing: 'Pricing', landingPill: 'COACHING, BUILT AROUND YOU',
     landingHeadlineOne: 'More coaching.', landingHeadlineTwo: 'Less busywork.',
     landingDescription: 'A focused workspace for fitness coaches to organize their clients and coaching practice.',
@@ -103,7 +103,6 @@ export const translations = {
     portalTitle: 'بوابة العميل', portalDescription: 'ستظهر الخطط والتحديثات التي يشاركها مدربك هنا.',
     portalSignIn: 'سجل الدخول كعميل لعرض بوابتك.', portalEmpty: 'لم تتم مشاركة أي خطط مع هذا الحساب بعد.',
     billingTitle: 'اشتراكك', billingDescription: 'يتضمن حساب المدرب تجربة مجانية لمدة ٣ أيام، ثم ٣٩ دولاراً شهرياً.',
-    billingProviderNotice: 'لم يتم إعداد الدفع الآمن للاشتراك بعد.',
     landingPlatform: 'المنصة', landingPricing: 'الأسعار', landingPill: 'تدريب مصمم خصيصاً لك',
     landingHeadlineOne: 'تدريب أكثر.', landingHeadlineTwo: 'أعمال روتينية أقل.',
     landingDescription: 'مساحة عمل مركزة لمدربي اللياقة لتنظيم العملاء وممارسة التدريب.',
@@ -151,7 +150,6 @@ export const translations = {
     portalTitle: 'Kundenportal', portalDescription: 'Geteilte Pläne und Check-ins deines Trainers erscheinen hier.',
     portalSignIn: 'Melde dich als Kunde an, um dein Portal zu öffnen.', portalEmpty: 'Für dieses Konto wurden noch keine Pläne freigegeben.',
     billingTitle: 'Dein Abonnement', billingDescription: 'Trainer erhalten 3 Tage kostenlos, danach kostet der Tarif 39 $ pro Monat.',
-    billingProviderNotice: 'Der sichere Abonnementabschluss ist noch nicht eingerichtet.',
     landingPlatform: 'Plattform', landingPricing: 'Preise', landingPill: 'COACHING, DAS ZU DIR PASST',
     landingHeadlineOne: 'Mehr Coaching.', landingHeadlineTwo: 'Weniger Aufwand.',
     landingDescription: 'Ein fokussierter Workspace für Fitnesstrainer zur Organisation ihrer Kunden und ihres Coachings.',
@@ -199,7 +197,6 @@ export const translations = {
     portalTitle: 'Portail client', portalDescription: 'Les plans et suivis partagés par votre coach apparaîtront ici.',
     portalSignIn: 'Connectez-vous comme client pour accéder à votre portail.', portalEmpty: 'Aucun plan n’a encore été partagé avec ce compte.',
     billingTitle: 'Votre abonnement', billingDescription: 'L’accès coach comprend 3 jours d’essai, puis coûte 39 $ par mois.',
-    billingProviderNotice: 'Le paiement sécurisé de l’abonnement n’est pas encore configuré.',
     landingPlatform: 'Plateforme', landingPricing: 'Tarifs', landingPill: 'LE COACHING, À VOTRE RYTHME',
     landingHeadlineOne: 'Plus de coaching.', landingHeadlineTwo: 'Moins de tâches.',
     landingDescription: 'Un espace dédié aux coachs sportifs pour organiser leurs clients et leur activité.',
@@ -247,7 +244,6 @@ export const translations = {
     portalTitle: 'Portal del cliente', portalDescription: 'Aquí aparecerán los planes y seguimientos compartidos por tu entrenador.',
     portalSignIn: 'Inicia sesión como cliente para ver tu portal.', portalEmpty: 'Aún no se han compartido planes con esta cuenta.',
     billingTitle: 'Tu suscripción', billingDescription: 'El acceso de entrenador incluye 3 días de prueba y después cuesta 39 $ al mes.',
-    billingProviderNotice: 'El pago seguro de la suscripción aún no está configurado.',
     landingPlatform: 'Plataforma', landingPricing: 'Precios', landingPill: 'ENTRENAMIENTO A TU MANERA',
     landingHeadlineOne: 'Más entrenamiento.', landingHeadlineTwo: 'Menos tareas.',
     landingDescription: 'Un espacio para que los entrenadores de fitness organicen a sus clientes y su trabajo.',
@@ -626,4 +622,5 @@ for (const locale of supportedLocales) {
 for (const locale of supportedLocales) {
   Object.assign(translations[locale], checklistTranslations[locale]);
   Object.assign(translations[locale], launchTranslations[locale]);
+  Object.assign(translations[locale], billingTranslations[locale]);
 }

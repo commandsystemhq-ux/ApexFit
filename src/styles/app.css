@@ -1310,3 +1310,7 @@ a.sidebar-profile:hover .profile-copy strong { color: #70afff; }
 @media (prefers-reduced-motion: reduce) {
   .exercise-media.is-playing .exercise-media-frame-b { animation: none; }
 }
+/* Subscription page */
+.billing-note { margin: 0; padding: 9px 11px; border: 1px solid var(--line); border-radius: 9px; background: rgba(255, 255, 255, .03); color: var(--muted); font-size: 11px; line-height: 1.6; }
+.billing-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.subscription-panel > .billing-note, .subscription-panel > .notice, .subscription-panel > .billing-actions { grid-column: 1 / -1; }

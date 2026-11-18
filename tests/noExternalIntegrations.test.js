@@ -34,7 +34,7 @@ test('the server code, pages and routes for the removed services are gone', () =
 
   // The serverless functions that remain: Vercel counts every file in api/ except the _lib folder.
   const functions = readdirSync(new URL('api/', root)).filter((name) => !name.startsWith('_'));
-  assert.deepEqual(functions.sort(), ['ai.js', 'jack.js', 'push.js', 'store.js', 'stripe-webhook.js', 'stripe.js', 'video-sessions.js', 'workflows.js']);
+  assert.deepEqual(functions.sort(), ['ai.js', 'jack.js', 'paddle-webhook.js', 'paddle.js', 'push.js', 'store.js', 'stripe-webhook.js', 'stripe.js', 'video-sessions.js', 'workflows.js']);
 });
 
 test('no code or screen text mentions Google Calendar, Fitbit, Garmin, Oura or their keys', () => {

@@ -110,9 +110,16 @@ export function AuthProvider({ children }) {
     }
   }, [showToast, t]);
 
+  // Asks the database again who the user is and what their plan allows (for example right after a payment).
+  const refreshProfile = useCallback(async () => {
+    const account = await getMyAccessStatus();
+    setProfile(account);
+    return account;
+  }, []);
+
   const value = useMemo(
-    () => ({ user, profile, setProfile, profileError, authReady, signOut, signInWithGoogle: signInGoogle }),
-    [user, profile, profileError, authReady, signOut, signInGoogle],
+    () => ({ user, profile, setProfile, refreshProfile, profileError, authReady, signOut, signInWithGoogle: signInGoogle }),
+    [user, profile, refreshProfile, profileError, authReady, signOut, signInGoogle],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
