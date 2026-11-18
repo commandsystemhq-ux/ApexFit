@@ -2,6 +2,12 @@ import { PAGES } from '../routes.js';
 
 export const JACK_STORAGE_PREFIX = 'apexfit.jack.';
 export const MAX_STORED_MESSAGES = 40;
+// Pages dispatch this on window ({ detail: { text } }) to open Jack with a ready-made question.
+export const JACK_ASK_EVENT = 'apexfit:jack-ask';
+
+export function askJack(text) {
+  window.dispatchEvent(new CustomEvent(JACK_ASK_EVENT, { detail: { text } }));
+}
 
 // Tools that change data. After one of them succeeds the current page reloads its data.
 export const WRITE_TOOLS = [
@@ -20,12 +26,19 @@ export const WRITE_TOOLS = [
   'send_client_chat_message',
   'send_coach_chat_message',
   'update_checklist_item',
+  'assign_task_to_client',
+  'generate_client_progress_report',
+  'complete_task',
+  'add_my_task',
+  'generate_my_progress_report',
+  'log_meal',
 ];
 
 const COACH_PROMPTS = {
   default: ['jackQ_coachSummary', 'jackQ_coachWorkflow', 'jackQ_coachPost', 'jackQ_coachTour'],
-  dashboard: ['jackQ_coachSummary', 'jackQ_coachAbsent', 'jackQ_coachWorkflow', 'jackQ_coachTour'],
+  dashboard: ['jackQ_coachSummary', 'jackQ_coachCompletion', 'jackQ_coachAbsent', 'jackQ_coachTour'],
   clients: ['jackQ_coachAbsent', 'jackQ_coachClearance', 'jackQ_coachHealth', 'jackQ_coachAssign'],
+  tasks: ['jackQ_coachCompletion', 'jackQ_coachSuggestTasks', 'jackQ_coachReport', 'jackQ_coachAbsent'],
   groups: ['jackQ_coachGroup', 'jackQ_coachGroupProgram', 'jackQ_coachPost', 'jackQ_coachSummary'],
   contracts: ['jackQ_coachContract', 'jackQ_coachClearance', 'jackQ_coachInvite', 'jackQ_coachTour'],
   programTemplates: ['jackQ_coachAssign', 'jackQ_coachTemplates', 'jackQ_coachWorkflow', 'jackQ_coachTour'],
@@ -47,9 +60,10 @@ const TRAINER_PROMPTS = { default: ['jackQ_trainerHome'] };
 const CLIENT_PROMPTS = {
   default: ['jackQ_clientSchedule', 'jackQ_clientDone', 'jackQ_clientWeight', 'jackQ_clientTour'],
   workouts: ['jackQ_clientDone', 'jackQ_clientSchedule', 'jackQ_clientPoints', 'jackQ_clientTour'],
-  progress: ['jackQ_clientWeight', 'jackQ_clientProgress', 'jackQ_clientPoints'],
+  progress: ['jackQ_clientWeight', 'jackQ_clientProgress', 'jackQ_clientReport', 'jackQ_clientPoints'],
+  myTasks: ['jackQ_clientTasks', 'jackQ_clientReport', 'jackQ_clientPoints', 'jackQ_clientSuggestTasks'],
   strength: ['jackQ_clientDone', 'jackQ_clientProgress', 'jackQ_clientTour'],
-  food: ['jackQ_clientFood', 'jackQ_clientLogMeal', 'jackQ_clientHealth', 'jackQ_clientTour'],
+  food: ['jackQ_clientFood', 'jackQ_clientMealPhoto', 'jackQ_clientLogMeal', 'jackQ_clientHealth'],
   integrations: ['jackQ_clientHealth', 'jackQ_clientLogMeal', 'jackQ_clientTour'],
   habits: ['jackQ_clientChecklist', 'jackQ_clientPoints', 'jackQ_clientWeight', 'jackQ_clientTour'],
   checklist: ['jackQ_clientChecklist', 'jackQ_clientWater', 'jackQ_clientDone', 'jackQ_clientTour'],
@@ -112,6 +126,42 @@ export function toApiMessages(messages) {
   return messages
     .filter((message) => !message.error && (message.role === 'user' || message.text))
     .map((message) => ({ role: message.role, content: message.text }));
+}
+
+// A short title for a saved conversation: the first line of the first question.
+export function conversationTitle(text) {
+  const line = String(text || '').split('\n').find((part) => part.trim()) || '';
+  const clean = line.trim().replace(/\s+/g, ' ');
+  return clean.length > 60 ? `${clean.slice(0, 57)}...` : clean;
+}
+
+// The pair of messages stored in the history after Jack answers. Photos are never stored, only the fact that one was sent.
+export function historyPayload(userMessage, assistantMessage) {
+  return [
+    { role: 'user', content: String(userMessage.text || '').slice(0, 4000), has_image: Boolean(userMessage.hasImage) },
+    { role: 'assistant', content: String(assistantMessage.text || '').slice(0, 4000), has_image: false },
+  ];
+}
+
+// Turns a saved conversation back into chat messages.
+export function messagesFromConversation(conversation) {
+  return (conversation?.messages || [])
+    .filter((message) => message && (message.role === 'user' || message.role === 'assistant'))
+    .map((message, index) => ({
+      id: `h-${conversation.id}-${index}`,
+      role: message.role,
+      text: String(message.content || ''),
+      hasImage: Boolean(message.has_image),
+      steps: [],
+      pending: false,
+      error: '',
+    }));
+}
+
+// The meal estimate Jack showed in a step, if any.
+export function mealFromStep(step) {
+  const meal = step?.tool === 'propose_meal_log' && step.status === 'done' ? step.detail?.meal : null;
+  return meal && typeof meal === 'object' ? meal : null;
 }
 
 export function parseNdjsonChunk(buffer, chunk) {

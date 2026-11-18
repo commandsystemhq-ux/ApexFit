@@ -13,6 +13,7 @@ export const PAGES = {
   store: { path: '/store', titleKey: 'navStore', icon: '\u25A3', access: 'coach' },
   sessions: { path: '/sessions', titleKey: 'navSessions', icon: '\u25B6', access: 'coach' },
   teamClients: { path: '/team-clients', titleKey: 'navTeamClients', icon: '\u2691', access: 'trainer' },
+  tasks: { path: '/tasks', titleKey: 'navTasks', icon: '\u2714', access: 'coach' },
   clients: { path: '/clients', titleKey: 'clients', icon: '☺', access: 'coach' },
   schedule: { path: '/schedule', titleKey: 'schedule', icon: '◷', access: 'coach' },
   invoicing: { path: '/invoicing', titleKey: 'invoicing', icon: '$', access: 'coach' },
@@ -23,6 +24,7 @@ export const PAGES = {
   food: { path: '/food', titleKey: 'foodTab', icon: '◔', access: 'client' },
   habits: { path: '/habits', titleKey: 'habitTracker', icon: '✓', access: 'client' },
   intake: { path: '/intake', titleKey: 'intakeTab', icon: '☰', access: 'client' },
+  myTasks: { path: '/my-tasks', titleKey: 'navMyTasks', icon: '\u2605', access: 'client' },
   checklist: { path: '/checklist', titleKey: 'navChecklist', icon: '\u2611', access: 'client' },
   integrations: { path: '/integrations', titleKey: 'navIntegrations', icon: '\u25C9', access: 'client' },
   assessments: { path: '/assessments', titleKey: 'navAssessments', icon: '\u2665', access: 'client' },
@@ -43,12 +45,12 @@ export const ADMIN_PATHS = { ai: '/admin/ai' };
 
 const COACH_NAVIGATION = [
   { group: 'main', items: ['dashboard', 'generator', 'workoutBuilder', 'programTemplates', 'exerciseLibrary', 'messages', 'workflows'] },
-  { group: 'clients', items: ['clients', 'team', 'groups', 'contracts', 'sessions', 'schedule', 'store', 'invoicing', 'community', 'leaderboard', 'billing'] },
+  { group: 'clients', items: ['clients', 'tasks', 'team', 'groups', 'contracts', 'sessions', 'schedule', 'store', 'invoicing', 'community', 'leaderboard', 'billing'] },
   { group: 'account', items: ['settings'] },
 ];
 
 const CLIENT_NAVIGATION = [
-  { group: 'clients', items: ['workouts', 'progress', 'strength', 'food', 'habits', 'checklist', 'integrations', 'intake', 'assessments', 'myContracts'] },
+  { group: 'clients', items: ['workouts', 'myTasks', 'progress', 'strength', 'food', 'habits', 'checklist', 'integrations', 'intake', 'assessments', 'myContracts'] },
   { group: 'community', items: ['coachHub', 'mySessions', 'myGroups', 'myStore', 'community', 'leaderboard'] },
   { group: 'account', items: ['settings'] },
 ];

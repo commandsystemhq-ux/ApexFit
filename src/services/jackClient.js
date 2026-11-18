@@ -9,7 +9,8 @@ export class JackRequestError extends Error {
 }
 
 // Sends the conversation plus page context and reports each streamed event (steps, text, navigation).
-export async function streamJack({ messages, context, signal, onEvent }) {
+// `image` is an optional photo ({ mime, data: base64 }) that belongs to the newest message.
+export async function streamJack({ messages, context, image = null, signal, onEvent }) {
   const { data } = await requireSupabase().auth.getSession();
   const token = data.session?.access_token;
   if (!token) throw new JackRequestError('Authentication is required.', 401);
@@ -17,7 +18,7 @@ export async function streamJack({ messages, context, signal, onEvent }) {
   const response = await fetch('/api/jack', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ messages, context }),
+    body: JSON.stringify(image ? { messages, context, image } : { messages, context }),
     signal,
   });
 

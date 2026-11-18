@@ -1214,3 +1214,78 @@ a.sidebar-profile:hover .profile-copy strong { color: #70afff; }
 .chk-week-fill { position: absolute; inset-inline: 0; bottom: 0; background: rgba(54, 132, 246, .28); }
 .chk-week-day.is-complete .chk-week-fill { background: rgba(50, 212, 154, .35); }
 .chk-week-day small { position: relative; font-size: 9px; }
+/* Accountability, progress reports and Jack's history and meal photos */
+.tone-text-good { color: var(--green); }
+.tone-text-warn { color: var(--amber); }
+.tone-text-low { color: var(--red); }
+.rate-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.rate-row { display: grid; grid-template-columns: minmax(120px, 1.2fr) minmax(90px, 1.5fr) auto auto auto; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255, 255, 255, .025); }
+.rate-row.is-selected { border-color: rgba(54, 132, 246, .6); background: rgba(54, 132, 246, .07); }
+.rate-select { display: grid; min-width: 0; gap: 2px; padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; text-align: start; }
+.rate-select strong { overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.rate-select small { color: var(--muted); font-size: 11px; }
+.rate-bar { height: 8px; overflow: hidden; border-radius: 999px; background: rgba(255, 255, 255, .08); }
+.rate-bar span { display: block; height: 100%; border-radius: inherit; background: var(--subtle); transition: width .3s ease; }
+.rate-bar.tone-good span { background: var(--green); }
+.rate-bar.tone-warn span { background: var(--amber); }
+.rate-bar.tone-low span { background: var(--red); }
+.rate-value { min-width: 40px; font: 600 13px var(--font-display); text-align: end; }
+.rate-badge.tone-good { border-color: rgba(50, 212, 154, .3); background: rgba(50, 212, 154, .1); color: var(--green); }
+.rate-badge.tone-warn { border-color: rgba(240, 181, 76, .3); background: rgba(240, 181, 76, .1); color: var(--amber); }
+.rate-badge.tone-low { border-color: rgba(242, 106, 118, .3); background: rgba(242, 106, 118, .1); color: var(--red); }
+.dash-completion { margin-block: 14px; }
+.dash-completion-side { display: flex; align-items: center; gap: 12px; }
+.dash-completion-average { font: 700 24px var(--font-display); }
+.task-manage { display: grid; grid-template-columns: minmax(260px, 340px) 1fr; gap: 16px; align-items: start; }
+.task-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.task-client-select { min-width: 200px; }
+.task-lists { display: grid; gap: 12px; }
+.task-item.is-overdue { border-color: rgba(240, 181, 76, .4); }
+.rpt-panel { margin-block: 14px; }
+.rpt-controls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
+.rpt-privacy { margin: 6px 0 0; color: var(--subtle); font-size: 11px; }
+.rpt-list { display: grid; gap: 10px; margin-top: 12px; }
+.rpt-card { display: grid; gap: 8px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255, 255, 255, .025); }
+.rpt-card header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.rpt-body { margin: 0; font-size: 13px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+.rpt-actions { display: flex; flex-wrap: wrap; gap: 14px; }
+.rpt-delete { color: var(--red); }
+
+.jack-icon-button.is-active { border-color: rgba(54, 132, 246, .6); background: rgba(54, 132, 246, .15); color: var(--text); }
+.jack-welcome-hint { margin: 0; color: var(--muted); font-size: 11px; }
+.jack-attach { display: grid; flex: none; width: 40px; height: 40px; place-items: center; padding: 0; border: 1px solid var(--line-strong); border-radius: 12px; background: rgba(255, 255, 255, .04); cursor: pointer; font-size: 17px; }
+.jack-attach:hover:not(:disabled) { background: rgba(255, 255, 255, .09); }
+.jack-attach:disabled { cursor: not-allowed; opacity: .4; }
+.jack-photo-preview { display: flex; align-items: center; gap: 10px; padding: 6px; border: 1px solid var(--line-strong); border-radius: 12px; background: rgba(255, 255, 255, .04); font-size: 11px; }
+.jack-photo-preview img { width: 52px; height: 52px; border-radius: 8px; object-fit: cover; }
+.jack-photo-preview span { flex: 1; color: var(--muted); }
+.jack-photo-sent img { display: block; max-width: 180px; max-height: 180px; border-radius: 12px; object-fit: cover; }
+.jack-photo-sent span { color: var(--muted); font-size: 11px; }
+.jack-message-user .jack-photo-sent { align-self: flex-end; }
+.jack-meal { display: grid; gap: 8px; padding: 12px; border: 1px solid rgba(50, 212, 154, .3); border-radius: 14px; background: rgba(50, 212, 154, .05); }
+.jack-meal.is-saved { border-color: var(--line); background: rgba(255, 255, 255, .03); }
+.jack-meal-head { display: grid; gap: 2px; }
+.jack-meal-head strong { font-size: 12px; }
+.jack-meal-head small { color: var(--muted); font-size: 10px; line-height: 1.5; }
+.jack-meal-field { display: grid; gap: 4px; color: var(--muted); font-size: 10px; }
+.jack-meal-field .field { min-height: 34px; padding: 6px 9px; font-size: 12px; }
+.jack-meal-macros { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.jack-meal-ingredients { color: var(--muted); font-size: 10px; line-height: 1.5; }
+.jack-meal-save { padding: 9px 12px; border: 0; border-radius: 10px; background: var(--gradient-blue); color: #fff; cursor: pointer; font-weight: 600; }
+.jack-meal-save:disabled { cursor: not-allowed; opacity: .5; }
+.jack-history { display: flex; min-height: 0; flex: 1; flex-direction: column; gap: 10px; padding: 14px; overflow-y: auto; overscroll-behavior: contain; }
+.jack-history-new { padding: 9px 12px; border: 1px dashed rgba(54, 132, 246, .5); border-radius: 12px; background: rgba(54, 132, 246, .08); color: #9fc7f5; cursor: pointer; font: inherit; font-size: 12px; }
+.jack-history-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.jack-history-item { display: flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255, 255, 255, .025); }
+.jack-history-item.is-active { border-color: rgba(54, 132, 246, .6); }
+.jack-history-open { display: grid; min-width: 0; flex: 1; gap: 2px; padding: 10px 12px; border: 0; background: transparent; color: inherit; cursor: pointer; text-align: start; }
+.jack-history-open strong { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.jack-history-open small { color: var(--muted); font-size: 10px; }
+.jack-history-item .jack-icon-button { margin-inline-end: 8px; }
+.jack-history-note { margin: auto 0 0; color: var(--subtle); font-size: 10px; }
+
+@media (max-width: 720px) {
+  .rate-row { grid-template-columns: 1fr auto; }
+  .rate-bar { grid-column: 1 / -1; order: 3; }
+  .task-manage { grid-template-columns: 1fr; }
+}

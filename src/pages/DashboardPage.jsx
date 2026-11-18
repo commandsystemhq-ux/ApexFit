@@ -1,4 +1,5 @@
 import Button from '../components/Button.jsx';
+import DashboardCompletion from '../components/DashboardCompletion.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 
@@ -28,6 +29,7 @@ export default function DashboardPage({ onNavigate }) {
           </article>
         ))}
       </section>
+      <DashboardCompletion onOpen={() => onNavigate('tasks')} />
       <section className="dashboard-grid">
         <article className="panel alert-panel">
           <div className="panel-heading"><div><span className="eyebrow">{t('insights')}</span><h3>{t('insights')}</h3></div></div>

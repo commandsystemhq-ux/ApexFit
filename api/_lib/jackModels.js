@@ -7,7 +7,8 @@ import { normalizeAzureEndpoint } from '../../src/services/aiProviders.js';
 // Providers: OpenAI, Google Gemini, Amazon Bedrock (Converse API) and Microsoft Azure AI Foundry.
 //
 // Internal message shapes:
-//   { role: 'user' | 'assistant', content, toolCalls? }   (assistant toolCalls: [{ id, name, args }])
+//   { role: 'user' | 'assistant', content, toolCalls?, image? }   (assistant toolCalls: [{ id, name, args }])
+//   image (user messages only): { mime: 'image/jpeg' | 'image/png' | 'image/webp', data: <base64> }, a photo to look at
 //   { role: 'tool', toolCallId, name, content }
 
 export class ModelError extends Error {
@@ -112,6 +113,14 @@ export function createOpenAiModel({
               function: { name: call.name, arguments: JSON.stringify(call.args ?? {}) },
             })),
           });
+        } else if (message.role === 'user' && message.image) {
+          payload.push({
+            role: 'user',
+            content: [
+              { type: 'text', text: message.content },
+              { type: 'image_url', image_url: { url: `data:${message.image.mime};base64,${message.image.data}` } },
+            ],
+          });
         } else {
           payload.push({ role: message.role, content: message.content });
         }
@@ -174,7 +183,9 @@ export function createGeminiModel({ apiKey, model = 'gemini-2.0-flash', baseUrl 
           for (const call of message.toolCalls || []) parts.push({ functionCall: { name: call.name, args: call.args ?? {} } });
           if (parts.length) contents.push({ role: 'model', parts });
         } else {
-          contents.push({ role: 'user', parts: [{ text: message.content }] });
+          const parts = [{ text: message.content }];
+          if (message.image) parts.push({ inlineData: { mimeType: message.image.mime, data: message.image.data } });
+          contents.push({ role: 'user', parts });
         }
       }
 
@@ -285,7 +296,9 @@ export function toConverseMessages(messages, withTools) {
       }
       push('assistant', blocks);
     } else {
-      push('user', message.content?.trim() ? [{ text: message.content }] : []);
+      const blocks = message.content?.trim() ? [{ text: message.content }] : [];
+      if (message.image) blocks.unshift({ image: { format: message.image.mime.replace('image/', ''), source: { bytes: message.image.data } } });
+      push('user', blocks);
     }
   }
   while (turns.length && turns[0].role !== 'user') turns.shift();

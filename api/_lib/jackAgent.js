@@ -5,8 +5,20 @@ export const LOCALES = ['en', 'ar', 'de', 'fr', 'es'];
 export const MAX_HISTORY_MESSAGES = 16;
 export const MAX_MESSAGE_CHARS = 2000;
 export const MAX_ITERATIONS = 5;
+export const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+// The browser shrinks photos before sending; this is the most base64 text the server accepts for one photo.
+export const MAX_IMAGE_BASE64_CHARS = 1_500_000;
 export const MAX_TOOL_CALLS_PER_TURN = 4;
 const MAX_TOOL_RESULT_CHARS = 6000;
+
+// A photo for Jack to look at: a supported image type and plain base64, within the size limit. Anything else is null.
+export function parseJackImage(image) {
+  if (!image || typeof image !== 'object') return null;
+  const data = typeof image.data === 'string' ? image.data.replace(/\s+/g, '') : '';
+  if (!IMAGE_TYPES.includes(image.mime) || data.length < 100 || data.length > MAX_IMAGE_BASE64_CHARS) return null;
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(data)) return null;
+  return { mime: image.mime, data };
+}
 
 // Only plain user/assistant text is accepted from the browser. System, tool, or function messages are
 // dropped, so a caller cannot smuggle instructions or fake tool results into the conversation.
@@ -23,6 +35,14 @@ export function parseJackRequest(body, { fallbackLocale = 'en', serverDate = new
     return { error: 'Send a message for Jack to answer.' };
   }
 
+  // A photo belongs to the newest user message only; older photos are never sent again.
+  let image = null;
+  if (body?.image !== undefined && body.image !== null) {
+    image = parseJackImage(body.image);
+    if (!image) return { error: 'The photo must be a JPEG, PNG or WebP image that is not too large.' };
+    messages[messages.length - 1].image = image;
+  }
+
   const context = body?.context && typeof body.context === 'object' ? body.context : {};
   const locale = LOCALES.includes(context.locale) ? context.locale : fallbackLocale;
   const route = typeof context.route === 'string' && pageForPath(context.route) ? context.route : '';
@@ -37,7 +57,7 @@ export function parseJackRequest(body, { fallbackLocale = 'en', serverDate = new
   // The browser's UTC offset in minutes (for example 120 for UTC+2), so "6 pm" means the user's 6 pm.
   const offset = Number(context.utcOffset);
   const utcOffsetMinutes = Number.isInteger(offset) && Math.abs(offset) <= 14 * 60 ? offset : 0;
-  return { messages, locale, route, today, utcOffsetMinutes };
+  return { messages, locale, route, today, utcOffsetMinutes, hasImage: Boolean(image) };
 }
 
 export function createRateLimiter({ limit = 20, windowMs = 60_000, now = () => Date.now() } = {}) {

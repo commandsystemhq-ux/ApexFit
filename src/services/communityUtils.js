@@ -20,6 +20,7 @@ export const POINT_RULES = [
   { source: 'food', points: 5, labelKey: 'earnFood' },
   { source: 'habit', points: 10, labelKey: 'earnHabit' },
   { source: 'metric', points: 10, labelKey: 'earnMetric' },
+  { source: 'task', points: 20, labelKey: 'earnTask' },
 ];
 
 export const LEADERBOARD_PERIODS = [

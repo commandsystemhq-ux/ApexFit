@@ -89,7 +89,22 @@ class Query {
     return this;
   }
 
+  insert(row) {
+    this.mode = 'insert';
+    this.row = row;
+    return this;
+  }
+
   async execute() {
+    if (this.mode === 'insert') {
+      const keys = Object.keys(this.row);
+      keys.forEach((key) => { if (!IDENTIFIER.test(key)) throw new Error(`Bad column ${key}`); });
+      return this.runner(
+        `insert into public.${this.table} (${keys.join(', ')}) values (${keys.map((_, index) => `$${index + 1}`).join(', ')})`,
+        keys.map((key) => this.row[key]),
+        'write',
+      );
+    }
     if (this.mode === 'upsert') {
       const keys = Object.keys(this.row);
       keys.forEach((key) => { if (!IDENTIFIER.test(key)) throw new Error(`Bad column ${key}`); });

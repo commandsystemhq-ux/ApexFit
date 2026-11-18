@@ -12,6 +12,8 @@ import {
   listOpenInvites,
   setClientStatus,
 } from '../services/coachClientService.js';
+import { getTaskCompletionRates } from '../services/accountabilityService.js';
+import { fillText, ratesByClient, rateTone } from '../services/accountabilityUtils.js';
 import { listClearanceFlags } from '../services/assessmentService.js';
 import { clientLabel } from '../services/coachingUtils.js';
 import { getTeam, listAssignments } from '../services/teamService.js';
@@ -32,6 +34,7 @@ export default function ClientsPage({ onNotify }) {
   const [assignments, setAssignments] = useState([]);
   const [trainerFilter, setTrainerFilter] = useState(TRAINER_FILTER_ALL);
   const [clearance, setClearance] = useState({});
+  const [rates, setRates] = useState(() => new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [creating, setCreating] = useState(false);
@@ -41,6 +44,7 @@ export default function ClientsPage({ onNotify }) {
   async function refresh() {
     try {
       const [clientRows, inviteRows, flagRows, teamRows, assignmentRows] = await Promise.all([listMyClients(), listOpenInvites(), listClearanceFlags().catch(() => []), getTeam().catch(() => []), listAssignments().catch(() => [])]);
+      getTaskCompletionRates(30).then((rows) => setRates(ratesByClient(rows))).catch(() => {});
       setTeam(teamRows);
       setAssignments(assignmentRows);
       setClients(clientRows);
@@ -141,11 +145,17 @@ export default function ClientsPage({ onNotify }) {
                   </div>
                   {trainerIndex.get(client.client_id) && <span className="soft-badge badge-cyan" title={t('tmTrainerBadge')}>{t('tmTrainerBadge')}: {memberLabel(trainerIndex.get(client.client_id))}</span>}
                   {clearance[client.client_id] && <span className="soft-badge badge-amber">{t('asmClearanceBadge')}</span>}
+                  {rates.get(client.client_id)?.rate !== null && rates.get(client.client_id)?.rate !== undefined && (
+                    <span className={`soft-badge rate-badge tone-${rateTone(rates.get(client.client_id).rate)}`} title={fillText(t('taskDoneOf'), { done: rates.get(client.client_id).done, n: rates.get(client.client_id).assigned })} dir="ltr">
+                      {t('taskTasksBadge')} {rates.get(client.client_id).rate}%
+                    </span>
+                  )}
                   <span className={`soft-badge ${client.status === 'active' ? 'badge-blue' : 'badge-muted'}`}>{t(client.status === 'active' ? 'active' : 'archivedStatus')}</span>
                 </div>
                 <div className="client-row-actions">
                   <button className="text-action" type="button" aria-expanded={expandedId === client.client_id} onClick={() => toggleIntake(client.client_id)}>{t('viewOnboarding')}</button>
                   <button className="text-action" type="button" onClick={() => navigate(`/messages?with=${client.client_id}`)}>{t('messages')}</button>
+                  <button className="text-action" type="button" onClick={() => navigate(`/tasks?client=${client.client_id}`)}>{t('taskManageLink')}</button>
                   <button className="text-action" type="button" onClick={() => toggleStatus(client)}>{client.status === 'active' ? t('archiveClient') : t('restoreClient')}</button>
                 </div>
                 {expandedId === client.client_id && (

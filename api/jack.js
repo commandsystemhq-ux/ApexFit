@@ -23,9 +23,13 @@ async function loadAccess(userClient) {
 // Which AI provider runs Jack is the platform owner's business. Coaches, assistant trainers and clients are only
 // told that Jack is unavailable; the platform owner (PLATFORM_ADMIN_EMAILS) is shown the provider's real status
 // and message so the setup can be fixed. Everything is also written to the server log.
-function friendlyError(error, admin) {
+function friendlyError(error, admin, hadImage = false) {
   if (error instanceof ModelError) {
     console.error('Jack model error', error.providerStatus, error.detail, error.requestUrl);
+    // A model that cannot read pictures rejects the request itself; say so instead of "unavailable".
+    if (hadImage && !admin && [400, 415, 422].includes(error.providerStatus)) {
+      return 'Jack could not read this photo. Try another photo, or ask the platform owner to choose a model that understands images.';
+    }
     return describeJackFailure(error, { admin });
   }
   console.error('Jack failed', error);
@@ -47,6 +51,7 @@ export default handler(['POST'], async (req, res) => {
   const serviceClient = safeAdminClient();
   // Assistant trainers are coach accounts working under a head coach; they get a much smaller toolbox.
   const role = access.access_state === 'trainer' ? 'trainer' : access.role;
+  if (request.hasImage && role !== 'client') throw new HttpError(400, 'Meal photos can only be analysed for client accounts.');
 
   let model;
   try {
@@ -79,7 +84,7 @@ export default handler(['POST'], async (req, res) => {
   try {
     await runJack({ model, system, history: request.messages, ctx, emit });
   } catch (error) {
-    emit({ type: 'error', message: friendlyError(error, admin) });
+    emit({ type: 'error', message: friendlyError(error, admin, request.hasImage) });
   } finally {
     emit({ type: 'done' });
     res.end();

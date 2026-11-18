@@ -39,6 +39,8 @@ const SchedulePage = lazy(() => import('./pages/SchedulePage.jsx'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage.jsx'));
 const AdminAiPage = lazy(() => import('./pages/AdminAiPage.jsx'));
 const ChecklistPage = lazy(() => import('./pages/ChecklistPage.jsx'));
+const TasksPage = lazy(() => import('./pages/TasksPage.jsx'));
+const MyTasksPage = lazy(() => import('./pages/MyTasksPage.jsx'));
 const WorkoutBuilderPage = lazy(() => import('./pages/WorkoutBuilderPage.jsx'));
 
 // Old bookmarks and notifications used hash URLs such as /#coachHub.
@@ -88,6 +90,7 @@ export default function App() {
               <Route path={PAGES.sessions.path} element={<SessionsPage />} />
               <Route path={PAGES.contracts.path} element={<ContractsPage />} />
               <Route path={PAGES.clients.path} element={<ClientsPage onNavigate={go} onNotify={showToast} />} />
+              <Route path={PAGES.tasks.path} element={<TasksPage onNotify={showToast} />} />
               <Route path={PAGES.schedule.path} element={<SchedulePage onNavigate={go} onNotify={showToast} />} />
               <Route path={PAGES.invoicing.path} element={<InvoicingPage onNavigate={go} onNotify={showToast} />} />
               <Route path={PAGES.billing.path} element={<BillingPage profile={profile} onNotify={showToast} />} />
@@ -101,6 +104,7 @@ export default function App() {
               <Route path={PAGES.coachHub.path} element={<CoachHubPage />} />
               <Route path={PAGES.integrations.path} element={<IntegrationsPage />} />
 <Route path={PAGES.checklist.path} element={<ChecklistPage />} />
+              <Route path={PAGES.myTasks.path} element={<MyTasksPage onNotify={showToast} />} />
               <Route path={PAGES.assessments.path} element={<AssessmentPage />} />
               <Route path={PAGES.myStore.path} element={<MyStorePage />} />
               <Route path={PAGES.mySessions.path} element={<MySessionsPage />} />
