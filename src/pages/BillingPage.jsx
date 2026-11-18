@@ -69,7 +69,8 @@ export default function BillingPage({ profile, onNotify }) {
       });
     } catch (checkoutError) {
       setPhase('idle');
-      setError(checkoutError.status === 503 ? t('checkoutUnavailable') : checkoutError.message || t('billingCheckoutError'));
+      // A 503 carries the server's own explanation, which names the setting that is missing.
+      setError(checkoutError.message || (checkoutError.status === 503 ? t('checkoutUnavailable') : t('billingCheckoutError')));
     }
   }
 

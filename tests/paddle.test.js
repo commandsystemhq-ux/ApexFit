@@ -212,6 +212,12 @@ test('missing Paddle settings are named, and production must be chosen on purpos
   assert.throws(() => paddleConfig({}), (error) => error instanceof ConfigError && /PADDLE_API_KEY, PADDLE_CLIENT_TOKEN, PADDLE_PRICE_ID/.test(error.message));
   const ready = { PADDLE_API_KEY: 'k', PADDLE_CLIENT_TOKEN: 't', PADDLE_PRICE_ID: PRICE };
   assert.equal(paddleConfig(ready).environment, 'sandbox');
+  assert.throws(() => paddleConfig({ PADDLE_API_KEY: 'k', PADDLE_PRICE_ID: PRICE }), /missing PADDLE_CLIENT_TOKEN\)/);
+  // The client token may be stored under the name Vercel and Next.js projects usually give it.
+  const { PADDLE_CLIENT_TOKEN: _omit, ...withoutToken } = ready;
+  assert.equal(paddleConfig({ ...withoutToken, NEXT_PUBLIC_PADDLE_CLIENT_TOKEN: 'live_abc' }).clientToken, 'live_abc');
+  assert.equal(paddleConfig({ ...withoutToken, VITE_PADDLE_CLIENT_TOKEN: 'live_def' }).clientToken, 'live_def');
+  assert.equal(paddleConfig({ ...ready, NEXT_PUBLIC_PADDLE_CLIENT_TOKEN: 'other' }).clientToken, 't');
   assert.equal(paddleConfig({ ...ready, PADDLE_ENVIRONMENT: 'Production' }).environment, 'production');
   assert.throws(() => paddleEnvironment({ PADDLE_ENVIRONMENT: 'live' }), /sandbox or production/);
 });

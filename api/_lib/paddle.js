@@ -8,7 +8,7 @@ import { HttpError } from './http.js';
 // Settings (server only, except the client token which Paddle designed to be public):
 //   PADDLE_ENVIRONMENT    sandbox (default) or production
 //   PADDLE_API_KEY        server API key
-//   PADDLE_CLIENT_TOKEN   client-side token for Paddle.js
+//   PADDLE_CLIENT_TOKEN   client-side token for Paddle.js (NEXT_PUBLIC_PADDLE_CLIENT_TOKEN and VITE_PADDLE_CLIENT_TOKEN are accepted too)
 //   PADDLE_PRICE_ID       the recurring price (pri_...) of the coach plan
 //   PADDLE_WEBHOOK_SECRET the notification destination's secret key (pdl_ntfset_...)
 
@@ -27,12 +27,15 @@ export function paddleEnvironment(environment = process.env) {
 
 export function paddleConfig(environment = process.env) {
   const read = (name) => String(environment[name] || '').trim();
-  const missing = ['PADDLE_API_KEY', 'PADDLE_CLIENT_TOKEN', 'PADDLE_PRICE_ID'].filter((name) => !read(name));
+  const clientToken = read('PADDLE_CLIENT_TOKEN') || read('NEXT_PUBLIC_PADDLE_CLIENT_TOKEN') || read('VITE_PADDLE_CLIENT_TOKEN');
+  const missing = [['PADDLE_API_KEY', read('PADDLE_API_KEY')], ['PADDLE_CLIENT_TOKEN', clientToken], ['PADDLE_PRICE_ID', read('PADDLE_PRICE_ID')]]
+    .filter(([, value]) => !value)
+    .map(([name]) => name);
   if (missing.length) throw new ConfigError(`Subscription checkout is not set up on the server (missing ${missing.join(', ')}).`);
   return {
     environment: paddleEnvironment(environment),
     apiKey: read('PADDLE_API_KEY'),
-    clientToken: read('PADDLE_CLIENT_TOKEN'),
+    clientToken,
     priceId: read('PADDLE_PRICE_ID'),
   };
 }
