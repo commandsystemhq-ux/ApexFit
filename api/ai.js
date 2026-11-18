@@ -2,6 +2,7 @@ import { adminClient, authenticate } from './_lib/auth.js';
 import { createAiStore, handleAiRequest } from './_lib/aiSettings.js';
 import { HttpError, handler, readJson } from './_lib/http.js';
 import { createRateLimiter } from './_lib/jackAgent.js';
+import { withOwnerDiagnostics } from './_lib/ownerDiagnostics.js';
 
 const allowRequest = createRateLimiter({ limit: 30, windowMs: 60_000 });
 
@@ -14,6 +15,6 @@ export default handler(['POST'], async (req, res) => {
 
   const body = await readJson(req);
   // The service-role client is created only after the owner check has passed.
-  const result = await handleAiRequest({ body, user, store: () => createAiStore({ admin: adminClient() }) });
+  const result = await withOwnerDiagnostics(user, () => handleAiRequest({ body, user, store: () => createAiStore({ admin: adminClient() }) }));
   res.status(result.status).json(result.body);
 });

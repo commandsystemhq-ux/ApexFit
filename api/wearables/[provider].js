@@ -1,9 +1,10 @@
 import { randomBytes } from 'node:crypto';
 import { adminClient, authenticate, requireRole } from '../_lib/auth.js';
-import { ConfigError, appUrl, env } from '../_lib/config.js';
+import { appUrl, env } from '../_lib/config.js';
 import { decryptSecret, encryptSecret, signState, verifyState } from '../_lib/crypto.js';
 import { HttpError, handler, readJson } from '../_lib/http.js';
-import { configuredProviders, resolveCredentials } from '../_lib/platformIntegrations.js';
+import { withOwnerDiagnostics } from '../_lib/ownerDiagnostics.js';
+import { configuredProviders, resolveCredentials, safeAdminClient } from '../_lib/platformIntegrations.js';
 import { getLocalToday } from '../_lib/today.js';
 import {
   ProviderError, WEARABLE_PROVIDERS, buildAuthorizeUrl, createAdminStore, exchangeCode,
@@ -13,14 +14,7 @@ import {
 const redirectUri = (provider) => `${appUrl()}/api/wearables/${provider}?action=callback`;
 
 // The keys the platform owner saved on the admin screen, else the server's environment variables.
-function serviceClient() {
-  try {
-    return adminClient();
-  } catch (error) {
-    if (error instanceof ConfigError) return null;
-    throw error;
-  }
-}
+const serviceClient = safeAdminClient;
 
 async function requireCredentials(provider) {
   const credentials = await resolveCredentials(provider, { admin: serviceClient() });
@@ -114,17 +108,21 @@ export default handler(['GET', 'POST'], async (req, res) => {
   await requireRole(context.userClient, 'client');
   const body = await readJson(req);
 
-  if (provider === 'status') return res.status(200).json({ providers: await configuredProviders({ admin: serviceClient() }) });
-  if (!WEARABLE_PROVIDERS.includes(provider)) throw new HttpError(404, 'Unknown device provider.');
+  // Unexpected failures are shown in full to the platform owner and as the generic message to everyone else.
+  const result = await withOwnerDiagnostics(context.user, async () => {
+    if (provider === 'status') return { providers: await configuredProviders({ admin: serviceClient() }) };
+    if (!WEARABLE_PROVIDERS.includes(provider)) throw new HttpError(404, 'Unknown device provider.');
 
-  if (body.action === 'auth-url') {
-    const credentials = await requireCredentials(provider);
-    const key = env('TOKEN_ENCRYPTION_KEY');
-    const nonce = randomBytes(16).toString('hex');
-    const state = signState({ clientId: context.user.id, provider, nonce }, key);
-    return res.status(200).json({ url: buildAuthorizeUrl(provider, { clientId: credentials.clientId, redirectUri: redirectUri(provider), state, verifier: pkceVerifier(nonce, key) }) });
-  }
-  if (body.action === 'sync') return res.status(200).json(await sync(context, provider, body));
-  if (body.action === 'disconnect') return res.status(200).json(await disconnect(context, provider));
-  throw new HttpError(400, 'Unknown action.');
+    if (body.action === 'auth-url') {
+      const credentials = await requireCredentials(provider);
+      const key = env('TOKEN_ENCRYPTION_KEY');
+      const nonce = randomBytes(16).toString('hex');
+      const state = signState({ clientId: context.user.id, provider, nonce }, key);
+      return { url: buildAuthorizeUrl(provider, { clientId: credentials.clientId, redirectUri: redirectUri(provider), state, verifier: pkceVerifier(nonce, key) }) };
+    }
+    if (body.action === 'sync') return sync(context, provider, body);
+    if (body.action === 'disconnect') return disconnect(context, provider);
+    throw new HttpError(400, 'Unknown action.');
+  });
+  res.status(200).json(result);
 });

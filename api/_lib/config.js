@@ -12,8 +12,25 @@ export function optionalEnv(name, fallback = '') {
   return process.env[name] || fallback;
 }
 
-export function appUrl() {
-  return env('APP_URL').replace(/\/+$/, '');
+// The site address with spaces, quotes and trailing slashes removed, so `${appUrl()}/path` never has a double slash.
+// Returns '' when it is empty and null when it is not a usable web address.
+export function normalizeAppUrl(value) {
+  const text = String(value ?? '').trim().replace(/^["']+|["']+$/g, '').trim().replace(/\/+$/, '');
+  if (!text) return '';
+  try {
+    const url = new URL(text);
+    if (!['http:', 'https:'].includes(url.protocol) || !url.hostname || url.search || url.hash) return null;
+    return `${url.origin}${url.pathname.replace(/\/+$/, '')}`;
+  } catch {
+    return null;
+  }
+}
+
+export function appUrl(environment = process.env) {
+  const value = normalizeAppUrl(environment.APP_URL);
+  if (value === '') throw new ConfigError('APP_URL is not configured on the server. Set it to the address of your site, for example https://your-app.vercel.app');
+  if (value === null) throw new ConfigError('APP_URL is not a valid web address. Use the full address of your site, for example https://your-app.vercel.app');
+  return value;
 }
 
 export function platformFeePercent() {

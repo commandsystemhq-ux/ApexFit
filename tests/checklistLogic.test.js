@@ -287,7 +287,8 @@ test('the device cards always offer Connect, with no "not available" dead end', 
   assert.match(panel, /startWearableConnection/);
   for (const locale of supportedLocales) assert.ok(translations[locale].hltSetupNeeded, locale);
   assert.match(read('api/wearables/[provider].js'), /resolveCredentials\(provider/);
-  assert.match(read('api/google.js'), /resolveCredentials\('google'/);
+  assert.match(read('api/_lib/googleAuth.js'), /resolveCredentials\('google'/);
+  assert.match(read('api/google.js'), /loadGoogleCredentials/);
   assert.doesNotMatch(read('api/google.js'), /env\('GOOGLE_CLIENT_ID'\)/, 'the Google keys come from the shared resolver');
 });
 

@@ -1,3 +1,4 @@
+import { adminClient } from './auth.js';
 import { decryptSecret, encryptSecret } from './crypto.js';
 import { HttpError } from './http.js';
 import { assertPlatformAdmin, isPlatformAdmin } from './aiSettings.js';
@@ -21,12 +22,31 @@ const CLIENT_SECRET = /^[\x21-\x7e]{8,500}$/;
 
 // ------------------------------------------------------------------ where the keys come from
 
+// Values pasted into a hosting dashboard often carry spaces or quotes.
+const cleanValue = (value) => String(value ?? '').trim().replace(/^["']+|["']+$/g, '').trim();
+
 export function envCredentials(provider, environment = process.env) {
   const names = ENV_NAMES[provider];
   if (!names) return null;
-  const clientId = (environment[names[0]] || '').trim();
-  const clientSecret = (environment[names[1]] || '').trim();
+  const clientId = cleanValue(environment[names[0]]);
+  const clientSecret = cleanValue(environment[names[1]]);
   return clientId && clientSecret ? { clientId, clientSecret } : null;
+}
+
+// Which of a service's variables are empty, for the platform owner's error message.
+export function missingEnvNames(provider, environment = process.env) {
+  return (ENV_NAMES[provider] || []).filter((name) => !cleanValue(environment[name]));
+}
+
+// The service-role database client, or null when it cannot be created (missing or malformed settings). The keys
+// then come from the environment variables alone.
+export function safeAdminClient() {
+  try {
+    return adminClient();
+  } catch (error) {
+    console.error('The database client is not available, using the environment variables only:', error?.message);
+    return null;
+  }
 }
 
 function encryptionKey(environment) {
@@ -48,12 +68,15 @@ function fromRow(row, environment) {
 export async function resolveCredentials(provider, { admin, environment = process.env } = {}) {
   if (!INTEGRATION_PROVIDERS.includes(provider)) return null;
   if (admin) {
+    // Anything that goes wrong here (the table does not exist yet, the query fails, the secret cannot be decrypted)
+    // is logged and the environment variables are used instead. It never turns the request into a 500.
     try {
-      const { data } = await admin.from('platform_integration_settings').select('*').eq('provider', provider).maybeSingle();
-      const stored = fromRow(data, environment);
+      const { data, error } = await admin.from('platform_integration_settings').select('*').eq('provider', provider).maybeSingle();
+      if (error) console.error('Could not read the integration keys, using the environment variables:', error.message);
+      const stored = error ? null : fromRow(data, environment);
       if (stored) return { ...stored, source: 'database' };
     } catch (error) {
-      console.error('Could not read the integration keys', error?.message);
+      console.error('Could not read the integration keys, using the environment variables:', error?.message);
     }
   }
   const fromEnvironment = envCredentials(provider, environment);

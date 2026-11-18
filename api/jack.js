@@ -1,10 +1,11 @@
-import { adminClient, authenticate } from './_lib/auth.js';
+import { authenticate } from './_lib/auth.js';
 import { describeJackFailure, isPlatformAdmin, resolveJackModel } from './_lib/aiSettings.js';
 import { ConfigError } from './_lib/config.js';
 import { HttpError, handler, readJson } from './_lib/http.js';
 import { buildContextSummary, createRateLimiter, pageIdForRoute, parseJackRequest, runJack } from './_lib/jackAgent.js';
 import { buildSystemPrompt } from './_lib/jackKnowledge.js';
 import { ModelError } from './_lib/jackModels.js';
+import { safeAdminClient } from './_lib/platformIntegrations.js';
 
 const allowRequest = createRateLimiter({ limit: 20, windowMs: 60_000 });
 
@@ -44,12 +45,7 @@ export default handler(['POST'], async (req, res) => {
 
   // One model for the whole platform: the platform owner's setting, else the server's environment variables.
   // Fails with a 503 before any streaming starts when nothing is configured.
-  let serviceClient = null;
-  try {
-    serviceClient = adminClient();
-  } catch (error) {
-    if (!(error instanceof ConfigError)) throw error;
-  }
+  const serviceClient = safeAdminClient();
   // Assistant trainers are coach accounts working under a head coach; they get a much smaller toolbox.
   const role = access.access_state === 'trainer' ? 'trainer' : access.role;
 

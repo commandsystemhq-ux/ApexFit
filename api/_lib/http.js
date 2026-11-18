@@ -1,9 +1,13 @@
 import { ConfigError } from './config.js';
 
 export class HttpError extends Error {
-  constructor(status, message) {
+  // `ownerDetail` is a fuller explanation (for example the names of missing variables) shown only to the platform
+  // owner, see explainForOwner. `expose` lets a 500 carry its own message instead of the generic one.
+  constructor(status, message, ownerDetail = '') {
     super(message);
     this.status = status;
+    this.ownerDetail = ownerDetail;
+    this.expose = false;
   }
 }
 
@@ -19,7 +23,7 @@ export function handler(methods, run) {
       const status = error instanceof HttpError ? error.status : error instanceof ConfigError ? 503 : 500;
       if (status === 500) console.error(error);
       if (!res.headersSent) {
-        res.status(status).json({ error: status === 500 ? 'Unexpected server error.' : error.message });
+        res.status(status).json({ error: status === 500 && !error.expose ? 'Unexpected server error.' : error.message });
       }
     }
   };

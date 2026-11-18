@@ -1,31 +1,28 @@
 import { ConfigError, appUrl, env } from './_lib/config.js';
 import { adminClient, authenticate, requireRole } from './_lib/auth.js';
 import { buildTaskEvent, isIsoDay, isValidTimeZone, addDays, taskEventId } from './_lib/checklistCalendar.js';
-import { decryptSecret, encryptSecret, signState, verifyState } from './_lib/crypto.js';
-import { buildAuthUrl, buildCalendarEvent, eventIdForSession, parseIdTokenEmail } from './_lib/googleCalendar.js';
+import { decryptSecret, encryptSecret, verifyState } from './_lib/crypto.js';
+import { buildCalendarEvent, eventIdForSession, parseIdTokenEmail } from './_lib/googleCalendar.js';
+import { RETURN_PAGES, googleCredentials as loadGoogleCredentials, googleRedirectUri, startGoogleAuthorization } from './_lib/googleAuth.js';
 import { HttpError, handler, readJson, requireUuid } from './_lib/http.js';
-import { resolveCredentials } from './_lib/platformIntegrations.js';
+import { withOwnerDiagnostics } from './_lib/ownerDiagnostics.js';
+import { safeAdminClient } from './_lib/platformIntegrations.js';
 
-const redirectUri = () => `${appUrl()}/api/google?action=callback`;
-
-// Where people land after Google sends them back. Only these pages are allowed.
-const RETURN_PAGES = { schedule: '/schedule', checklist: '/checklist' };
+const redirectUri = () => googleRedirectUri();
 const MAX_TASKS_PER_SYNC = 60;
 
-function serviceClient() {
-  try {
-    return adminClient();
-  } catch (error) {
-    if (error instanceof ConfigError) return null;
-    throw error;
-  }
-}
-
 // The keys saved by the platform owner, else the server's GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET.
-async function googleCredentials() {
-  const credentials = await resolveCredentials('google', { admin: serviceClient() });
-  if (!credentials) throw new HttpError(503, 'Google Calendar is not configured on the server.');
-  return credentials;
+const googleCredentials = () => loadGoogleCredentials({ admin: safeAdminClient() });
+
+// The stored refresh token, or a clear "connect again" when it can no longer be read (for example after the
+// encryption key was changed).
+function readRefreshToken(connection) {
+  try {
+    return decryptSecret(connection.refresh_token_encrypted, env('TOKEN_ENCRYPTION_KEY'));
+  } catch (error) {
+    if (error instanceof ConfigError) throw error;
+    throw new HttpError(409, 'The saved Google Calendar connection can no longer be read. Connect it again.');
+  }
 }
 
 async function tokenRequest(params, credentials) {
@@ -43,7 +40,7 @@ async function tokenRequest(params, credentials) {
 }
 
 async function accessTokenFor(admin, connection, credentials) {
-  const refreshToken = decryptSecret(connection.refresh_token_encrypted, env('TOKEN_ENCRYPTION_KEY'));
+  const refreshToken = readRefreshToken(connection);
   const { ok, payload } = await tokenRequest({ grant_type: 'refresh_token', refresh_token: refreshToken }, credentials);
   if (!ok) {
     if (payload.error === 'invalid_grant') {
@@ -67,21 +64,31 @@ async function handleCallback(req, res) {
   if (!owner) throw new HttpError(400, 'The authorization request has expired. Try connecting again.');
   if (error || !code) return redirect('denied');
 
-  const credentials = await googleCredentials();
-  const { ok, payload: tokens } = await tokenRequest({
-    grant_type: 'authorization_code',
-    code,
-    redirect_uri: redirectUri(),
-  }, credentials);
-  if (!ok || !tokens.refresh_token) return redirect('failed');
+  // Whatever goes wrong while finishing the connection, the person lands back on their page with a clear
+  // "could not connect" notice instead of a raw error page. The cause is in the server log.
+  try {
+    const credentials = await googleCredentials();
+    const { ok, payload: tokens } = await tokenRequest({
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: redirectUri(),
+    }, credentials);
+    if (!ok || !tokens.refresh_token) {
+      console.error('Google did not accept the authorization:', tokens?.error, tokens?.error_description);
+      return redirect('failed');
+    }
 
-  const { error: saveError } = await adminClient().from('google_calendar_connections').upsert({
-    coach_id: owner,
-    google_email: parseIdTokenEmail(tokens.id_token),
-    refresh_token_encrypted: encryptSecret(tokens.refresh_token, env('TOKEN_ENCRYPTION_KEY')),
-    updated_at: new Date().toISOString(),
-  }, { onConflict: 'coach_id' });
-  if (saveError) throw saveError;
+    const { error: saveError } = await adminClient().from('google_calendar_connections').upsert({
+      coach_id: owner,
+      google_email: parseIdTokenEmail(tokens.id_token),
+      refresh_token_encrypted: encryptSecret(tokens.refresh_token, env('TOKEN_ENCRYPTION_KEY')),
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'coach_id' });
+    if (saveError) throw saveError;
+  } catch (failure) {
+    console.error('Could not finish the Google Calendar connection:', failure?.message || failure);
+    return redirect('failed');
+  }
   return redirect('connected');
 }
 
@@ -211,7 +218,7 @@ async function disconnect({ user }) {
   const { data } = await admin.from('google_calendar_connections').select('refresh_token_encrypted').eq('coach_id', user.id).maybeSingle();
   if (data) {
     try {
-      const token = decryptSecret(data.refresh_token_encrypted, env('TOKEN_ENCRYPTION_KEY'));
+      const token = readRefreshToken(data);
       await fetch('https://oauth2.googleapis.com/revoke', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -242,26 +249,27 @@ export default handler(['GET', 'POST'], async (req, res) => {
 
   const context = await authenticate(req);
   const body = await readJson(req);
-  const role = await roleOf(context.userClient);
 
-  if (body.action === 'auth-url') {
-    if (role === 'coach') await requireRole(context.userClient, 'coach');
-    const credentials = await googleCredentials();
-    const returnTo = role === 'client' ? 'checklist' : RETURN_PAGES[body.returnTo] ? body.returnTo : 'schedule';
-    const state = signState({ userId: context.user.id, returnTo }, env('TOKEN_ENCRYPTION_KEY'));
-    return res.status(200).json({ url: buildAuthUrl({ clientId: credentials.clientId, redirectUri: redirectUri(), state }) });
-  }
-  if (body.action === 'disconnect') {
-    return res.status(200).json(await disconnect(context));
-  }
-  if (body.action === 'sync') {
-    await requireRole(context.userClient, 'coach');
-    return res.status(200).json(await syncSession(context, requireUuid(body.sessionId, 'Session')));
-  }
-  if (body.action === 'sync-checklist' || body.action === 'remove-event') {
-    if (role !== 'client') throw new HttpError(403, 'A client account is required.');
-    if (body.action === 'sync-checklist') return res.status(200).json(await syncChecklist(context, body));
-    return res.status(200).json(await removeTaskEvent(context, requireUuid(body.taskId, 'Task')));
-  }
-  throw new HttpError(400, 'Unknown action.');
+  // Unexpected failures are shown in full to the platform owner and as the generic message to everyone else.
+  const result = await withOwnerDiagnostics(context.user, async () => {
+    const role = await roleOf(context.userClient);
+
+    if (body.action === 'auth-url') {
+      if (role === 'coach') await requireRole(context.userClient, 'coach');
+      const returnTo = role === 'client' ? 'checklist' : body.returnTo;
+      const { url } = await startGoogleAuthorization({ userId: context.user.id, returnTo, admin: safeAdminClient() });
+      return { url };
+    }
+    if (body.action === 'disconnect') return disconnect(context);
+    if (body.action === 'sync') {
+      await requireRole(context.userClient, 'coach');
+      return syncSession(context, requireUuid(body.sessionId, 'Session'));
+    }
+    if (body.action === 'sync-checklist' || body.action === 'remove-event') {
+      if (role !== 'client') throw new HttpError(403, 'A client account is required.');
+      return body.action === 'sync-checklist' ? syncChecklist(context, body) : removeTaskEvent(context, requireUuid(body.taskId, 'Task'));
+    }
+    throw new HttpError(400, 'Unknown action.');
+  });
+  res.status(200).json(result);
 });

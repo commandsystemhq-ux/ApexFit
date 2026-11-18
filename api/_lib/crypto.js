@@ -1,8 +1,9 @@
 import { createCipheriv, createDecipheriv, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { ConfigError } from './config.js';
 
 function keyBytes(base64Key) {
   const key = Buffer.from(base64Key || '', 'base64');
-  if (key.length !== 32) throw new Error('TOKEN_ENCRYPTION_KEY must be 32 bytes encoded as base64.');
+  if (key.length !== 32) throw new ConfigError('TOKEN_ENCRYPTION_KEY must be 32 bytes encoded as base64. Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'base64\'))"');
   return key;
 }
 
