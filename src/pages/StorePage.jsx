@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Button from '../components/Button.jsx';
 import PageHeader from '../components/PageHeader.jsx';
+import PaymentMethodsPanel from '../components/PaymentMethodsPanel.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import { useToast } from '../contexts/ToastContext.jsx';
 import { CURRENCIES } from '../services/coachingUtils.js';
-import { deleteProduct, getSales, listProducts, saveProduct, setProductPublished } from '../services/storeService.js';
+import { cancelStoreOrder, confirmStorePayment, deleteProduct, getSales, listProducts, saveProduct, setProductPublished } from '../services/storeService.js';
+import { PAID_METHODS } from '../services/paymentMethodsUtils.js';
 import {
   STORE_LIMITS,
   centsToInput,
@@ -13,6 +15,8 @@ import {
   formatPrice,
   formatRevenue,
   isSecureUrl,
+  orderReference,
+  orderStage,
   publicStorePath,
   validateProductForm,
 } from '../services/storeUtils.js';
@@ -101,6 +105,7 @@ export default function StorePage() {
   const [draft, setDraft] = useState(null);
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState('');
+  const [confirming, setConfirming] = useState(null);
 
   const refresh = useCallback(async () => {
     const [productRows, programRows, salesData] = await Promise.all([listProducts(), listMyWorkoutPrograms(), getSales()]);
@@ -147,6 +152,34 @@ export default function StorePage() {
     }
   }
 
+  async function handleConfirm(event) {
+    event.preventDefault();
+    setBusyId(confirming.id);
+    try {
+      await confirmStorePayment(confirming.id, confirming.method, confirming.reference);
+      setConfirming(null);
+      await refresh();
+      showToast(t('strOrderConfirmed'));
+    } catch (confirmError) {
+      showToast(`${t('strActionError')} ${confirmError.message}`);
+    } finally {
+      setBusyId('');
+    }
+  }
+
+  async function handleDecline(orderId) {
+    if (!window.confirm(t('strDeclineConfirm'))) return;
+    setBusyId(orderId);
+    try {
+      await cancelStoreOrder(orderId);
+      await refresh();
+    } catch (declineError) {
+      showToast(`${t('strActionError')} ${declineError.message}`);
+    } finally {
+      setBusyId('');
+    }
+  }
+
   async function copyLink() {
     try {
       await navigator.clipboard.writeText(storeLink);
@@ -175,6 +208,43 @@ export default function StorePage() {
               <div className="panel store-stat"><span className="eyebrow">{t('strStatRevenue')}</span><strong dir="ltr">{formatRevenue(sales.revenue, locale)}</strong></div>
               <div className="panel store-stat"><span className="eyebrow">{t('strStatPending')}</span><strong>{sales.orders_pending}</strong></div>
             </div>
+          )}
+
+          <PaymentMethodsPanel />
+
+          {sales?.pending?.length > 0 && (
+            <section className="panel store-pending">
+              <div className="panel-heading"><div><span className="eyebrow">{t('strStatPending')}</span><h3>{t('strPendingOrders')}</h3></div></div>
+              <p className="muted-copy">{t('strPendingHelp')}</p>
+              <ul className="store-sales">
+                {sales.pending.map((order) => (
+                  <li key={order.order_id}>
+                    <span className="store-sale-title">{order.title}<small>{t('strBuyer')}: {order.buyer} {'\u00B7'} {t('payReference')}: <span dir="ltr">{orderReference(order.order_id)}</span></small></span>
+                    <span className={`soft-badge ${orderStage(order) === 'reported' ? 'badge-green' : 'badge-muted'}`}>{t(orderStage(order) === 'reported' ? 'strClientPaid' : 'strAwaitingClient')}</span>
+                    <strong dir="ltr">{formatPrice(order.amount_cents, order.currency, locale, t('strFree'))}</strong>
+                    <button className="text-action" type="button" onClick={() => setConfirming({ id: order.order_id, method: 'bank_transfer', reference: '' })}>{t('confirmPayment')}</button>
+                    <button className="text-action" type="button" disabled={busyId === order.order_id} onClick={() => handleDecline(order.order_id)}>{t('strDecline')}</button>
+                    {confirming?.id === order.order_id && (
+                      <form className="invoice-confirm" onSubmit={handleConfirm}>
+                        <p className="muted-copy">{t('strConfirmHelp')}</p>
+                        <label className="form-label">{t('paidVia')}
+                          <select className="field" value={confirming.method} onChange={(event) => setConfirming({ ...confirming, method: event.target.value })}>
+                            {PAID_METHODS.map((method) => <option key={method} value={method}>{t(`paidVia_${method}`)}</option>)}
+                          </select>
+                        </label>
+                        <label className="form-label">{t('paymentReference')}
+                          <input className="field" maxLength={120} value={confirming.reference} onChange={(event) => setConfirming({ ...confirming, reference: event.target.value })} placeholder={t('paymentReferencePlaceholder')} />
+                        </label>
+                        <div className="template-actions">
+                          <Button variant="primary" size="small" type="submit" disabled={busyId === order.order_id}>{t('strConfirmDeliver')}</Button>
+                          <Button variant="secondary" size="small" type="button" onClick={() => setConfirming(null)}>{t('chkCancel')}</Button>
+                        </div>
+                      </form>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
           )}
 
           <section className="panel store-share">
@@ -235,7 +305,7 @@ export default function StorePage() {
                 {sales.recent.map((order) => (
                   <li key={order.order_id}>
                     <span className="store-sale-title">{order.title}<small>{t('strBuyer')}: {order.buyer}</small></span>
-                    {order.payment_mode === 'demo' && <span className="soft-badge badge-amber">{t('strDemoTag')}</span>}
+                    {order.paid_method && <span className="soft-badge badge-muted">{t(`paidVia_${order.paid_method === 'card' ? 'other' : order.paid_method}`)}</span>}
                     <span className={`soft-badge ${order.delivered ? 'badge-green' : 'badge-amber'}`}>{order.delivered ? t('strDelivered') : t('strNotDelivered')}</span>
                     <strong dir="ltr">{formatPrice(order.amount_cents, order.currency, locale, t('strFree'))}</strong>
                     <small>{new Date(order.purchased_at).toLocaleDateString(locale)}</small>

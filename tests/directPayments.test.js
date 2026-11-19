@@ -1,6 +1,6 @@
 import test, { before, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { translations } from '../src/i18n/translations.js';
 import {
   bankLines, emptyPaymentForm, formFromMethods, formatIban, ibanIsValid, invoiceStage, normalizeIban, paymentsReady, validatePaymentForm,
@@ -268,12 +268,64 @@ test('every new payment text exists in all five languages with the same placehol
   for (const locale of ['en', 'ar', 'de', 'fr', 'es']) assert.doesNotMatch(translations[locale].invoicingDescription, /Stripe/, locale);
 });
 
-test('the packages and invoices screens no longer call Stripe', () => {
-  const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
-  for (const path of ['src/pages/InvoicingPage.jsx', 'src/components/ClientBilling.jsx', 'src/services/invoicingService.js', 'src/components/PaymentMethodsPanel.jsx', 'src/components/PaymentInstructions.jsx']) {
-    assert.doesNotMatch(read(path), /stripe/i, path);
+test('no code, setting or screen text mentions Stripe any more', () => {
+  const root = new URL('../', import.meta.url);
+  const hits = [];
+  const visit = (relative) => {
+    const url = new URL(relative, root);
+    if (!existsSync(url)) return;
+    if (statSync(url).isDirectory()) {
+      for (const name of readdirSync(url)) visit(`${relative.replace(/\/$/, '')}/${name}`);
+    } else if (/\.(js|jsx|mjs|json|html|example)$/.test(relative) && /stripe/i.test(readFileSync(url, 'utf8'))) {
+      hits.push(relative);
+    }
+  };
+  for (const entry of ['api', 'src', 'scripts', 'package.json', 'vercel.json', 'index.html', '.env.example']) visit(entry);
+  assert.deepEqual(hits, []);
+  assert.equal(existsSync(new URL('api/stripe.js', root)) || existsSync(new URL('api/stripe-webhook.js', root)) || existsSync(new URL('api/store.js', root)), false);
+  const lock = JSON.parse(readFileSync(new URL('package-lock.json', root), 'utf8'));
+  assert.equal(Object.keys(lock.packages).some((name) => /(^|\/)stripe$/.test(name)), false, 'the stripe package is gone');
+  for (const locale of ['en', 'ar', 'de', 'fr', 'es']) {
+    assert.equal(Object.values(translations[locale]).some((text) => /stripe/i.test(text)), false, locale);
   }
-  const stripeApi = read('api/stripe.js');
-  assert.doesNotMatch(stripeApi, /checkout\s*:|invoiceId|buildCheckoutParams/);
-  assert.doesNotMatch(read('api/stripe-webhook.js'), /invoice/i);
+});
+
+test('the database keeps no Stripe tables, columns or functions', async () => {
+  const tables = await rows("select table_name, column_name from information_schema.columns where table_schema = 'public' and (table_name ilike '%stripe%' or column_name ilike '%stripe%')");
+  assert.deepEqual(tables, []);
+  assert.deepEqual(await rows("select table_name from information_schema.tables where table_schema = 'public' and table_name = 'coach_payment_accounts'"), []);
+  assert.deepEqual(await rows("select proname from pg_proc where pronamespace = 'public'::regnamespace and proname in ('mark_invoice_paid', 'complete_store_order', 'finish_store_order')"), []);
+  assert.deepEqual((await rows("select pg_get_constraintdef(oid) as def from pg_constraint where conname = 'store_orders_payment_mode_check'")).map((row) => /stripe|demo/.test(row.def)), [false]);
+});
+
+test('a project that sold through Stripe keeps its paid orders and invoices when the cleanup runs', async () => {
+  const STORE_MIGRATION = new URL('../supabase/migrations/20261115002500_store_direct_payments.sql', import.meta.url);
+  // Put the old shape back: the Stripe columns and table, the old payment modes, and orders and invoices paid that way.
+  await db.exec(`
+    alter table public.store_orders drop constraint store_orders_payment_mode_check;
+    alter table public.store_orders add column stripe_session_id text, add column stripe_payment_intent_id text;
+    alter table public.invoices add column stripe_checkout_session_id text, add column stripe_payment_intent_id text;
+    create table public.coach_payment_accounts (coach_id uuid primary key, stripe_account_id text not null);
+  `);
+  await db.query(
+    `insert into public.store_orders (buyer_client_id, coach_id, product_title, amount_cents, currency, status, payment_mode, stripe_session_id, purchased_at)
+     values ($1, $2, 'Old plan', 2900, 'usd', 'paid', 'stripe', 'cs_1', now()), ($1, $2, 'Test plan', 100, 'usd', 'paid', 'demo', null, now())`,
+    [ids.sara, ids.coach],
+  );
+  await db.query(
+    "insert into public.invoices (invoice_number, coach_id, client_id, description, amount_cents, currency, status, paid_at, stripe_checkout_session_id) values ('INV-OLD1', $1, $2, 'Old', 9000, 'usd', 'paid', now(), 'cs_9')",
+    [ids.coach, ids.sara],
+  );
+
+  await db.exec(readFileSync(STORE_MIGRATION, 'utf8'));
+
+  assert.deepEqual(
+    (await rows("select product_title, status, payment_mode, paid_method from public.store_orders order by product_title")).map((row) => [row.product_title, row.status, row.payment_mode, row.paid_method]),
+    [['Old plan', 'paid', 'manual', 'card'], ['Test plan', 'paid', 'manual', 'other']],
+  );
+  assert.deepEqual((await rows("select status, paid_method from public.invoices where invoice_number = 'INV-OLD1'"))[0], { status: 'paid', paid_method: 'card' });
+  assert.deepEqual(await rows("select column_name from information_schema.columns where table_schema = 'public' and column_name ilike '%stripe%'"), []);
+  assert.deepEqual(await rows("select 1 from information_schema.tables where table_schema = 'public' and table_name = 'coach_payment_accounts'"), []);
+  // The buyer keeps the order they paid for.
+  assert.deepEqual((await ok(as(ids.sara).rpc('get_my_store'))).purchases.map((purchase) => purchase.title).sort(), ['Old plan', 'Test plan']);
 });

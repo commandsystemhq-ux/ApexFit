@@ -71,7 +71,8 @@ beforeEach(async () => {
 test('manual-setup.sql contains the migration and it can be applied again', async () => {
   const migration = readFileSync(MIGRATION, 'utf8').replace(/\r\n/g, '\n').trim();
   assert.ok(readFileSync(MANUAL_SETUP, 'utf8').replace(/\r\n/g, '\n').includes(migration));
-  await db.exec(readFileSync(MIGRATION, 'utf8'));
+  // The whole setup file is applied again, the way a coach would re-run it in the SQL editor.
+  await db.exec(readFileSync(MANUAL_SETUP, 'utf8'));
 });
 
 // ---------------------------------------------------------------------- store
@@ -87,10 +88,8 @@ const saveProduct = (userId, o = {}) => as(userId).rpc('save_store_product', {
   p_publish: o.publish ?? true,
 });
 
-const completeOrder = (orderId, o = {}) => db.query(
-  'select public.complete_store_order($1, $2, $3, $4, $5, $6) as result',
-  [orderId, o.session === undefined ? `cs_${orderId}` : o.session, o.amount ?? 2900, o.currency ?? 'usd', o.intent ?? 'pi_1', o.mode ?? 'stripe'],
-);
+// The coach confirms that an order was paid (this delivers the program).
+const completeOrder = async (orderId, o = {}) => ({ rows: [{ result: await ok(as(o.coach ?? ids.coachA).rpc('confirm_store_payment', { p_order_id: orderId, p_method: o.method ?? 'bank_transfer', p_reference: o.reference ?? null })) }] });
 
 test('coaches create, edit, publish and delete store products', async () => {
   const id = await ok(saveProduct(ids.coachA, { publish: false, cover: 'https://img.example.com/cover.png' }));
@@ -196,7 +195,7 @@ test('only clients of the coach can start a purchase of a published product', as
   assert.equal(await count('select count(*) as n from public.store_orders'), 0);
 });
 
-test('payments are confirmed only by the server, only for the right amount, and only once', async () => {
+test('the client reports a payment and only the coach can confirm it; confirming delivers the program once', async () => {
   await ok(as(ids.coachA).rpc('save_workflow', {
     p_workflow_id: null, p_name: 'Plan ready', p_description: '', p_trigger_type: 'plan_assigned', p_is_active: true,
     p_steps: [{ delay_days: 0, action_type: 'send_message', message_template: 'Thanks for your purchase, {client_name}!' }],
@@ -204,41 +203,92 @@ test('payments are confirmed only by the server, only for the right amount, and 
   const productId = await ok(saveProduct(ids.coachA, { price: 2900 }));
   const { order_id: orderId } = await ok(as(ids.sara).rpc('begin_store_purchase', { p_product_id: productId }));
 
-  await fails(as(ids.sara).rpc('complete_store_order', { p_order_id: orderId, p_session_id: 'cs', p_amount_cents: 2900, p_currency: 'usd', p_payment_intent: 'pi', p_mode: 'demo' }), /permission denied/);
-  await fails(as(ids.coachA).rpc('complete_store_order', { p_order_id: orderId, p_session_id: 'cs', p_amount_cents: 2900, p_currency: 'usd', p_payment_intent: 'pi', p_mode: 'demo' }), /permission denied/);
-  assert.equal((await rows('select status from public.store_orders'))[0].status, 'pending');
+  await ok(as(ids.sara).rpc('report_store_payment', { p_order_id: orderId }));
+  assert.deepEqual((await rows('select status, payment_reported_at is not null as reported from public.store_orders'))[0], { status: 'pending', reported: true });
+  assert.equal(await count('select count(*) as n from public.program_assignments'), 0, 'reporting a payment delivers nothing');
 
-  await assert.rejects(completeOrder(orderId, { amount: 100 }), /does not match/);
-  await assert.rejects(completeOrder(orderId, { currency: 'eur' }), /does not match/);
-  await assert.rejects(completeOrder(orderId, { mode: 'cash' }), /Unsupported payment mode/);
+  // Nobody but the coach of the order can confirm it; the internal delivery function is not callable at all.
+  await fails(as(ids.sara).rpc('confirm_store_payment', { p_order_id: orderId, p_method: 'cash' }), /active coach/);
+  await fails(as(ids.coachB).rpc('confirm_store_payment', { p_order_id: orderId, p_method: 'cash' }), /not found/);
+  await fails(as(ids.trainer).rpc('confirm_store_payment', { p_order_id: orderId, p_method: 'cash' }), /active coach|not found/);
+  await fails(as(ids.coachA).rpc('confirm_store_payment', { p_order_id: orderId, p_method: 'bitcoin' }), /how the order was paid/);
+  await fails(as(ids.coachA).rpc('confirm_store_payment', { p_order_id: orderId, p_method: 'cash', p_reference: 'x'.repeat(121) }), /too long/);
+  await fails(as(ids.coachA).rpc('deliver_store_order', { p_order_id: orderId, p_mode: 'manual', p_method: 'cash', p_reference: null }), /permission denied/);
+  await fails(as(ids.sara).rpc('deliver_store_order', { p_order_id: orderId, p_mode: 'manual', p_method: 'cash', p_reference: null }), /permission denied/);
+  assert.equal((await rows('select status from public.store_orders'))[0].status, 'pending');
   assert.equal(await count('select count(*) as n from public.program_assignments'), 0);
 
-  const [{ result }] = (await completeOrder(orderId)).rows;
+  const [{ result }] = (await completeOrder(orderId, { reference: '  TRX 7  ' })).rows;
   assert.deepEqual([result.status, result.already_paid, result.delivered], ['paid', false, true]);
   const [order] = await rows('select * from public.store_orders');
-  assert.deepEqual([order.status, order.stripe_session_id, order.stripe_payment_intent_id, order.payment_mode], ['paid', `cs_${orderId}`, 'pi_1', 'stripe']);
+  assert.deepEqual([order.status, order.payment_mode, order.paid_method, order.payment_reference], ['paid', 'manual', 'bank_transfer', 'TRX 7']);
   assert.ok(order.purchased_at && order.assignment_id);
   assert.deepEqual((await rows('select body from public.coach_messages')).map((row) => row.body), ['Thanks for your purchase, Sara Ali!'], 'the plan-assigned workflow ran');
 
   const [{ result: replay }] = (await completeOrder(orderId)).rows;
   assert.equal(replay.already_paid, true);
-  assert.equal(await count('select count(*) as n from public.program_assignments'), 1, 'a repeated webhook never assigns twice');
+  assert.equal(await count('select count(*) as n from public.program_assignments'), 1, 'confirming twice never assigns twice');
   assert.equal(await count('select count(*) as n from public.coach_messages'), 1);
 });
 
-test('demo mode confirmation skips the amount check but is still recorded as demo', async () => {
-  const productId = await ok(saveProduct(ids.coachA, { price: 4900 }));
+test('only the buyer can report a payment, only on an open paid order, and a price change clears it', async () => {
+  const productId = await ok(saveProduct(ids.coachA, { price: 2900 }));
   const { order_id: orderId } = await ok(as(ids.sara).rpc('begin_store_purchase', { p_product_id: productId }));
-  await completeOrder(orderId, { mode: 'demo', session: null, amount: null, currency: null, intent: null });
-  const [order] = await rows('select status, payment_mode from public.store_orders');
-  assert.deepEqual(order, { status: 'paid', payment_mode: 'demo' });
+  await fails(as(ids.omar).rpc('report_store_payment', { p_order_id: orderId }), /own open orders/);
+  await fails(as(ids.coachA).rpc('report_store_payment', { p_order_id: orderId }), /client account/);
+  await ok(as(ids.sara).rpc('report_store_payment', { p_order_id: orderId }));
+  assert.equal((await ok(as(ids.sara).rpc('begin_store_purchase', { p_product_id: productId }))).payment_reported, true);
+
+  await ok(saveProduct(ids.coachA, { id: productId, price: 3500 }));
+  const again = await ok(as(ids.sara).rpc('begin_store_purchase', { p_product_id: productId }));
+  assert.deepEqual([again.amount_cents, again.payment_reported], [3500, false], 'a payment reported at the old price no longer counts');
+
+  const freeProduct = await ok(saveProduct(ids.coachA, { price: 0, title: 'Free one' }));
+  await ok(as(ids.omar).rpc('begin_store_purchase', { p_product_id: freeProduct }));
+  const [{ id: freeOrder }] = await rows("select id from public.store_orders where product_title = 'Free one'");
+  await fails(as(ids.omar).rpc('report_store_payment', { p_order_id: freeOrder }), /own open orders/);
+});
+
+test('an open order can be declined by the coach or withdrawn by the buyer, and bought again', async () => {
+  const productId = await ok(saveProduct(ids.coachA, { price: 2900 }));
+  const { order_id: first } = await ok(as(ids.sara).rpc('begin_store_purchase', { p_product_id: productId }));
+  await fails(as(ids.omar).rpc('cancel_store_order', { p_order_id: first }), /own open orders/);
+  await fails(as(ids.coachB).rpc('cancel_store_order', { p_order_id: first }), /own open orders/);
+  await ok(as(ids.coachA).rpc('cancel_store_order', { p_order_id: first }));
+  assert.equal((await rows('select status from public.store_orders where id = $1', [first]))[0].status, 'canceled');
+  await fails(as(ids.coachA).rpc('confirm_store_payment', { p_order_id: first, p_method: 'cash' }), /can no longer be completed/);
+
+  const { order_id: second } = await ok(as(ids.sara).rpc('begin_store_purchase', { p_product_id: productId }));
+  assert.notEqual(second, first);
+  await ok(as(ids.sara).rpc('cancel_store_order', { p_order_id: second }));
+  const { order_id: third } = await ok(as(ids.sara).rpc('begin_store_purchase', { p_product_id: productId }));
+  await completeOrder(third);
+  await fails(as(ids.sara).rpc('cancel_store_order', { p_order_id: third }), /own open orders/);
+  assert.equal(await count('select count(*) as n from public.program_assignments'), 1);
+});
+
+test('the coach sees open orders, the ones the client has paid first, and the client sees their own', async () => {
+  const productId = await ok(saveProduct(ids.coachA, { price: 2900 }));
+  const { order_id: waiting } = await ok(as(ids.omar).rpc('begin_store_purchase', { p_product_id: productId }));
+  const { order_id: paid } = await ok(as(ids.sara).rpc('begin_store_purchase', { p_product_id: productId }));
+  await ok(as(ids.sara).rpc('report_store_payment', { p_order_id: paid }));
+
+  const sales = await ok(as(ids.coachA).rpc('get_store_sales'));
+  assert.deepEqual(sales.pending.map((order) => [order.order_id, order.buyer, Boolean(order.payment_reported_at)]), [[paid, 'Sara Ali', true], [waiting, 'Omar Hassan', false]]);
+  assert.equal(sales.orders_pending, 2);
+  assert.deepEqual((await ok(as(ids.coachB).rpc('get_store_sales'))).pending, []);
+
+  const mine = await ok(as(ids.sara).rpc('get_my_store'));
+  assert.deepEqual([mine.products[0].pending_order.id, mine.products[0].pending_order.reported, mine.products[0].coach_id], [paid, true, ids.coachA]);
+  assert.equal((await ok(as(ids.lina).rpc('get_my_store'))).products[0].pending_order, null);
+  assert.equal((await ok(as(ids.omar).rpc('get_my_store'))).products[0].pending_order.reported, false);
 });
 
 test('a paid order is kept even when the program cannot be delivered', async () => {
   const productId = await ok(saveProduct(ids.coachA, { price: 2900 }));
   const { order_id: orderId } = await ok(as(ids.sara).rpc('begin_store_purchase', { p_product_id: productId }));
   await db.query("update public.coach_clients set status = 'archived' where client_id = $1", [ids.sara]);
-  const [{ result }] = (await completeOrder(orderId)).rows;
+  const [{ result }] = (await completeOrder(orderId, { method: 'cash' })).rows;
   assert.deepEqual([result.status, result.delivered], ['paid', false]);
   const [order] = await rows('select status, assignment_id, note from public.store_orders');
   assert.equal(order.status, 'paid');
@@ -250,9 +300,9 @@ test('sales figures add up per currency and per product, and sold products canno
   const strength = await ok(saveProduct(ids.coachA, { price: 2900, title: 'Strength' }));
   const euro = await ok(saveProduct(ids.coachA, { price: 1500, currency: 'eur', title: 'Mobility' }));
   const unsold = await ok(saveProduct(ids.coachA, { price: 900, title: 'Unsold' }));
-  for (const [client, product, amount, currency] of [[ids.sara, strength, 2900, 'usd'], [ids.omar, strength, 2900, 'usd'], [ids.sara, euro, 1500, 'eur']]) {
+  for (const [client, product] of [[ids.sara, strength], [ids.omar, strength], [ids.sara, euro]]) {
     const { order_id: orderId } = await ok(as(client).rpc('begin_store_purchase', { p_product_id: product }));
-    await completeOrder(orderId, { amount, currency });
+    await completeOrder(orderId);
   }
   await ok(as(ids.lina).rpc('begin_store_purchase', { p_product_id: unsold }));
 

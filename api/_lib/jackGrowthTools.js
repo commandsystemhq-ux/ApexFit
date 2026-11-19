@@ -92,7 +92,7 @@ export const GROWTH_COACH_TOOLS = [
   {
     name: 'get_store_sales',
     roles: ['coach'],
-    description: 'Read the store sales: number of paid orders, revenue per currency, best-selling products and the latest buyers.',
+    description: 'Read the store sales: number of paid orders, revenue per currency, best-selling products and the latest buyers, and the orders waiting for the coach to confirm that the client paid (clients who say they paid come first).',
     parameters: () => ({ type: 'object', properties: {} }),
     async run(_args, ctx) {
       const { data, error } = await ctx.userClient.rpc('get_store_sales');
@@ -101,10 +101,13 @@ export const GROWTH_COACH_TOOLS = [
         result: {
           orders_paid: data.orders_paid,
           open_checkouts: data.orders_pending,
+          waiting_for_payment: (data.pending || []).slice(0, 10).map((order) => ({
+            product: order.title, buyer: order.buyer, amount: formatMoney(order.amount_cents, order.currency, 'en'), client_says_paid: Boolean(order.payment_reported_at),
+          })),
           revenue: data.revenue.map((line) => ({ currency: line.currency, amount: Number(line.cents) / 100 })),
           products: data.products.slice(0, 5).map((item) => ({ title: item.title, sales: item.sales, revenue: Number(item.cents) / 100, currency: item.currency })),
           recent: data.recent.slice(0, 5).map((order) => ({
-            product: order.title, buyer: order.buyer, amount: formatMoney(order.amount_cents, order.currency, 'en'), date: isoDay(order.purchased_at), test_purchase: order.payment_mode === 'demo',
+            product: order.title, buyer: order.buyer, amount: formatMoney(order.amount_cents, order.currency, 'en'), date: isoDay(order.purchased_at), paid_by: order.paid_method || order.payment_mode,
           })),
         },
       };

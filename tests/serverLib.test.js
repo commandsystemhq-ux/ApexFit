@@ -2,7 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
 import { decryptSecret, encryptSecret } from '../api/_lib/crypto.js';
-import { computeApplicationFee } from '../api/_lib/stripeCheckout.js';
 import { NOTIFICATION_TYPES, buildPushMessage } from '../api/_lib/pushText.js';
 
 const key = randomBytes(32).toString('base64');
@@ -15,13 +14,6 @@ test('stored secrets round-trip and reject tampering or wrong keys', () => {
   assert.throws(() => decryptSecret(encrypted, randomBytes(32).toString('base64')));
   assert.throws(() => decryptSecret(`${encrypted.slice(0, -2)}AA`, key));
   assert.throws(() => encryptSecret('x', 'short'), /32 bytes/);
-});
-
-test('the platform fee on a store sale is a rounded percentage and zero by default', () => {
-  assert.equal(computeApplicationFee(333, 2.5), 8);
-  assert.equal(computeApplicationFee(50000, 10), 5000);
-  assert.equal(computeApplicationFee(50000, 0), 0);
-  assert.equal(computeApplicationFee(50000, undefined), 0);
 });
 
 test('push messages exist for every type and locale and fall back to English', () => {

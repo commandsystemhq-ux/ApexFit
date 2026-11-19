@@ -1,6 +1,5 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildStoreCheckoutParams, isDemoStore } from '../api/_lib/storeCheckout.js';
 import { NOTIFICATION_TYPES, buildPushMessage } from '../api/_lib/pushText.js';
 import { parseJackRequest } from '../api/_lib/jackAgent.js';
 import { buildSystemPrompt } from '../api/_lib/jackKnowledge.js';
@@ -59,24 +58,6 @@ test('store helpers format prices, links and ids', () => {
   for (const bad of ['http://a.example.com', 'javascript:alert(1)', 'https://a b', '', null, `https://a.example.com/${'x'.repeat(500)}`]) assert.equal(isSecureUrl(bad), false, String(bad).slice(0, 30));
   assert.equal(isUuid('00000000-0000-4000-8000-0000000000a1'), true);
   assert.equal(isUuid('../../etc/passwd'), false);
-});
-
-test('Stripe checkout for a store order carries the order id and the exact amount', () => {
-  const order = { order_id: 'o1', amount_cents: 2990, currency: 'eur', title: 'Strength Basics' };
-  const params = buildStoreCheckoutParams({ order, destinationAccount: 'acct_1', appUrl: 'https://app.example.com', customerEmail: 'a@b.co', feePercent: 10 });
-  assert.equal(params.line_items[0].price_data.unit_amount, 2990);
-  assert.equal(params.line_items[0].price_data.currency, 'eur');
-  assert.equal(params.metadata.store_order_id, 'o1');
-  assert.equal(params.payment_intent_data.metadata.store_order_id, 'o1');
-  assert.equal(params.payment_intent_data.application_fee_amount, 299);
-  assert.equal(params.payment_intent_data.transfer_data.destination, 'acct_1');
-  assert.equal(params.success_url, 'https://app.example.com/my-store?checkout=success');
-  assert.equal(params.cancel_url, 'https://app.example.com/my-store?checkout=canceled');
-  assert.equal('application_fee_amount' in buildStoreCheckoutParams({ order, destinationAccount: 'a', appUrl: 'https://x.y' }).payment_intent_data, false);
-  assert.equal(isDemoStore({ STORE_DEMO_MODE: 'true' }), true);
-  assert.equal(isDemoStore({ STORE_DEMO_MODE: ' 1 ' }), true);
-  assert.equal(isDemoStore({ STORE_DEMO_MODE: 'false' }), false);
-  assert.equal(isDemoStore({}), false);
 });
 
 // ----------------------------------------------------------------- team

@@ -106,12 +106,12 @@ test('create_store_product rejects bad input and other coaches\' programs withou
   assert.equal(await count('select count(*) as n from public.store_products'), 0);
 });
 
-test('get_store_sales summarizes paid orders and keeps test purchases visible', async () => {
+test('get_store_sales summarizes paid orders and lists the orders waiting for payment', async () => {
   await executeTool('create_store_product', { program: 'Strength Basics', price: 29 }, coach());
   const [{ id: productId }] = await rows('select id from public.store_products');
   for (const buyer of [ids.sara, ids.omar]) {
     const { order_id: orderId } = await rpc(buyer, 'begin_store_purchase', { p_product_id: productId });
-    await db.query("select public.complete_store_order($1, null, null, null, null, 'demo')", [orderId]);
+    await rpc(ids.coachA, 'confirm_store_payment', { p_order_id: orderId, p_method: 'cash', p_reference: null });
   }
   const { order_id: pending } = await rpc(ids.saraK, 'begin_store_purchase', { p_product_id: productId });
   assert.ok(pending);
@@ -121,7 +121,8 @@ test('get_store_sales summarizes paid orders and keeps test purchases visible', 
   assert.deepEqual([sales.result.orders_paid, sales.result.open_checkouts], [2, 1]);
   assert.deepEqual(sales.result.revenue, [{ currency: 'usd', amount: 58 }]);
   assert.deepEqual(sales.result.products, [{ title: 'Strength Basics', sales: 2, revenue: 58, currency: 'usd' }]);
-  assert.ok(sales.result.recent.every((order) => order.test_purchase && order.date === TODAY));
+  assert.ok(sales.result.recent.every((order) => order.paid_by === 'cash' && order.date === TODAY));
+  assert.deepEqual(sales.result.waiting_for_payment.map((order) => [order.product, order.client_says_paid]), [['Strength Basics', false]]);
   assert.deepEqual((await executeTool('get_store_sales', {}, ctx(ids.coachB, 'coach'))).result.revenue, []);
 
   const mine = await executeTool('get_my_store', {}, client());

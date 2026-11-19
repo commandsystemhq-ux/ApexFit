@@ -71,3 +71,9 @@ export function publicStorePath(coachId) {
 export function isUuid(value) {
   return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }
+
+// What a buyer quotes when paying, so the coach can match the payment to the order: ORD-1A2B3C4D.
+export const orderReference = (orderId) => `ORD-${String(orderId || '').replace(/-/g, '').slice(0, 8).toUpperCase()}`;
+
+// The state of an order for the coach: waiting for the client, the client says paid, delivered.
+export const orderStage = (order) => (order.payment_reported_at ? 'reported' : 'waiting');

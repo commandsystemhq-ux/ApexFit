@@ -32,12 +32,3 @@ export function appUrl(environment = process.env) {
   if (value === null) throw new ConfigError('APP_URL is not a valid web address. Use the full address of your site, for example https://your-app.vercel.app');
   return value;
 }
-
-export function platformFeePercent() {
-  const raw = optionalEnv('STRIPE_PLATFORM_FEE_PERCENT', '0');
-  const percent = Number(raw);
-  if (!Number.isFinite(percent) || percent < 0 || percent > 50) {
-    throw new ConfigError('STRIPE_PLATFORM_FEE_PERCENT must be a number between 0 and 50.');
-  }
-  return percent;
-}
