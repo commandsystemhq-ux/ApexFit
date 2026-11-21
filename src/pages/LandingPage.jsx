@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import BrandMark from '../components/BrandMark.jsx';
 import LanguageToggle from '../components/LanguageToggle.jsx';
+import PublicFooter from '../components/PublicFooter.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 
 export default function LandingPage() {
@@ -58,7 +59,7 @@ export default function LandingPage() {
           <Link className="button button-primary button-large" to="/signup">{t('trial')} <span aria-hidden="true">→</span></Link>
         </article>
       </section>
-      <footer className="landing-footer"><BrandMark /><span>© {new Date().getFullYear()} ApexFit</span></footer>
+      <PublicFooter />
     </div>
   );
 }

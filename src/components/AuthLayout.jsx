@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import BrandMark from './BrandMark.jsx';
 import LanguageToggle from './LanguageToggle.jsx';
+import PublicFooter from './PublicFooter.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import { AUTH_PATHS } from '../routes.js';
 
@@ -22,6 +23,7 @@ export default function AuthLayout({ title, description, footer, children }) {
           <p className="auth-footer">{footer}</p>
         </section>
       </main>
+      <PublicFooter />
     </div>
   );
 }

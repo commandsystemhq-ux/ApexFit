@@ -27,7 +27,8 @@ const ids = {
 };
 const SECRET = 'pdl_ntfset_test_secret_value';
 const PRICE = 'pri_01coachmonthly';
-const NOW = Date.parse('2026-11-18T12:00:00Z');
+// The database function judges the paid period against the real clock, so the fixtures must follow it too.
+const NOW = Math.floor(Date.now() / 1000) * 1000;
 const iso = (offsetDays, from = NOW) => new Date(from + offsetDays * 86_400_000).toISOString();
 
 // ------------------------------------------------------------------ signatures

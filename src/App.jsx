@@ -6,9 +6,10 @@ import PublicStorePage from './pages/PublicStorePage.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import SignupPage from './pages/SignupPage.jsx';
+import { PricingPage, PrivacyPage, RefundsPage, TermsPage } from './pages/PublicPages.jsx';
 import { useAuth } from './contexts/AuthContext.jsx';
 import { useToast } from './contexts/ToastContext.jsx';
-import { ADMIN_PATHS, AUTH_PATHS, PAGES, legacyHashPath, pathFor } from './routes.js';
+import { ADMIN_PATHS, AUTH_PATHS, PAGES, PUBLIC_PATHS, legacyHashPath, pathFor } from './routes.js';
 
 const BillingPage = lazy(() => import('./pages/BillingPage.jsx'));
 const WorkflowsPage = lazy(() => import('./pages/WorkflowsPage.jsx'));
@@ -67,6 +68,11 @@ export default function App() {
         <Route path={AUTH_PATHS.home} element={<LandingGate><LandingPage /></LandingGate>} />
 
         <Route path="/shop/:coachId" element={<PublicStorePage />} />
+
+        <Route path={PUBLIC_PATHS.pricing} element={<PricingPage />} />
+        <Route path={PUBLIC_PATHS.terms} element={<TermsPage />} />
+        <Route path={PUBLIC_PATHS.privacy} element={<PrivacyPage />} />
+        <Route path={PUBLIC_PATHS.refunds} element={<RefundsPage />} />
 
         <Route element={<PublicOnly />}>
           <Route path={AUTH_PATHS.login} element={<LoginPage />} />

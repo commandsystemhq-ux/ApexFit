@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import BrandMark from '../components/BrandMark.jsx';
 import LanguageToggle from '../components/LanguageToggle.jsx';
+import PublicFooter from '../components/PublicFooter.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import { getPublicStore } from '../services/storeService.js';
@@ -65,6 +66,7 @@ export default function PublicStorePage() {
           </>
         )}
       </main>
+      <PublicFooter />
     </div>
   );
 }

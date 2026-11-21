@@ -40,6 +40,9 @@ export const PAGES = {
 
 export const AUTH_PATHS = { home: '/', login: '/login', signup: '/signup' };
 
+// Open to everyone, signed in or not: pricing and the policies payment providers ask to review.
+export const PUBLIC_PATHS = { pricing: '/pricing', terms: '/terms', privacy: '/privacy', refunds: '/refunds' };
+
 // Pages that are not part of any role's navigation. The platform owner's AI screen is opened by its address only.
 export const ADMIN_PATHS = { ai: '/admin/ai' };
 

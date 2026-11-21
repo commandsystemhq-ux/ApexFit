@@ -13,6 +13,7 @@ import { liveRoomTranslations } from './liveRoomTranslations.js';
 import { paymentsTranslations } from './paymentsTranslations.js';
 import { platformTranslations } from './platformTranslations.js';
 import { priority2Translations } from './priority2Translations.js';
+import { publicPagesTranslations } from './publicPagesTranslations.js';
 import { workflowTranslations } from './workflowTranslations.js';
 
 export const supportedLocales = ['en', 'ar', 'de', 'fr', 'es'];
@@ -625,4 +626,5 @@ for (const locale of supportedLocales) {
   Object.assign(translations[locale], launchTranslations[locale]);
   Object.assign(translations[locale], billingTranslations[locale]);
   Object.assign(translations[locale], paymentsTranslations[locale]);
+  Object.assign(translations[locale], publicPagesTranslations[locale]);
 }

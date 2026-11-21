@@ -1335,4 +1335,27 @@ a.sidebar-profile:hover .profile-copy strong { color: #70afff; }
 .invoice-reported, .invoice-waiting { border-color: rgba(240, 181, 76, .35); background: rgba(240, 181, 76, .1); color: var(--amber); }
 /* Store: an open order the client has to pay */
 .store-order { display: grid; gap: 10px; padding-top: 6px; border-top: 1px dashed var(--line-strong); }
-.store-pending .store-sales li { flex-wrap: wrap; }
+.store-pending .store-sales li { flex-wrap: wrap; }/* Public pages (pricing, terms, privacy, refunds) and their footer */
+.public-footer { flex-wrap: wrap; gap: 14px 24px; font-size: 11px; }
+.public-footer-brand { display: flex; align-items: center; gap: 12px; }
+.public-footer-links { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+.public-footer-links a { color: var(--muted); text-decoration: none; }
+.public-footer-links a:hover { color: var(--text, #fff); text-decoration: underline; }
+.public-main { display: flex; flex: 1; justify-content: center; padding: 16px 16px 56px; }
+.public-article { display: grid; width: min(100%, 820px); align-content: start; gap: 26px; }
+.public-article > .button { justify-self: start; }
+.public-heading h1 { margin: 0 0 10px; font: 600 30px var(--font-display); }
+.public-heading p { margin: 0 0 8px; color: var(--muted); font-size: 14px; line-height: 1.75; }
+.public-heading small { color: var(--subtle); font-size: 11px; }
+.public-section { display: grid; gap: 10px; }
+.public-section h2 { margin: 0; font: 600 17px var(--font-display); }
+.public-section p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.85; }
+.public-plan { display: grid; gap: 6px; justify-items: start; }
+.public-plan p { font-size: 13px; }
+.public-plan-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.public-plan .button { width: auto; }
+.public-feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.public-feature { padding: 16px; border: 1px solid var(--line); border-radius: 12px; }
+.public-feature h3 { margin: 0 0 6px; font-size: 14px; }
+.public-feature p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.75; }
+.public-note { font-size: 12px; }
