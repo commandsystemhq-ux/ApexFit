@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "ApexFit",
+    "slug": "apexfit",
+    "scheme": "apexfit",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "bundleIdentifier": "com.apexfit.app",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "ApexFit uses the microphone to record voice messages to your coach or client."
+      }
+    },
+    "android": {
+      "package": "com.apexfit.app",
+      "permissions": ["RECORD_AUDIO"]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "expo-secure-store",
+      ["expo-audio", { "microphonePermission": "ApexFit uses the microphone to record voice messages." }],
+      "expo-web-browser",
+      "expo-localization"
+    ]
+  }
+}

@@ -1,0 +1,2 @@
+# The native app has its own package.json and is built with Expo, not on Vercel.
+apps/
