@@ -19,7 +19,7 @@ function jsonResponse(body, status = 200) {
 
 test('products are normalized to per 100 g values and unusable ones are dropped', () => {
   assert.deepEqual(normalizeProduct(OATS, 'en'), {
-    code: '3017620422003', name: 'Oats', brand: 'Acme', per100g: { calories: 372, protein_g: 13.5, carbs_g: 58.7, fat_g: 7 }, serving_g: 40,
+    code: '3017620422003', name: 'Oats', brand: 'Acme', per100g: { calories: 372, protein_g: 13.5, carbs_g: 58.7, fat_g: 7 }, serving_g: 40, source: 'openfoodfacts',
   });
   assert.equal(normalizeProduct(OATS, 'ar').name, 'شوفان');
   assert.deepEqual(per100gFrom({ energy_100g: 418.4 }), { calories: 100, protein_g: 0, carbs_g: 0, fat_g: 0 });
@@ -40,7 +40,7 @@ test('a search returns normalized items and the second identical search comes fr
   let calls = 0;
   const fetchImpl = async (url, options) => {
     calls += 1;
-    assert.match(url, /^https:\/\/world\.openfoodfacts\.org\/cgi\/search\.pl\?/);
+    assert.match(url, /^https:\/\/search\.openfoodfacts\.org\/search\?/);
     assert.ok(options.signal && options.headers['User-Agent']);
     return jsonResponse({ products: [OATS, { code: '1', product_name: 'No data', nutriments: {} }] });
   };
@@ -154,4 +154,14 @@ test('every language has the food search texts, Arabic in Arabic', () => {
   }
   assert.match(translations.ar.foodSearchLabel, /[\u0600-\u06FF]/);
   assert.match(translations.ar.foodPortionGrams, /[\u0600-\u06FF]/);
+});
+
+test('the search service answers with "hits" and a list of brands', async () => {
+  const hit = { code: '5000108236832', brands: ['Quaker', ' Quaker Oats'], product_name: 'Oats so simple', nutriments: { 'energy-kcal_100g': 379, proteins_100g: 8.9, carbohydrates_100g: 68, fat_100g: 6.4 } };
+  const result = await searchFoods({ q: 'oats "quick": (x)' }, { fetchImpl: async (url) => {
+    const query = new URL(url).searchParams.get('q');
+    assert.equal(query, 'oats quick x');
+    return jsonResponse({ hits: [hit, { code: '9', product_name: 'No energy', nutriments: {} }] });
+  }, cache: createFoodCache() });
+  assert.deepEqual(result.items.map((item) => [item.name, item.brand, item.per100g.calories]), [['Oats so simple', 'Quaker', 379]]);
 });

@@ -1,0 +1,60 @@
+# North African (Maghreb, Libya, Sudan) dishes. English|Arabic|kcal|protein|carbs|fat|serving g|extra search words
+Couscous with vegetables and meat|كسكس بالخضار واللحم|140|7|20|3.5|350|كسكسي
+Couscous with chicken|كسكس بالدجاج|150|9|20|3.5|350|كسكسي
+Tunisian couscous with fish|كسكسي بالسمك|131|8|18|3|350|كسكسي سمك
+Chicken tagine with olives and lemon|طاجين دجاج بالزيتون|153|14|4|9|300|طاجين
+Lamb tagine with prunes|طاجين لحم بالبرقوق|205|13|18|9|300|طاجين
+Kefta tagine with eggs|طاجين كفتة بالبيض|171|13|5|11|300|طاجين
+Fish tagine|طاجين سمك|121|14|5|5|300|طاجين
+Vegetable tagine|طاجين خضار|71|2|9|3|300|طاجين
+Harira soup|حريرة|82|4|11|2.5|300|حريرة
+Bissara|بيصارة|104|6|12|3.5|250|بيصارة
+Chicken pastilla|بسطيلة دجاج|283|12|25|15|150|بسطيلة
+Rfissa|رفيسة|191|12|20|7|300|رفيسة
+Tangia|طنجية|233|18|2|17|250|طنجية
+Zaalouk|زعلوك|92|1.5|8|6|100|زعلوك
+Taktouka|طكطوكة|83|1.5|8|5|100|طكطوكة
+Mrouzia|مروزية|256|15|22|12|250|مروزية
+Chakchouka|شكشوكة مغربية|93|5|6|5.5|200|شكشوكة
+Brik with egg and tuna|بريك بالبيض والتونة|272|10|22|16|100|بريك
+Lablabi|لبلابي|111|5|15|3.5|300|لبلابي
+Ojja merguez|عجة مرقاز|199|11|5|15|250|عجة
+Tunisian salad|سلطة تونسية|70|1.5|6|4.5|150|سلطة
+Mechouia salad|سلطة مشوية|79|1.5|7|5|150|سلطة
+Harissa paste|هريسة تونسية|96|3|12|4|15|هريسة
+Merguez sausage|مرقاز|293|15|2|25|100|مرقاز
+Msemen|مسمن|328|7|48|12|100|مسمن
+Baghrir|بغرير|182|5|36|2|80|بغرير
+Harcha|حرشة|301|7|48|9|80|حرشة
+Moroccan bread (khobz)|خبز مغربي|254|8|52|1.5|100|خبز
+Sellou|سلو|483|10|50|27|40|سلو سفوف
+Chebakia|شباكية|446|7|55|22|40|شباكية
+Moroccan ghriba|غريبة مغربية|427|7|57|19|30|غريبة
+Almond briouat|بريوات باللوز|401|8|45|21|40|بريوات
+Gazelle horns|كعب غزال|421|8|50|21|40|كعب
+Moroccan mint tea|شاي مغربي بالنعناع|35|0|8.5|0|200|أتاي
+Dry couscous|كسكس جاف|364|12.8|77|0.6|50|كسكسي
+Argan oil|زيت أركان|884|0|0|100|14|أركان
+Amlou|أملو|598|17|20|50|30|أملو
+Fish with chermoula|سمك بالشرمولة|146|20|3|6|200|شرمولة
+Algerian chorba|شوربة جزائرية|70.5|4|8|2.5|300|شوربة فريك
+Chakhchoukha|شخشوخة|219|9|30|7|300|شخشوخة
+Rechta|رشتة|181|8|26|5|300|رشتة
+Makroudh|مقروض|403|5|62|15|50|مقروض
+Karantika|كرنتيكا|225|8|28|9|100|كرانتيكا
+Mhajeb|مهاجب|248|6|38|8|100|مهاجب
+Libyan bazin|بازين|141.5|4|28|1.5|300|بازين
+Libyan usban|عصبان|219|12|18|11|150|عصبان
+Sudanese kisra|كسرة سودانية|128.5|3|28|0.5|100|كسرة
+Sudanese ful with ghee|فول مدمس سوداني بالسمن|160|7|16|7|200|فول
+Sudanese aseeda|عصيدة سودانية|130|3|28|1|200|عصيدة
+Mulah (Sudanese stew)|ملاح|140|8|6|9|250|ملاح
+Mauritanian thieboudienne|ثيبو جين|165|9|22|4.5|300|أرز بالسمك
+Sfenj|سفنج|290|6|42|11|60|سفنج
+Preserved lemon|ليمون مصير|17|0.5|4|0.1|20|حامض
+Moroccan olive salad|سلطة زيتون مغربية|150|1|5|14|50|زيتون
+Tunisian tuna brik|بريك تونة|265|11|21|15|100|بريك
+Tunisian kafteji|كفتاجي|150|4|12|10|200|كفتجي
+Tunisian fricassee|فريكاسي|290|8|28|16|100|فريكاسي
+Moroccan fish sandwich|ساندوتش سمك مغربي|240|13|27|9|200|سمك
+Moroccan kefta sandwich|ساندوتش كفتة مغربي|260|13|27|11|200|كفتة

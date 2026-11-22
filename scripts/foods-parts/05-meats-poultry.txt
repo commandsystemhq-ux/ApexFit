@@ -1,0 +1,84 @@
+# Meat, poultry and grills. English|Arabic|kcal|protein|carbs|fat|serving g|extra search words
+Chicken wings (fried)|جناح دجاج مقلي|300|27|8|18|100|ونجز
+Chicken wings (grilled)|جناح دجاج مشوي|213|24|0|13|100|اجنحة فراخ
+Chicken drumstick (roasted)|فخذ دجاج مشوي|185|26|0|9|120|ارجل فراخ دبوس
+Whole roasted chicken|دجاج مشوي كامل|207|27|0|11|200|فراخ مشوية
+Breaded fried chicken|دجاج مقلي بالبقسماط|254|22|10|14|150|فراخ مقلية
+Chicken liver (cooked)|كبدة دجاج مطبوخة|158|24|1|6.5|100|كبدة فراخ
+Chicken gizzards (cooked)|قوانص دجاج|147|30|0|3|100|قوانص
+Chicken hearts (cooked)|قلب دجاج|180|26|0.1|8.5|100|قلوب
+Ground chicken (cooked)|دجاج مفروم مطبوخ|188|20|0|12|120|فراخ مفرومة
+Chicken tikka|دجاج تكا|162|24|3|6|150|تكا
+Fried chicken fillet|فيليه دجاج مقلي|245|20|12|13|150|فيليه
+Chicken nuggets|ناجتس دجاج|281|15|17|17|100|ناجتس
+Beef tenderloin (cooked)|فيليه بقري مطبوخ|248|26|0|16|150|فيليه
+Ribeye steak (cooked)|ريب آي ستيك|289|25|0|21|200|ستيك
+Boiled beef|لحم بقري مسلوق|247.5|27|0|15.5|150|لحمة مسلوقة
+Beef stew|يخنة لحم|152|12|8|8|250|يخني
+Beef brisket (cooked)|صدر بقر مطبوخ|285|24|0|21|150|صدر
+Beef short ribs|ضلوع بقري|295|22|0|23|150|ضلوع
+Veal (cooked)|لحم عجالي|184|28|0|8|150|عجل بتلو
+Beef kidney (cooked)|كلاوي بقري|145|25|0|5|100|كلاوي
+Beef tongue (cooked)|لسان بقري|255|21|0|19|100|لسان
+Beef brain (cooked)|مخ بقري|143|11|0|11|100|مخ
+Beef tripe (cooked)|كرشة بقري|96|15|0|4|100|كرشة
+Lean ground beef (raw)|لحم مفروم قليل الدسم نيئ|133.5|21|0|5.5|0|مفروم
+Fatty ground beef (cooked)|لحم مفروم دسم مطبوخ|266|26|0|18|120|مفروم
+Grilled beef burger patty|برجر لحم مشوي|249|22|2|17|120|برجر
+Beef jerky|بيف جيركي|410|33|11|26|30|جيركي لحم مجفف
+Pastrami|باسترامي|147|20|1|7|30|بسطرمة
+Canned corned beef|لحم معلب كورند بيف|250|25|0|16|0|كورنبيف
+Beef mortadella|مرتديلا بقري|252|12|6|20|30|مرتديلا
+Chicken mortadella|مرتديلا دجاج|216|12|6|16|30|مرتديلا
+Beef sausage|سجق بقري|290|14|3|25|60|سوسيس
+Hot dog sausage|هوت دوج سجق|290|10|4|26|50|هوت دوج
+Salami|سلامي|331|20|2|27|30|ساليمي
+Turkey ham slices|شرائح ديك رومي|107|17|3|3|30|ديك رومي
+Ham|هام|144|21|1.5|6|30|لانشون
+Bacon (cooked)|بيكون مطبوخ|532|37|1.4|42|15|بيكن
+Beef bacon|لحم بقري مقدد|450|35|1|34|15|بيكون
+Grilled lamb chops|ريش ضاني مشوية|289|25|0|21|150|ريش
+Lamb shoulder (cooked)|كتف ضاني مطبوخ|280|25|0|20|150|كتف
+Roast leg of lamb|فخذ ضاني مشوي|243|27|0|15|150|فخذ
+Ground lamb (cooked)|ضاني مفروم مطبوخ|280|24|0|20|120|مفروم
+Lamb shank (cooked)|موزة ضاني|216|27|0|12|200|موزة
+Lamb liver (cooked)|كبدة ضاني|188|27|2|8|100|كبدة
+Goat meat (cooked)|لحم ماعز مطبوخ|135|27|0|3|150|ماعز
+Camel meat (cooked)|لحم جمل مطبوخ|143|29|0|3|150|جمل
+Goose (roasted)|إوز مشوي|298|25|0|22|150|اوز
+Quail (roasted)|سمان مشوي|226|25|0|14|100|سماني
+Pigeon (boiled)|حمام مسلوق|197|20|0|13|150|حمام
+Roast turkey|ديك رومي مشوي|183.5|29|0|7.5|150|رومي
+Turkey thigh (cooked)|فخذ ديك رومي|202|28|0|10|150|رومي
+Ground turkey (cooked)|ديك رومي مفروم|165|21|0|9|120|مفروم
+Charcoal grilled chicken|فراخ مشوية على الفحم|176|26|0|8|200|فراخ
+Chicken fajita|فاهيتا دجاج|147|16|5|7|200|فاهيتا
+Beef fajita|فاهيتا لحم|178|17|5|10|200|فاهيتا
+Baked chicken with potatoes|دجاج بالفرن بالبطاطس|146|11|12|6|300|فراخ
+Chicken curry|دجاج بالكاري|162|13|5|10|250|كاري
+Chicken in cream sauce|صدور دجاج بالكريمة|188|16|4|12|200|كريمة
+Pulled chicken|دجاج مسحب|121|18|1|5|120|مسحب
+Chicken schnitzel|بانيه دجاج|267|20|13|15|150|شنيتزل بانيه
+Beef escalope|اسكالوب لحم|246|18|12|14|150|اسكالوب
+Beef with onions|لحمة بالبصل|187|16|6|11|200|لحمه
+Beef and potato stew|يخنة لحم بالبطاطس|130|9|11|6|300|يخني
+Beef and vegetable stew|طاجن لحم بالخضار|110|9|7|5|300|طاجن
+Casserole chicken and rice|طاجن دجاج وأرز|160|11|18|5|300|طاجن
+Grilled chicken breast with spices|صدور دجاج متبلة مشوية|150|28|1|3.5|150|صدور
+Lemon herb chicken|دجاج بالليمون والأعشاب|150|24|2|5|150|فراخ
+Honey mustard chicken|دجاج بالعسل والخردل|180|22|8|6|150|فراخ
+Tandoori chicken|دجاج تندوري|160|22|3|6.5|150|تندوري
+BBQ chicken|دجاج باربكيو|190|22|10|6|150|باربكيو
+BBQ ribs|ضلوع باربكيو|290|20|10|18|150|ريبس
+Meatballs in tomato sauce|كفتة بصلصة الطماطم|180|11|8|11|200|كفتة طماطم
+Spaghetti meatballs|كرات لحم بالصلصة|200|12|10|12|150|بولز
+Sliders mini burgers|ميني برجر|270|14|24|13|60|برجر
+Grilled liver sandwich filling|كبدة مشوية|140|22|3|4|100|كبدة
+Beef shawarma wrap|راب شاورما لحم|230|14|21|10|250|شاورما
+Chicken kebab skewers|أسياخ دجاج|170|25|2|6|150|اسياخ
+Lamb kofta skewers|أسياخ كفتة ضاني|280|19|3|21|150|كفتة
+Fried liver (Egyptian style)|كبدة مقلية|190|20|5|10|150|كبدة
+Pan fried beef strips|شرائح لحم سوتيه|200|24|3|10|150|سوتيه
+Stuffed chicken breast|صدر دجاج محشي|190|24|3|9|180|محشي
+Chicken cordon bleu|دجاج كوردون بلو|250|20|12|13|180|كوردون
+Chicken popcorn|دجاج بوب كورن|302|17|18|18|100|بوب كورن

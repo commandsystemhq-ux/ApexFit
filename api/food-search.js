@@ -14,7 +14,7 @@ export default handler(['GET'], async (req, res) => {
   if (!allowRequest(user.id)) throw new HttpError(429, 'Too many requests. Wait a moment.');
   await requireRole(userClient, 'client');
 
-  const { items, cached } = await searchFoods(req.query || {}, { cache });
+  const { items, cached } = await searchFoods(req.query || {}, { cache, usdaKey: process.env.USDA_API_KEY || '' });
   res.setHeader('Cache-Control', 'private, max-age=300');
   res.status(200).json({ items, cached });
 });

@@ -1,0 +1,93 @@
+# Egyptian dishes and street food. English|Arabic|kcal|protein|carbs|fat|serving g|extra search words (per 100 g, typical home recipes)
+Ful medames with oil and cumin|فول بالزيت والكمون|135|6.5|15|5.5|200|فول مدمس زيت حار
+Ful with tahini|فول بالطحينة|150|7|15|7|200|فول طحينة
+Ful iskandarani|فول إسكندراني|120|5.5|13|5|200|فول اسكندراني طماطم
+Taameya sandwich|ساندوتش طعمية|250|8|30|11|150|فلافل عيش بلدي
+Stuffed grape leaves (mahshi warak enab)|محشي ورق عنب|170|3|22|8|100|ورق عنب دلمة
+Stuffed zucchini (mahshi kousa)|محشي كوسة|130|4|16|6|150|كوسا
+Stuffed peppers (mahshi filfil)|محشي فلفل|125|3|17|5|150|فلفل رومي
+Stuffed cabbage (mahshi koronb)|محشي كرنب|140|4|17|6|150|ملفوف كرنب
+Stuffed eggplant (mahshi betingan)|محشي باذنجان|135|3.5|16|6.5|150|بيذنجان
+Molokhia with chicken|ملوخية بالفراخ|70|7|4|3|250|ملوخية دجاج
+Molokhia with rice and chicken plate|طبق ملوخية بالأرز والفراخ|120|8|13|4|350|ملوخية رز
+Okra with meat (bamia)|بامية باللحمة|90|6|6|5|250|بامية لحم
+Green beans with meat|فاصوليا باللحمة|100|6|9|4.5|250|فاصوليا خضراء لحمة
+Peas and carrots stew|بسلة بالجزر|80|4|10|2.5|250|بسلة جزر
+Fish rice (sayadiya)|صيادية سمك|155|9|22|3.5|300|صيادية
+Ribbed rice with butter (roz moammar)|رز معمر|190|4.5|25|8|200|رز بالقشطة
+Rice with vermicelli|رز بالشعرية|165|3.3|30|3.5|200|رز شعرية
+Vegetable rice|رز بالخضار|140|3|27|2.5|200|أرز خضار
+Rice with meat|أرز باللحمة|180|8|24|6|250|رز لحم
+Rice with chicken|أرز بالفراخ|170|10|22|4.5|300|رز دجاج
+Fatta with rice and meat|فتة بالأرز واللحمة|190|9|22|7.5|300|فتة
+Hawawshi|حواوشي|270|13|23|14|200|حواوشي لحمة
+Grilled kofta|كفتة مشوية|250|21|3|17|150|كفتة
+Grilled kebab|كباب مشوي|245|24|0|16|150|كباب لحم
+Shish tawook|شيش طاووق|165|26|2|5.5|150|طاووق
+Grilled sausage (sogok)|سجق مشوي|300|14|3|26|100|سوجوك
+Mombar|ممبار|280|9|20|18|100|ممبار محشي
+Alexandrian liver (kebda eskandarani)|كبدة إسكندراني|190|18|4|11|150|كبدة
+Cow trotters (kawareh)|كوارع|220|22|0|15|150|كوارع بقر
+Macaroni with bechamel|مكرونة بالبشاميل|205|9|20|10|250|مكرونة فرن
+Macaroni with red sauce|مكرونة بالصلصة|150|5|27|2.5|250|مكرونة صلصة
+Mesaqaa (eggplant stew)|مسقعة|95|2|9|6|200|مسقعة باذنجان
+Torly (baked vegetables)|تورلي|85|2.5|10|4|250|تورلى خضار
+Meat sambousek|سمبوسة لحمة|290|9|26|17|50|سمبوسك
+Cheese sambousek|سمبوسة جبنة|310|10|27|18|50|سمبوسك
+Feteer meshaltet|فطير مشلتت|420|8|40|25|150|فطير
+Feteer with meat|فطير باللحمة|340|12|30|19|200|فطير حواوشي
+Belila|بليلة|150|4|25|4|200|بليله قمح
+Qatayef with nuts|قطايف بالمكسرات|330|6|45|14|60|قطايف
+Qatayef with cream|قطايف بالقشطة|290|5|40|12|60|قطايف
+Basbousa|بسبوسة|340|4|52|13|80|بسبوسه هريسة
+Konafa with nuts|كنافة بالمكسرات|400|6|48|21|100|كنافه
+Konafa with cream|كنافة بالقشطة|330|6|42|16|100|كنافه
+Om Ali|أم علي|270|6|30|14|200|ام علي
+Mahalabia|مهلبية|120|3|20|3|150|مهلبيه
+Rice pudding (roz bel laban)|رز باللبن|125|3|22|2.8|150|ارز بلبن
+Zalabia|زلابية|380|5|55|16|80|زلابيا
+Baklava|بقلاوة|430|6|50|24|60|بقلاوه
+Luqaimat|لقيمات|360|5|50|16|60|لقمة القاضي
+Kahk|كحك العيد|460|6|55|25|40|كحك بسكويت
+Ghorayeba|غريبة|480|5|55|27|30|غريبه
+Sobia drink|سوبيا|70|1|15|0.8|250|سوبيا
+Karkade (hibiscus) sweetened|كركديه بالسكر|45|0|11|0|250|كركدية
+Sugarcane juice|عصير قصب|70|0.2|17|0.1|250|قصب
+Tamarind drink|تمر هندي مشروب|60|0.3|15|0|250|تمر هندى
+Licorice drink (erk sous)|عرقسوس|35|0|8.5|0|250|عرق سوس
+Domiati cheese|جبنة دمياطي|257|14|3|21|40|دمياطى جبنه
+Liver sandwich|ساندوتش كبدة|230|12|24|10|200|كبدة
+Chicken shawarma sandwich|ساندوتش شاورما فراخ|216|14|22|8|250|شاورما
+Beef shawarma sandwich|ساندوتش شاورما لحمة|239|15|20|11|250|شاورما
+Shawarma meat only|لحم شاورما|253|22|3|17|150|شاورما
+Tahini sauce|صوص طحينة|218|6|8|18|30|طحينه سلطة
+Baba ghanoush|بابا غنوج|132|2.5|8|10|50|بابا غنوش
+Tabbouleh|تبولة|106|2|11|6|100|تبوله
+Fattoush|فتوش|92|2|12|4|100|فتوش سلطة
+Egyptian salad (baladi)|سلطة بلدي|60|1.2|6|3.5|150|سلطة طماطم خيار
+Yogurt cucumber salad|سلطة زبادي بالخيار|54|3|5|2.5|100|زبادي خيار
+Tahini salad|سلطة طحينة|152|4|7|12|50|طحينه
+Green salad|سلطة خضراء|41|1.2|5|1.8|150|سلطة خضرا
+Lentil soup (Egyptian)|شوربة عدس|71|4|11|1.2|250|شوربة عدس
+Chicken soup|شوربة فراخ|39|4|3|1.2|250|شوربة دجاج
+Vegetable soup|شوربة خضار|37|1.5|6|0.8|250|شوربه خضار
+Orzo soup|شوربة شعرية|53|1.5|9|1.2|250|شوربة لسان عصفور
+Meat soup|شوربة لحمة|44|4|3|1.8|250|شوربة لحم
+Eggs with basterma|بيض بالبسطرمة|263|17|1.5|21|150|بيض بسطرمة
+Omelette|أومليت|152|10.6|0.6|12|100|اومليت عجة
+Scrambled eggs|بيض مخفوق|145|10|1.6|11|100|سكرامبل
+Eggs with tomato (shakshuka)|شكشوكة بالطماطم|111|7|5|7|200|شكشوكه بيض طماطم
+Basterma|بسطرمة|176|25|1|8|30|بسطرمه
+Boiled lupin (termis)|ترمس|128|16|9|3|100|ترمس مسلوق
+Roasted pigeon stuffed with freekeh|حمام محشي فريك|232|16|15|12|200|حمام
+Roast duck|بط مشوي|328|19|0|28|150|بط
+Rabbit (cooked)|أرانب مطبوخة|164|33|0|3.5|150|ارنب
+Stuffed chicken with rice|فراخ محشية بالأرز|180|12|15|8|250|فراخ محشي
+Egyptian lentil with rice and fried onions|عدس بجبة|160|6|27|3|250|عدس
+Macaroni with minced meat|مكرونة بالكفتة|190|9|23|7|250|مكرونه لحمه
+Egyptian white beans stew|فاصوليا بيضاء بالصلصة|110|6|18|2|250|فاصوليا
+Stuffed cabbage rolls with meat|لفائف كرنب باللحمة|150|7|15|7|150|ملفوف
+Egyptian fried fish sandwich|ساندوتش سمك مقلي|250|13|26|11|200|سمك
+Egyptian koshari with sauce|كشري بالصلصة والدقة|155|4.5|27|3.5|350|كشرى
+Fried eggplant sandwich|ساندوتش باذنجان مقلي|220|5|27|10|180|باذنجان
+Egyptian chips sandwich|ساندوتش بطاطس|240|4|36|9|180|بطاطس

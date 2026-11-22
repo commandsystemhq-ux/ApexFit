@@ -1,0 +1,76 @@
+# Levantine dishes. English|Arabic|kcal|protein|carbs|fat|serving g|extra search words
+Fried kibbeh|كبة مقلية|291|12|18|19|60|كبه
+Raw kibbeh (kibbeh nayyeh)|كبة نية|192|16|14|8|100|كبه نيه
+Kibbeh in yogurt (labaniyeh)|كبة لبنية|173|9|14|9|200|كبه لبنيه
+Shish barak|شيش برك|189|9|18|9|200|شيشبرك
+Zaatar manakish|مناقيش زعتر|288|7|38|12|120|مناقيش
+Cheese manakish|مناقيش جبنة|294|12|30|14|130|مناقيش
+Meat manakish (lahm bi ajeen)|لحم بعجين|267|12|30|11|120|لحم بعجين
+Spinach fatayer|فطاير سبانخ|234|6|30|10|80|فطائر
+Cheese fatayer|فطاير جبنة|287|10|28|15|80|فطائر
+Sfiha|صفيحة|255|11|28|11|80|صفيحه
+Mujaddara|مجدرة|151|6|25|3|250|مجدره عدس
+Mansaf|منسف|191|11|20|7.5|350|منسف
+Chicken maqluba|مقلوبة دجاج|161|9|20|5|350|مقلوبه
+Lamb maqluba|مقلوبة لحم|179|9|20|7|350|مقلوبه
+Musakhan|مسخن|226|14|20|10|250|مسخن
+Cooked freekeh|فريكة مطبوخة|123|4.5|24|1|200|فريك
+Freekeh with chicken|فريكة بالدجاج|164|12|19|4.5|300|فريكه
+Ouzi|أوزي|238|10|27|10|300|اوزي
+Falafel sandwich|ساندوتش فلافل|241|8|32|9|200|فلافل
+Hummus with meat|حمص بلحمة|199|11|14|11|200|حمص
+Msabbaha|مسبحة|181|8|17|9|200|مسبحه حمص
+Muhammara|محمرة|284|4|13|24|50|محمره
+Akkawi cheese|جبنة عكاوي|247|17|2|19|40|عكاوي
+Halloumi cheese|جبنة حلوم|318|21|2.2|25|40|حلومي
+Nabulsi cheese|جبنة نابلسية|269|18|2|21|40|نابلسي
+Labneh balls in oil|كرات لبنة بالزيت|281|9|5|25|30|لبنه
+Zaatar mix|زعتر|310|10|45|10|10|زعتر
+Zaatar with olive oil|زعتر بالزيت|436|6|22|36|20|زعتر
+Kunafa nabulsia|كنافة نابلسية|367|9|40|19|100|كنافه
+Awwameh|عوامة|394|3|55|18|80|عوامه لقمة
+Atayef asafiri|عطايف|339|6|45|15|60|قطايف
+Znoud el sit|زنود الست|362|5|45|18|50|زنود
+Sahlab|سحلب|102|3|17|2.5|250|سحلب
+Lemonade with mint|ليمون بالنعناع|45|0.1|11.5|0.1|300|ليموناضة
+Turkish coffee sweet|قهوة تركية مظبوط|30|0.2|7.5|0|60|قهوة
+Mint tea with sugar|شاي بالنعناع|30|0|7.5|0|200|نعناع شاي
+Arabic salad|سلطة عربية|51|1.2|6|2.5|150|سلطة
+Moutabal|متبل|154|3.5|8|12|50|متبل باذنجان
+Yalanji (vegetarian grape leaves)|ورق عنب بالزيت|153|2.5|20|7|100|يالنجي
+Okra in oil (bamieh bi zeit)|بامية بالزيت|102|2|10|6|200|بامية
+Green beans in oil (loubieh bi zeit)|لوبية بالزيت|94|2|9|5.5|200|لوبياء
+Batata harra|بطاطا حرة|161|2.5|22|7|150|بطاطس حارة
+Kafta in tray|كفتة بالصينية|209|15|8|13|200|كفتة
+Shish kebab (beef)|شيش كباب لحم|212|25|1|12|150|شيش
+Mixed grill|مشاوي مشكلة|263|22|1|19|300|مشاوي
+Kebab halabi|كباب حلبي|249|18|6|17|150|كباب
+Freekeh soup|شوربة فريكة|82|4|12|2|250|فريك
+Tomato soup|شوربة طماطم|47|1|8|1.2|250|شوربه
+Cheese rolls (rakakat)|رقاقات بالجبنة|290|10|25|17|60|رقائق
+Eggplant fatteh|فتة باذنجان|180|6|20|9|250|فتة
+Hummus fatteh|فتة حمص|190|8|22|8|250|فتة
+Chicken fatteh|فتة دجاج|185|11|20|7|300|فتة
+Kibbeh bil sanieh|كبة بالصينية|240|13|17|13|150|كبة
+Shakriyeh (lamb in yogurt)|شاكرية|180|10|8|12|250|شاكريه لبن
+Laban emmo (lamb in yogurt)|لبن أمه|170|9|9|11|250|لبن
+Vegetarian kibbeh|كبة نباتية|200|7|28|7|100|كبه
+Shawarma wrap Lebanese|شاورما لبناني|215|13|22|8|220|شاورما
+Chicken shawarma plate|طبق شاورما دجاج|190|20|7|9|250|شاورما
+Garlic sauce (toum)|ثومية|458|1.5|5|48|30|توم
+Lebanese bread thin|خبز لبناني|275|9|55|1.2|60|خبز رقيق
+Labneh with olive oil|لبنة بزيت الزيتون|215|7|5|19|50|لبنة
+Hummus with pine nuts|حمص بالصنوبر|200|8|14|13|100|حمص
+Falafel with tahini|فلافل بالطحينة|290|11|27|16|100|فلافل
+Pistachio ice cream Arabic (booza)|بوظة|215|4|28|10|100|بوظه
+Ashta cream|قشطة شامية|220|4|12|17|50|أشطة
+Rice with lentils and onions|رز بعدس|155|5|27|3|250|مجدرة
+Kafta with potatoes|كفتة بالبطاطس|190|11|14|10|250|كفتة
+Spinach stew (sabanekh bil lahme)|سبانخ باللحمة|85|7|4|5|250|سبانخ
+Lamb stew with beans|يخنة فاصوليا بالضاني|130|9|11|6|250|فاصوليا
+Molokhia Levantine|ملوخية شامية|75|7|5|3|250|ملوخية
+Bulgur with tomato|برغل بالبندورة|110|3|20|2.5|200|برغل
+Bulgur with chickpeas|برغل بحمص|135|5|24|2|200|برغل
+Lebanese salad|سلطة لبنانية|60|1.5|6|3.5|150|سلطة
+Hindbeh (chicory with onions)|هندباء بزيت|90|2|8|6|100|هندبا
+Bulgur kibbeh balls with pomegranate|كبة بالرمان|230|10|22|11|100|كبة

@@ -3,8 +3,10 @@
 
 export const SIDEBAR_COLLAPSED_KEY = 'apexfit.sidebar-collapsed';
 export const NAV_SEEN_KEY = 'apexfit.nav-seen';
-// Below this width the sidebar is a drawer and is never collapsed (it matches the CSS breakpoint).
-export const DRAWER_MAX_WIDTH = 820;
+// Up to RAIL_MAX_WIDTH the sidebar is at least the narrow icon bar (tablets); up to DRAWER_MAX_WIDTH (phones) it is a
+// drawer behind a button. Both match the CSS breakpoints.
+export const RAIL_MAX_WIDTH = 820;
+export const DRAWER_MAX_WIDTH = 560;
 
 function safe(storage, action, fallback) {
   try {

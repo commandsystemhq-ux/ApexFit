@@ -1,20 +1,27 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Button from './Button.jsx';
+import FoodTargetProgress from './FoodTargetProgress.jsx';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
+import { getNutritionTarget } from '../services/foodReviewService.js';
+import { buildTargetProgress } from '../services/foodReviewUtils.js';
 import { addFoodLog, deleteFoodLog, listFoodLogs, updateFoodLog } from '../services/clientFoodService.js';
 import { MACRO_FIELDS, basisFromValues, entryToForm, joinPortion } from '../services/foodFormUtils.js';
 import { MEAL_TYPES, summarizeFoodDay } from '../services/clientPriority2Utils.js';
 import { getLocalDateString, shiftDate } from '../services/clientTrackingUtils.js';
 import { searchFoodDatabase } from '../services/foodSearchService.js';
 import { MAX_PORTION_GRAMS, classifyFoodQuery, createDebouncer, defaultPortionGrams, parsePortionGrams, scaleFoodPortion } from '../services/foodSearchUtils.js';
-import { mergeFoodResults, searchLocalFoods } from '../services/localFoodSearch.js';
 
+const SOURCE_LABELS = { local: 'foodSourceLocal', usda: 'foodSourceUsda', openfoodfacts: 'foodSourceOff' };
 const MEAL_LABELS = { breakfast: 'mealBreakfast', lunch: 'mealLunch', dinner: 'mealDinner', snack: 'mealSnack' };
 const EMPTY_ENTRY = { meal_type: 'breakfast', food_name: '', ingredients: '', calories: '', protein_g: '', carbs_g: '', fat_g: '' };
 
 export default function ClientFoodLogger() {
   const { locale, t } = useLocale();
+  const { user } = useAuth();
   const today = getLocalDateString();
+  // The daily goal (set by the coach or by the client), shown with what is left of it for the chosen day.
+  const [target, setTarget] = useState(null);
   const [selectedDate, setSelectedDate] = useState(today);
   const [entry, setEntry] = useState(EMPTY_ENTRY);
   const [grams, setGrams] = useState('');
@@ -35,9 +42,16 @@ export default function ClientFoodLogger() {
   const gramsRef = useRef(null);
   const caloriesRef = useRef(null);
 
-  // Common foods answer at once and need no network.
-  const localResults = useMemo(() => searchLocalFoods(searchText, { locale }), [searchText, locale]);
-  const results = useMemo(() => mergeFoodResults(localResults, remote.items), [localResults, remote.items]);
+  // The built-in food list (1000+ foods) is a separate download, fetched when this page opens. Once it is here, local
+  // results appear on every keystroke without any network.
+  const [localSearch, setLocalSearch] = useState(null);
+  useEffect(() => {
+    let active = true;
+    import('../services/localFoodSearch.js').then((module) => { if (active) setLocalSearch(module); }).catch(() => null);
+    return () => { active = false; };
+  }, []);
+  const localResults = useMemo(() => (localSearch ? localSearch.searchLocalFoods(searchText, { locale }) : []), [localSearch, searchText, locale]);
+  const results = useMemo(() => (localSearch ? localSearch.mergeFoodResults(localResults, remote.items) : remote.items), [localSearch, localResults, remote.items]);
   const typed = searchText.trim();
 
   // Open Food Facts adds products after a short pause. Any failure leaves the local results and manual entry as they are.
@@ -81,6 +95,13 @@ export default function ClientFoodLogger() {
     refresh(selectedDate);
   }, [selectedDate]);
 
+  useEffect(() => {
+    if (!user?.id) return undefined;
+    let active = true;
+    getNutritionTarget(user.id).then((row) => { if (active) setTarget(row); }).catch(() => { if (active) setTarget(null); });
+    return () => { active = false; };
+  }, [user?.id]);
+
   const dayLogs = logs.filter((log) => log.logged_on === selectedDate);
   const totals = summarizeFoodDay(dayLogs);
   const week = Array.from({ length: 7 }, (_, index) => {
@@ -92,6 +113,7 @@ export default function ClientFoodLogger() {
     };
   });
   const weekMax = Math.max(...week.map((day) => day.calories), 1);
+  const targetRows = buildTargetProgress(target, totals);
 
   function resetForm() {
     setEntry((current) => ({ ...EMPTY_ENTRY, meal_type: current.meal_type }));
@@ -243,7 +265,7 @@ export default function ClientFoodLogger() {
                   <button type="button" className="food-search-result" onClick={() => chooseFood(food)}>
                     <span className="food-result-top">
                       <strong dir="auto">{food.name}</strong>
-                      <span className={`food-source ${food.source === 'local' ? 'is-local' : ''}`}>{t(food.source === 'local' ? 'foodSourceLocal' : 'foodSourceOff')}</span>
+                      <span className={`food-source ${food.source === 'local' ? 'is-local' : ''}`}>{t(SOURCE_LABELS[food.source] || 'foodSourceOff')}</span>
                     </span>
                     <small>{[food.brand, `${food.per100g.calories} ${t('kcal')} · ${t('foodProtein')} ${food.per100g.protein_g} · ${t('foodCarbs')} ${food.per100g.carbs_g} · ${t('foodFat')} ${food.per100g.fat_g} / 100 ${t('foodGramsUnit')}`].filter(Boolean).join(' · ')}</small>
                   </button>
@@ -302,6 +324,10 @@ export default function ClientFoodLogger() {
           <div><dt>{t('foodCarbs')}</dt><dd>{totals.carbs_g}</dd></div>
           <div><dt>{t('foodFat')}</dt><dd>{totals.fat_g}</dd></div>
         </dl>
+        <div className="food-target">
+          <h4>{t('foodTargetTitle')}{target && target.set_by && target.set_by !== user?.id ? ` · ${t('foodTargetByCoach')}` : ''}</h4>
+          {targetRows.length > 0 ? <FoodTargetProgress rows={targetRows} /> : <p className="muted-copy">{t('foodTargetNone')}</p>}
+        </div>
         {loadError && <div className="notice notice-error" role="alert">{t('foodLoadError')} {loadError}</div>}
         {loading && <div className="empty-state" role="status">{t('loadingProgress')}</div>}
         {!loading && !loadError && dayLogs.length === 0 && <div className="empty-state">{t('foodNoEntries')}</div>}

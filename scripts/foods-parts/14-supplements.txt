@@ -1,0 +1,51 @@
+# Sports nutrition and protein products (typical powder or product values; check the label). English|Arabic|kcal|protein|carbs|fat|serving g|extra search words
+Whey protein concentrate (powder)|واي بروتين كونسنتريت|390|78|6|6|30|واي بروتين بودرة
+Whey protein isolate (powder)|واي بروتين أيزوليت|373|90|1|1|30|ايزوليت
+Casein protein (powder)|كازين بروتين|367|80|5|3|30|كازين
+Pea protein (powder)|بروتين البازلاء|386|75|8|6|30|نباتي
+Soy protein isolate (powder)|بروتين الصويا|382|80|0|3.4|30|صويا
+Mass gainer (powder)|مكمل زيادة الوزن ماس جينر|383|20|68|3.5|100|ماس
+Creatine monohydrate|كرياتين|0|0|0|0|5|كرياتين
+Protein bar (chocolate)|بروتين بار شوكولاتة|350|30|35|10|60|بروتين بار
+Low-carb protein bar|بروتين بار قليل الكارب|357|33|18|17|55|بروتين بار
+Protein cookie|كوكيز بروتين|395|20|45|15|60|كوكيز
+Protein pancake mix|خليط بان كيك بروتين|365|30|50|5|50|بان كيك
+Ready-to-drink protein shake|بروتين شيك جاهز|61|10|3|1|330|شيك
+Protein yogurt|زبادي بروتين|69|10|5|1|150|زبادي
+Protein pudding|بودنج بروتين|85.5|10|8|1.5|150|بودنج
+Protein ice cream|آيس كريم بروتين|93.5|8|12|1.5|100|ايس كريم
+Protein chips|شيبس بروتين|390|50|25|10|30|شيبس
+Protein pasta|مكرونة بروتين|345|25|50|5|0|مكرونة
+Collagen powder|كولاجين بودرة|360|90|0|0|10|كولاجين
+Meal replacement powder|بديل وجبة بودرة|370|30|40|10|60|بديل
+Maltodextrin|مالتوديكسترين|380|0|95|0|30|كارب
+Dextrose|دكستروز|380|0|95|0|30|جلوكوز
+MCT oil|زيت MCT|830|0|0|100|14|ام سي تي
+Chia pudding|بودنج الشيا|126|4|14|6|150|شيا
+Egg white powder|مسحوق بياض البيض|380|80|5|0.5|30|بياض
+Beef protein powder|بروتين اللحم بودرة|370|90|1|1|30|بروتين
+Chicken jerky|جيركي دجاج|289|55|6|5|30|جيركي
+Skyr|سكير|61.8|11|4|0.2|150|سكير
+Quark|كوارك|66.7|12|4|0.3|150|كوارك
+Seitan|سيتان|142|25|6|2|100|سيتان
+Textured soy protein|بروتين الصويا المجفف|329|50|30|1|30|صويا
+Plant-based burger|برجر نباتي بروتين|230|17|9|14|110|برجر
+Pre-workout oats bowl|وعاء شوفان قبل التمرين|140|6|22|3|250|شوفان
+Peanut butter protein shake|بروتين شيك بزبدة الفول السوداني|110|9|8|5|330|شيك
+Banana oat protein pancakes|بان كيك موز وشوفان وبروتين|160|10|20|4|120|بان كيك
+Tuna rice bowl (gym meal)|وعاء أرز وتونة|150|13|18|2.5|350|تونة رز
+Chicken rice broccoli (meal prep)|دجاج وأرز وبروكلي|140|13|15|3|400|ميل بريب
+Beef rice vegetables (meal prep)|لحم وأرز وخضار|160|11|17|5|400|ميل بريب
+Egg white oats (gym breakfast)|شوفان بالبيض|130|9|14|4|250|إفطار
+Sweet potato chicken (meal prep)|بطاطا حلوة ودجاج|120|11|13|2.5|400|ميل بريب
+Tuna avocado wrap|راب تونة وأفوكادو|210|13|18|10|220|راب
+Cottage cheese and berries|قريش وتوت|90|9|10|1.5|200|قريش
+Greek yogurt with nuts|زبادي يوناني بالمكسرات|130|9|9|7|180|زبادي
+Rice cakes with peanut butter|كعك الأرز بزبدة الفول السوداني|430|13|58|17|30|زبدة
+Protein overnight oats|شوفان ليلة بروتين|130|9|16|3|250|شوفان
+BCAA drink|مشروب BCAA|5|1|0|0|300|احماض
+Electrolyte drink|مشروب إلكتروليت|8|0|2|0|500|املاح
+Pre-workout drink|مشروب ما قبل التمرين|5|0|1|0|300|بري ورك اوت
+Nut mix for athletes|مكسرات للرياضيين|600|20|20|50|30|مكسرات
+Oat protein bar homemade|بار شوفان منزلي|390|12|50|16|50|بار
+Date and nut energy balls|كرات التمر والمكسرات|380|7|50|17|30|كرات

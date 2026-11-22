@@ -10,18 +10,33 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import { useChatUnread } from '../hooks/useChatUnread.js';
 import { displayNameFor } from '../services/profileUtils.js';
-import { DRAWER_MAX_WIDTH, markPageSeen, readCollapsed, readSeenPages, tooltipPosition, writeCollapsed } from '../services/sidebarState.js';
+import { DRAWER_MAX_WIDTH, RAIL_MAX_WIDTH, markPageSeen, readCollapsed, readSeenPages, tooltipPosition, writeCollapsed } from '../services/sidebarState.js';
 import { ADMIN_PATHS, NEW_PAGE_IDS, PAGES, homePathFor, navigationFor, pageForPath, roleOf } from '../routes.js';
 
 const JackFloatingWidget = lazy(() => import('./JackFloatingWidget.jsx'));
 
 const storage = () => (typeof window === 'undefined' ? null : window.localStorage);
+const RAIL_QUERY = `(min-width: ${DRAWER_MAX_WIDTH + 1}px) and (max-width: ${RAIL_MAX_WIDTH}px)`;
+
+// True on a tablet-sized window, where the menu stays on screen as the icon bar instead of hiding behind a button.
+function useRailMode() {
+  const [rail, setRail] = useState(() => typeof window !== 'undefined' && window.matchMedia(RAIL_QUERY).matches);
+  useEffect(() => {
+    const query = window.matchMedia(RAIL_QUERY);
+    const update = () => setRail(query.matches);
+    update();
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
+  return rail;
+}
 
 export default function AppShell() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => readCollapsed(storage()));
   const [seen, setSeen] = useState(() => readSeenPages(storage()));
   const [tooltip, setTooltip] = useState(null);
+  const rail = useRailMode();
   const [dataVersion, setDataVersion] = useState(0);
   const { t } = useLocale();
   const { user, profile, signOut } = useAuth();
@@ -62,16 +77,16 @@ export default function AppShell() {
 
   // The narrow icon bar has no room for labels, so the name of the item under the pointer or focus floats beside it.
   const showTooltip = useCallback((event, label) => {
-    if (!collapsed || window.innerWidth <= DRAWER_MAX_WIDTH) return;
+    if (!(collapsed || rail) || window.innerWidth <= DRAWER_MAX_WIDTH) return;
     const rect = event.currentTarget.getBoundingClientRect();
     setTooltip({ label, ...tooltipPosition(rect, { rtl: document.documentElement.dir === 'rtl', viewportWidth: window.innerWidth }) });
-  }, [collapsed]);
+  }, [collapsed, rail]);
   const hideTooltip = useCallback(() => setTooltip(null), []);
 
   const toggleLabel = t(collapsed ? 'sidebarExpand' : 'sidebarCollapse');
 
   return (
-    <div className={`app-shell ${collapsed ? 'is-collapsed' : ''}`}>
+    <div className={`app-shell ${collapsed ? 'is-collapsed' : ''} ${rail ? 'is-rail' : ''}`}>
       <div className={`sidebar-backdrop ${menuOpen ? 'is-visible' : ''}`} onClick={() => setMenuOpen(false)} />
       <aside className={`sidebar ${menuOpen ? 'is-open' : ''}`} aria-label={t('main')}>
         <div className="sidebar-head">
@@ -95,7 +110,7 @@ export default function AppShell() {
                     key={id}
                     to={PAGES[id].path}
                     className={({ isActive }) => `nav-link ${isActive ? 'is-active' : ''}`}
-                    aria-label={collapsed ? label : undefined}
+                    aria-label={collapsed || rail ? label : undefined}
                     onMouseEnter={(event) => showTooltip(event, label)}
                     onMouseLeave={hideTooltip}
                     onFocus={(event) => showTooltip(event, label)}

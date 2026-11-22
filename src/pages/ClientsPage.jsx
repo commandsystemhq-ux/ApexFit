@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/Button.jsx';
 import ClientCompliancePanel from '../components/ClientCompliancePanel.jsx';
+import ClientFoodReview from '../components/ClientFoodReview.jsx';
 import ClientHealthPanel from '../components/ClientHealthPanel.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
@@ -39,6 +40,7 @@ export default function ClientsPage({ onNotify }) {
   const [error, setError] = useState('');
   const [creating, setCreating] = useState(false);
   const [expandedId, setExpandedId] = useState('');
+  const [detailTab, setDetailTab] = useState('profile');
   const [intake, setIntake] = useState({ state: 'idle', data: null, error: '' });
 
   async function refresh() {
@@ -98,6 +100,7 @@ export default function ClientsPage({ onNotify }) {
       return;
     }
     setExpandedId(clientId);
+    setDetailTab('profile');
     setIntake({ state: 'loading', data: null, error: '' });
     try {
       setIntake({ state: 'ready', data: await getClientIntake(clientId), error: '' });
@@ -159,6 +162,15 @@ export default function ClientsPage({ onNotify }) {
                   <button className="text-action" type="button" onClick={() => toggleStatus(client)}>{client.status === 'active' ? t('archiveClient') : t('restoreClient')}</button>
                 </div>
                 {expandedId === client.client_id && (
+                  <div className="client-detail-tabs" role="tablist" aria-label={clientLabel(client)}>
+                    <button type="button" role="tab" aria-selected={detailTab === 'profile'} className={`client-detail-tab ${detailTab === 'profile' ? 'is-active' : ''}`} onClick={() => setDetailTab('profile')}>{t('clientTabProfile')}</button>
+                    <button type="button" role="tab" aria-selected={detailTab === 'food'} className={`client-detail-tab ${detailTab === 'food' ? 'is-active' : ''}`} onClick={() => setDetailTab('food')}>{t('clientTabFood')}</button>
+                  </div>
+                )}
+                {expandedId === client.client_id && detailTab === 'food' && (
+                  <div className="client-intake-summary" role="tabpanel"><ClientFoodReview clientId={client.client_id} /></div>
+                )}
+                {expandedId === client.client_id && detailTab === 'profile' && (
                   <div className="client-intake-summary">
                     {intake.state === 'loading' && <p className="muted-copy" role="status">{t('loadingProgress')}</p>}
                     {intake.state === 'error' && <div className="notice notice-error" role="alert">{t('intakeLoadError')} {intake.error}</div>}

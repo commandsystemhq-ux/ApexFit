@@ -42,7 +42,7 @@ export default function ClientPortalPage({ section }) {
   return (
     <>
       <PageHeader eyebrow="APEXFIT" title={t(PAGES[section].titleKey)} description={t('clientTrackingDescription')} />
-      <nav className="client-feature-tabs" aria-label={t('portalTitle')}>
+      <nav className="client-feature-tabs portal-tabs" aria-label={t('portalTitle')}>
         {SECTION_IDS.map((id) => (
           <NavLink key={id} to={PAGES[id].path} className={({ isActive }) => `client-feature-tab ${isActive ? 'is-active' : ''}`}>
             <span aria-hidden="true">{PAGES[id].icon}</span>{t(PAGES[id].titleKey)}

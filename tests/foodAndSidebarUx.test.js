@@ -7,7 +7,7 @@ import { basisFromValues, entryToForm, joinPortion, splitPortion } from '../src/
 import { scaleFoodPortion } from '../src/services/foodSearchUtils.js';
 import { COMMON_FOOD_COUNT, hasArabic, mergeFoodResults, normalizeSearchText, searchLocalFoods } from '../src/services/localFoodSearch.js';
 import {
-  DRAWER_MAX_WIDTH, NAV_SEEN_KEY, SIDEBAR_COLLAPSED_KEY, markPageSeen, readCollapsed, readSeenPages, tooltipPosition, writeCollapsed,
+  DRAWER_MAX_WIDTH, NAV_SEEN_KEY, RAIL_MAX_WIDTH, SIDEBAR_COLLAPSED_KEY, markPageSeen, readCollapsed, readSeenPages, tooltipPosition, writeCollapsed,
 } from '../src/services/sidebarState.js';
 import { NEW_PAGE_IDS, PAGES, navigationFor } from '../src/routes.js';
 import { supportedLocales, translations } from '../src/i18n/translations.js';
@@ -17,9 +17,9 @@ const names = (results) => results.map((item) => item.name);
 
 // ------------------------------------------------------------------------------------------ local foods
 
-test('the built-in food list has 100+ foods with both names and believable numbers', () => {
+test('the built-in food list has 1000+ foods with both names and believable numbers', () => {
   const { foods } = commonFoods;
-  assert.ok(foods.length >= 100);
+  assert.ok(foods.length >= 1000, `only ${foods.length} foods`);
   assert.equal(COMMON_FOOD_COUNT, foods.length);
   assert.equal(new Set(foods.map((food) => food.id)).size, foods.length);
   for (const food of foods) {
@@ -45,10 +45,10 @@ test('the everyday Arabic and Egyptian foods are all found by their Arabic names
 });
 
 test('local search answers in the language the person uses and forgives spelling variants', () => {
-  assert.deepEqual(names(searchLocalFoods('شوفان', { locale: 'en' })), ['شوفان']);
+  assert.equal(names(searchLocalFoods('شوفان', { locale: 'en' }))[0], 'شوفان');
   assert.match(names(searchLocalFoods('oats', { locale: 'en' }))[0], /^Oats/);
   assert.equal(names(searchLocalFoods('oats', { locale: 'ar' }))[0], 'شوفان');
-  assert.ok(names(searchLocalFoods('chicken breast')).every((name) => /Chicken/.test(name)));
+  assert.ok(names(searchLocalFoods('chicken breast')).every((name) => /chicken/i.test(name)));
   assert.equal(names(searchLocalFoods('الشوفان'))[0], 'شوفان');
   assert.equal(names(searchLocalFoods('ارز بسمتي'))[0], 'أرز بسمتي مطبوخ');
   assert.equal(names(searchLocalFoods('رز ابيض'))[0], 'أرز أبيض مطبوخ');
@@ -71,17 +71,19 @@ test('local results come first and the same food from the database is not shown 
   const local = searchLocalFoods('شوفان');
   const remote = [{ code: '1', name: 'شوفان', per100g: {} }, { code: '2', name: 'شوفان كويكر', per100g: {} }];
   const merged = mergeFoodResults(local, remote);
-  assert.deepEqual(names(merged), ['شوفان', 'شوفان كويكر']);
+  assert.equal(names(merged).filter((name) => name === 'شوفان').length, 1);
   assert.equal(merged[0].source, 'local');
-  assert.equal(merged[1].source, 'openfoodfacts');
+  const quaker = merged.find((item) => item.name === 'شوفان كويكر');
+  assert.equal(quaker.source, 'openfoodfacts');
+  assert.ok(merged.indexOf(quaker) > merged.findIndex((item) => item.source === 'local'));
 });
 
 // ----------------------------------------------------------------------------------- Open Food Facts
 
 test('Arabic users ask Open Food Facts for Arabic and see Arabic-named products first', () => {
-  assert.match(buildFoodUrl({ type: 'name', value: 'شوفان', lang: 'ar' }), /[?&]lc=ar&/);
+  assert.match(buildFoodUrl({ type: 'name', value: 'شوفان', lang: 'ar' }), /[?&]langs=ar%2Cen&/);
   assert.match(buildFoodUrl({ type: 'barcode', value: '3017620422003', lang: 'ar' }), /product\/3017620422003\.json\?lc=ar&/);
-  assert.match(buildFoodUrl({ type: 'name', value: 'oats', lang: 'en' }), /lc=en/);
+  assert.match(buildFoodUrl({ type: 'name', value: 'oats', lang: 'en' }), /langs=en&/);
 
   const nutriments = { 'energy-kcal_100g': 100 };
   const english = normalizeProduct({ code: '1', product_name: 'Oat flakes', nutriments }, 'ar');
@@ -155,8 +157,11 @@ test('the open or closed state of the sidebar is remembered and storage problems
   assert.doesNotThrow(() => writeCollapsed(broken, true));
   assert.equal(readCollapsed(null), false);
   assert.deepEqual(readSeenPages(broken), []);
-  assert.ok(DRAWER_MAX_WIDTH >= 700);
-  assert.match(read('src/styles/app.css'), new RegExp(`@media \\(max-width: ${DRAWER_MAX_WIDTH}px\\)`));
+  assert.ok(DRAWER_MAX_WIDTH < RAIL_MAX_WIDTH);
+  const sheet = read('src/styles/app.css');
+  assert.match(sheet, new RegExp(`@media \\(max-width: ${RAIL_MAX_WIDTH}px\\)`));
+  assert.match(sheet, new RegExp(`@media \\(min-width: ${DRAWER_MAX_WIDTH + 1}px\\) and \\(max-width: ${RAIL_MAX_WIDTH}px\\)`));
+  assert.match(sheet, new RegExp(`@media \\(max-width: ${DRAWER_MAX_WIDTH}px\\)`));
 });
 
 test('a "New" badge is shown until the page has been opened', () => {
@@ -195,8 +200,8 @@ test('the shell has the toggle, the saved state, the tooltip and a drawer that c
   const shell = read('src/components/AppShell.jsx');
   for (const piece of ['sidebar-toggle', 'readCollapsed', 'writeCollapsed', 'nav-tooltip', "event.key === 'Escape'", 'nav-badge-new', 'aria-expanded']) assert.ok(shell.includes(piece), piece);
   const css = read('src/styles/app.css');
-  assert.match(css, /\.app-shell\.is-collapsed \{ --sidebar-width: 72px; \}/);
-  assert.match(css, /\.is-collapsed \.nav-link\.is-active/);
+  assert.match(css, /\.app-shell:is\(\.is-collapsed, \.is-rail\) \{ --sidebar-width: 72px; \}/);
+  assert.match(css, /:is\(\.is-collapsed, \.is-rail\) \.nav-link\.is-active/);
   assert.match(css, /inset-inline-end/);
   assert.match(css, /\[dir='rtl'\] \.sidebar-toggle-icon/);
   assert.match(css, /prefers-reduced-motion: reduce\) \{\s*\.sidebar, \.main-area/);
