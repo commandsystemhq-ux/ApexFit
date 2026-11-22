@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import ChatAvatar from './ChatAvatar.jsx';
+import VoicePlayer from './VoicePlayer.jsx';
+import VoiceRecorderBar from './VoiceRecorderBar.jsx';
+import useVoiceRecorder from '../hooks/useVoiceRecorder.js';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import {
   CHAT_MAX_LENGTH, buildThread, dayKind, formatClock, formatFullTime, groupByDay, isNearBottom, makePendingMessage, markSentRead, mergePage,
@@ -7,6 +10,9 @@ import {
 } from '../services/chatUtils.js';
 import { announceChatChanged, getChatMessages, markChatRead, sendChatMessage } from '../services/chatService.js';
 import { getMessageVideoUrl, listInboxMessages, listSentMessages, markMessagesRead } from '../services/messageService.js';
+import { notifyChatReceiver } from '../services/pushService.js';
+import { getVoiceUrl, sendVoiceMessage } from '../services/voiceService.js';
+import { canRecordVoice, validateRecording } from '../services/voiceUtils.js';
 
 const POLL_MS = 10_000;
 const STATUS_GLYPH = { sending: '◷', sent: '✓', read: '✓✓', failed: '!' };
@@ -19,6 +25,13 @@ function Bubble({ item, locale, t, onRetry, onDiscard, videoUrls, loadingVideo, 
       <div className={`chat-bubble ${item.type !== 'chat' ? 'is-note' : ''} ${status === 'failed' ? 'is-failed' : ''}`}>
         {item.type !== 'chat' && <span className="chat-note-label">{t(item.type === 'video' ? 'chatBroadcastVideo' : 'chatBroadcastNote')}</span>}
         {item.text && <p className="chat-text" dir="auto">{item.text}</p>}
+        {message?.message_type === 'voice' && (
+          <VoicePlayer
+            src={message.localUrl || ''}
+            duration={message.audio_duration_seconds}
+            loadSource={message.audio_path ? () => getVoiceUrl(message.audio_path) : null}
+          />
+        )}
         {item.type === 'video' && (videoUrls[item.id]
           ? <video className="chat-video" src={videoUrls[item.id]} controls playsInline preload="metadata" />
           : <button className="text-action" type="button" disabled={loadingVideo === item.id} onClick={() => onLoadVideo(item)}>{loadingVideo === item.id ? t('loadingProgress') : t('playVideo')}</button>)}
@@ -51,6 +64,9 @@ export default function ChatThread({ partner, myId, events, connection, onBack, 
   const [loadingEarlier, setLoadingEarlier] = useState(false);
   const [videoUrls, setVideoUrls] = useState({});
   const [loadingVideo, setLoadingVideo] = useState('');
+  const recorder = useVoiceRecorder();
+  const voiceFiles = useRef(new Map()); // client_ref -> { blob, url } for voice messages still being sent
+  const voiceSupported = useMemo(() => canRecordVoice(), []);
 
   const listRef = useRef(null);
   const inputRef = useRef(null);
@@ -99,6 +115,7 @@ export default function ChatThread({ partner, myId, events, connection, onBack, 
     setNotes([]);
     setDraft('');
     setDraftError('');
+    recorder.reset();
     scrollPlan.current = 'bottom';
     getChatMessages(partnerId)
       .then((page) => {
@@ -191,13 +208,57 @@ export default function ChatThread({ partner, myId, events, connection, onBack, 
 
   async function deliver(message) {
     try {
-      const saved = await sendChatMessage(partnerId, message.message_text, message.client_ref);
+      let saved;
+      if (message.message_type === 'voice') {
+        const file = voiceFiles.current.get(message.client_ref);
+        if (!file) throw new Error(t('voiceErrUpload'));
+        saved = await sendVoiceMessage({
+          senderId: myId, receiverId: partnerId, blob: file.blob, seconds: message.audio_duration_seconds, mime: message.audio_mime, clientRef: message.client_ref,
+        });
+      } else {
+        saved = await sendChatMessage(partnerId, message.message_text, message.client_ref);
+      }
       setChat((current) => upsertMessage(current, saved));
       activityRef.current?.();
+      notifyChatReceiver(saved.id);
     } catch (sendError) {
       setChat((current) => current.map((item) => (item.client_ref === message.client_ref ? { ...item, pending: false, failed: true, error: sendError.message } : item)));
     }
   }
+
+  function sendVoice() {
+    const recorded = recorder.recording;
+    if (!recorded) return;
+    const problem = validateRecording({ bytes: recorded.blob.size, seconds: recorded.seconds, mime: recorded.mime });
+    if (problem) {
+      setDraftError(t(problem));
+      return;
+    }
+    setDraftError('');
+    const clientRef = crypto.randomUUID();
+    const url = URL.createObjectURL(recorded.blob);
+    voiceFiles.current.set(clientRef, { blob: recorded.blob, url });
+    const message = {
+      ...makePendingMessage({ senderId: myId, receiverId: partnerId, text: '', clientRef }),
+      message_type: 'voice',
+      audio_duration_seconds: recorded.seconds,
+      audio_mime: recorded.mime,
+      localUrl: url,
+    };
+    scrollPlan.current = 'bottom';
+    setChat((current) => upsertMessage(current, message));
+    recorder.reset();
+    deliver(message);
+  }
+
+  // Local copies of recordings are released when the conversation closes.
+  useEffect(() => {
+    const files = voiceFiles.current;
+    return () => {
+      files.forEach((file) => URL.revokeObjectURL(file.url));
+      files.clear();
+    };
+  }, [partnerId]);
 
   function send() {
     const result = validateChatText(draft);
@@ -221,7 +282,12 @@ export default function ChatThread({ partner, myId, events, connection, onBack, 
     deliver(message);
   }
 
-  const discard = (message) => setChat((current) => current.filter((item) => item.client_ref !== message.client_ref));
+  const discard = (message) => {
+    const file = voiceFiles.current.get(message.client_ref);
+    if (file) URL.revokeObjectURL(file.url);
+    voiceFiles.current.delete(message.client_ref);
+    setChat((current) => current.filter((item) => item.client_ref !== message.client_ref));
+  };
 
   function onKeyDown(event) {
     if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
@@ -283,7 +349,9 @@ export default function ChatThread({ partner, myId, events, connection, onBack, 
       </div>
 
       {canSend ? (
-        <form className="chat-composer" onSubmit={(event) => { event.preventDefault(); send(); }}>
+        <form className="chat-composer" onSubmit={(event) => { event.preventDefault(); if (recorder.state === 'idle') send(); }}>
+          {recorder.state !== 'idle' ? <VoiceRecorderBar recorder={recorder} onSend={sendVoice} /> : (
+          <>
           <textarea
             ref={inputRef}
             className="chat-input"
@@ -296,9 +364,18 @@ export default function ChatThread({ partner, myId, events, connection, onBack, 
             onChange={onInput}
             onKeyDown={onKeyDown}
           />
-          <button className="chat-send" type="submit" disabled={!draft.trim()} aria-label={t('chatSend')} title={t('chatSend')}>
-            <span aria-hidden="true">➤</span>
-          </button>
+          {voiceSupported && !draft.trim() ? (
+            <button className="chat-send chat-mic" type="button" onClick={recorder.start} aria-label={t('voiceRecord')} title={t('voiceRecord')}>
+              <span aria-hidden="true">🎤</span>
+            </button>
+          ) : (
+            <button className="chat-send" type="submit" disabled={!draft.trim()} aria-label={t('chatSend')} title={t('chatSend')}>
+              <span aria-hidden="true">➤</span>
+            </button>
+          )}
+          </>
+          )}
+          {recorder.errorKey && <small className="chat-composer-error" role="alert">{t(recorder.errorKey)}</small>}
           {draftError && <small className="chat-composer-error" role="alert">{draftError}</small>}
           {draft.length > CHAT_MAX_LENGTH - 200 && <small className="chat-counter" dir="ltr">{draft.length}/{CHAT_MAX_LENGTH}</small>}
         </form>

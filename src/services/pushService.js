@@ -58,6 +58,11 @@ export async function disablePush() {
   if (error) throw error;
 }
 
+// Tells the other person in a chat that a message (text or voice) was sent. Best effort, like the other notifications.
+export function notifyChatReceiver(messageId) {
+  return callApi('push', { body: { action: 'notify', type: 'chat', id: messageId } }).catch(() => null);
+}
+
 // Notification delivery is best effort and must never block the action that triggered it.
 export function notifyClients(type, id) {
   return callApi('push', { body: { action: 'notify', type, id } }).catch(() => null);

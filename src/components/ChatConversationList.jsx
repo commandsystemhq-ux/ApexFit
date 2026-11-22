@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import ChatAvatar from './ChatAvatar.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import { filterConversations, formatListTime } from '../services/chatUtils.js';
+import { describeLastMessage } from '../services/voiceUtils.js';
 
 export default function ChatConversationList({ conversations, selectedId, myId, onSelect }) {
   const { t, locale } = useLocale();
@@ -16,8 +17,10 @@ export default function ChatConversationList({ conversations, selectedId, myId, 
       <ul>
         {visible.map((item) => {
           const unread = Number(item.unread_count) || 0;
-          const preview = item.last_text
-            ? `${item.last_sender_id === myId ? `${t('chatYou')}: ` : ''}${item.last_text}`
+          const last = describeLastMessage(item);
+          const lastBody = last.voice ? `🎤 ${t('voiceMessage')}` : last.text;
+          const preview = lastBody
+            ? `${item.last_sender_id === myId ? `${t('chatYou')}: ` : ''}${lastBody}`
             : t('chatNoMessagesYet');
           return (
             <li key={item.partner_id}>
