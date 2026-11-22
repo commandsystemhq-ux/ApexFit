@@ -4,6 +4,8 @@ import { useLocale } from '../contexts/LocaleContext.jsx';
 import { addFoodLog, deleteFoodLog, listFoodLogs } from '../services/clientFoodService.js';
 import { MEAL_TYPES, summarizeFoodDay } from '../services/clientPriority2Utils.js';
 import { getLocalDateString, shiftDate } from '../services/clientTrackingUtils.js';
+import { searchFoodDatabase } from '../services/foodSearchService.js';
+import { MAX_PORTION_GRAMS, classifyFoodQuery, createDebouncer, defaultPortionGrams, scaleFoodPortion } from '../services/foodSearchUtils.js';
 
 const MEAL_LABELS = { breakfast: 'mealBreakfast', lunch: 'mealLunch', dinner: 'mealDinner', snack: 'mealSnack' };
 const EMPTY_ENTRY = { meal_type: 'breakfast', food_name: '', ingredients: '', calories: '', protein_g: '', carbs_g: '', fat_g: '' };
@@ -20,6 +22,75 @@ export default function ClientFoodLogger() {
   const [success, setSuccess] = useState('');
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState('');
+  const [searchText, setSearchText] = useState('');
+  const [searchState, setSearchState] = useState('idle');
+  const [searchStatus, setSearchStatus] = useState(0);
+  const [results, setResults] = useState([]);
+  const [selectedFood, setSelectedFood] = useState(null);
+  const [grams, setGrams] = useState('');
+
+  // The search is a convenience: any failure or empty answer leaves the manual fields below fully usable.
+  useEffect(() => {
+    const query = classifyFoodQuery(searchText, locale);
+    if (!query) {
+      setSearchState('idle');
+      setResults([]);
+      return undefined;
+    }
+    const controller = new AbortController();
+    const debouncer = createDebouncer();
+    setSearchState('loading');
+    debouncer.schedule(async () => {
+      try {
+        const items = await searchFoodDatabase(query, { signal: controller.signal });
+        setResults(items);
+        setSearchState('done');
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        setResults([]);
+        setSearchStatus(error.status || 0);
+        setSearchState('error');
+      }
+    });
+    return () => {
+      debouncer.cancel();
+      controller.abort();
+    };
+  }, [searchText, locale]);
+
+  function fillFromPortion(food, amount) {
+    const scaled = scaleFoodPortion(food.per100g, amount);
+    if (!scaled) return;
+    setEntry((current) => ({
+      ...current,
+      calories: String(scaled.calories),
+      protein_g: String(scaled.protein_g),
+      carbs_g: String(scaled.carbs_g),
+      fat_g: String(scaled.fat_g),
+    }));
+  }
+
+  function chooseFood(food) {
+    const amount = defaultPortionGrams(food);
+    setSuccess('');
+    setSelectedFood(food);
+    setGrams(String(amount));
+    setEntry((current) => ({ ...current, food_name: food.name }));
+    fillFromPortion(food, amount);
+  }
+
+  function changeGrams(value) {
+    setSuccess('');
+    setGrams(value);
+    if (selectedFood) fillFromPortion(selectedFood, value);
+  }
+
+  function clearSearch() {
+    setSearchText('');
+    setResults([]);
+    setSelectedFood(null);
+    setGrams('');
+  }
 
   async function refresh(date = selectedDate) {
     setLoading(true);
@@ -60,8 +131,12 @@ export default function ClientFoodLogger() {
     setSuccess('');
     setSaving(true);
     try {
-      await addFoodLog({ loggedOn: selectedDate, ...entry });
+      const portion = selectedFood && Number(grams) > 0
+        ? [`${Number(grams)} ${t('foodGramsUnit')}`, selectedFood.brand].filter(Boolean).join(' · ')
+        : '';
+      await addFoodLog({ loggedOn: selectedDate, ...entry, ingredients: entry.ingredients.trim() || portion });
       setEntry((current) => ({ ...EMPTY_ENTRY, meal_type: current.meal_type }));
+      clearSearch();
       setSuccess(t('foodAdded'));
       await refresh();
     } catch (error) {
@@ -97,6 +172,36 @@ export default function ClientFoodLogger() {
               {MEAL_TYPES.map((meal) => <option key={meal} value={meal}>{t(MEAL_LABELS[meal])}</option>)}
             </select>
           </label>
+        </div>
+        <div className="food-search">
+          <label className="form-label">{t('foodSearchLabel')}
+            <input className="field" type="search" maxLength={80} value={searchText} placeholder={t('foodSearchPlaceholder')} onChange={(event) => setSearchText(event.target.value)} />
+          </label>
+          <small className="muted-copy">{t('foodSearchHint')}</small>
+          {searchState === 'loading' && <div className="empty-state" role="status">{t('foodSearching')}</div>}
+          {searchState === 'error' && <div className="notice notice-error" role="alert">{t(searchStatus === 504 ? 'foodSearchTimeout' : searchStatus === 429 ? 'foodSearchBusy' : 'foodSearchUnavailable')}</div>}
+          {searchState === 'done' && results.length === 0 && <div className="notice notice-info" role="status">{t('foodSearchNoResults')}</div>}
+          {searchState === 'done' && results.length > 0 && (
+            <ul className="food-search-results">
+              {results.map((food, index) => (
+                <li key={`${food.code}-${index}`}>
+                  <button type="button" className="food-search-result" onClick={() => chooseFood(food)}>
+                    <strong>{food.name}</strong>
+                    <small>{[food.brand, `${food.per100g.calories} ${t('kcal')} / 100 ${t('foodGramsUnit')}`].filter(Boolean).join(' · ')}</small>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {selectedFood && (
+            <div className="food-portion">
+              <label className="form-label">{t('foodPortionGrams')}
+                <input className="field" type="number" inputMode="decimal" min="1" max={MAX_PORTION_GRAMS} step="1" value={grams} onChange={(event) => changeGrams(event.target.value)} />
+              </label>
+              <small className="muted-copy">{t('foodPortionHint')}</small>
+              <button className="text-action" type="button" onClick={clearSearch}>{t('foodSearchClear')}</button>
+            </div>
+          )}
         </div>
         <label className="form-label">{t('foodName')}<input className="field" maxLength={160} value={entry.food_name} onChange={(event) => updateEntry('food_name', event.target.value)} required /></label>
         <label className="form-label">{t('foodIngredients')}<textarea className="field intake-textarea" maxLength={1000} value={entry.ingredients} onChange={(event) => updateEntry('ingredients', event.target.value)} /></label>

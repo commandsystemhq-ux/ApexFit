@@ -585,6 +585,12 @@
 .food-entry > div { min-width: 0; }
 .food-entry p { margin: 2px 0; font-size: 10px; overflow-wrap: anywhere; }
 .food-entry small { color: var(--subtle); font-size: 9px; }
+.food-search, .food-portion { display: grid; gap: 8px; min-width: 0; }
+.food-search-results { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; max-height: 240px; overflow-y: auto; }
+.food-search-result { display: grid; gap: 2px; width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: inherit; font: inherit; font-size: 11px; text-align: start; cursor: pointer; }
+.food-search-result:hover, .food-search-result:focus-visible { background: rgba(255, 255, 255, .05); }
+.food-search-result small { color: var(--subtle); font-size: 9px; }
+.food-portion { padding: 10px; border: 1px solid var(--line); border-radius: 8px; }
 @media (max-width: 760px) {
   .food-macro-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
