@@ -15,6 +15,7 @@ import { paymentsTranslations } from './paymentsTranslations.js';
 import { platformTranslations } from './platformTranslations.js';
 import { priority2Translations } from './priority2Translations.js';
 import { publicPagesTranslations } from './publicPagesTranslations.js';
+import { uxTranslations } from './uxTranslations.js';
 import { workflowTranslations } from './workflowTranslations.js';
 
 export const supportedLocales = ['en', 'ar', 'de', 'fr', 'es'];
@@ -629,4 +630,5 @@ for (const locale of supportedLocales) {
   Object.assign(translations[locale], paymentsTranslations[locale]);
   Object.assign(translations[locale], publicPagesTranslations[locale]);
   Object.assign(translations[locale], campaignTranslations[locale]);
+  Object.assign(translations[locale], uxTranslations[locale]);
 }

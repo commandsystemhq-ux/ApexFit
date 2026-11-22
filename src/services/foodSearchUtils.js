@@ -10,13 +10,14 @@ const ARABIC_LETTERS = /[\u0600-\u06FF]/;
 export function classifyFoodQuery(text, locale = 'en') {
   const value = String(text ?? '').replace(/\s+/g, ' ').trim();
   const digits = value.replace(/[\s-]/g, '');
-  if (/^\d{8,14}$/.test(digits)) return { barcode: digits };
+  const lang = locale === 'ar' || ARABIC_LETTERS.test(value) ? 'ar' : 'en';
+  if (/^\d{8,14}$/.test(digits)) return { barcode: digits, lang };
   if (value.length < 2) return null;
-  return { q: value.slice(0, 80), lang: locale === 'ar' || ARABIC_LETTERS.test(value) ? 'ar' : 'en' };
+  return { q: value.slice(0, 80), lang };
 }
 
 export function buildFoodSearchUrl(query) {
-  const params = new URLSearchParams(query.barcode ? { barcode: query.barcode } : { q: query.q, lang: query.lang });
+  const params = new URLSearchParams(query.barcode ? { barcode: query.barcode, lang: query.lang } : { q: query.q, lang: query.lang });
   return `/api/food-search?${params}`;
 }
 

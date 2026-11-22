@@ -24,6 +24,18 @@ export async function addFoodLog({ loggedOn, ...entry }) {
   if (error) throw error;
 }
 
+// Changes one saved entry. The same validation as a new entry runs first; the date and the owner stay as they were.
+export async function updateFoodLog(id, entry) {
+  const normalized = normalizeFoodEntry(entry);
+  const { data, error } = await requireSupabase()
+    .from('client_food_logs')
+    .update(normalized)
+    .eq('id', id)
+    .select('id');
+  if (error) throw error;
+  if (!data?.length) throw new Error('This entry could not be found.');
+}
+
 export async function deleteFoodLog(id) {
   const { error } = await requireSupabase().from('client_food_logs').delete().eq('id', id);
   if (error) throw error;

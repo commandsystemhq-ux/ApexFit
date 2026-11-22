@@ -1,4 +1,4 @@
-import { Fragment, Suspense, lazy, useEffect, useState } from 'react';
+import { Fragment, Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import BrandMark from './BrandMark.jsx';
 import Button from './Button.jsx';
@@ -10,12 +10,18 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import { useChatUnread } from '../hooks/useChatUnread.js';
 import { displayNameFor } from '../services/profileUtils.js';
-import { ADMIN_PATHS, PAGES, homePathFor, navigationFor, pageForPath, roleOf } from '../routes.js';
+import { DRAWER_MAX_WIDTH, markPageSeen, readCollapsed, readSeenPages, tooltipPosition, writeCollapsed } from '../services/sidebarState.js';
+import { ADMIN_PATHS, NEW_PAGE_IDS, PAGES, homePathFor, navigationFor, pageForPath, roleOf } from '../routes.js';
 
 const JackFloatingWidget = lazy(() => import('./JackFloatingWidget.jsx'));
 
+const storage = () => (typeof window === 'undefined' ? null : window.localStorage);
+
 export default function AppShell() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => readCollapsed(storage()));
+  const [seen, setSeen] = useState(() => readSeenPages(storage()));
+  const [tooltip, setTooltip] = useState(null);
   const [dataVersion, setDataVersion] = useState(0);
   const { t } = useLocale();
   const { user, profile, signOut } = useAuth();
@@ -32,26 +38,81 @@ export default function AppShell() {
     window.scrollTo({ top: 0 });
   }, [location.pathname]);
 
+  // A page with a "New" badge stops showing it once it has been opened.
+  useEffect(() => {
+    const opened = NEW_PAGE_IDS.find((id) => PAGES[id].path === location.pathname);
+    if (opened) setSeen(markPageSeen(storage(), opened));
+  }, [location.pathname]);
+
+  // Escape closes the drawer on a phone.
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const onKey = (event) => { if (event.key === 'Escape') setMenuOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [menuOpen]);
+
+  const toggleCollapsed = useCallback(() => {
+    setTooltip(null);
+    setCollapsed((current) => {
+      writeCollapsed(storage(), !current);
+      return !current;
+    });
+  }, []);
+
+  // The narrow icon bar has no room for labels, so the name of the item under the pointer or focus floats beside it.
+  const showTooltip = useCallback((event, label) => {
+    if (!collapsed || window.innerWidth <= DRAWER_MAX_WIDTH) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    setTooltip({ label, ...tooltipPosition(rect, { rtl: document.documentElement.dir === 'rtl', viewportWidth: window.innerWidth }) });
+  }, [collapsed]);
+  const hideTooltip = useCallback(() => setTooltip(null), []);
+
+  const toggleLabel = t(collapsed ? 'sidebarExpand' : 'sidebarCollapse');
+
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${collapsed ? 'is-collapsed' : ''}`}>
       <div className={`sidebar-backdrop ${menuOpen ? 'is-visible' : ''}`} onClick={() => setMenuOpen(false)} />
-      <aside className={`sidebar ${menuOpen ? 'is-open' : ''}`}>
-        <button className="sidebar-brand" onClick={() => navigate(homePathFor(role))} aria-label={`ApexFit ${t('home')}`}><BrandMark /></button>
-        <nav className="side-nav" aria-label={t('main')}>
+      <aside className={`sidebar ${menuOpen ? 'is-open' : ''}`} aria-label={t('main')}>
+        <div className="sidebar-head">
+          <button className="sidebar-brand" onClick={() => navigate(homePathFor(role))} aria-label={`ApexFit ${t('home')}`}><BrandMark /></button>
+          <button className="sidebar-toggle" type="button" onClick={toggleCollapsed} aria-expanded={!collapsed} aria-label={toggleLabel} title={toggleLabel}
+            onMouseEnter={(event) => showTooltip(event, toggleLabel)} onMouseLeave={hideTooltip} onFocus={(event) => showTooltip(event, toggleLabel)} onBlur={hideTooltip}>
+            <span aria-hidden="true" className="sidebar-toggle-icon">‹</span>
+          </button>
+          <button className="sidebar-close" type="button" onClick={() => setMenuOpen(false)} aria-label={t('closeNavigation')}>✕</button>
+        </div>
+        <nav className="side-nav" aria-label={t('main')} onScroll={hideTooltip}>
           {sections.map((section) => (
             <div className="nav-section" key={section.group}>
               <span className="nav-heading">{t(section.group)}</span>
-              {section.items.map((id) => (
-                <NavLink key={id} to={PAGES[id].path} className={({ isActive }) => `nav-link ${isActive ? 'is-active' : ''}`}>
-                  <span className="nav-icon" aria-hidden="true">{PAGES[id].icon}</span>
-                  <span>{t(PAGES[id].titleKey)}</span>
-                  {id === chatPageId && unreadChat > 0 && <span className="nav-badge" aria-label={`${unreadChat} ${t('chatUnread')}`}>{unreadChat > 99 ? '99+' : unreadChat}</span>}
-                </NavLink>
-              ))}
+              {section.items.map((id) => {
+                const label = t(PAGES[id].titleKey);
+                const unread = id === chatPageId && unreadChat > 0;
+                const isNew = NEW_PAGE_IDS.includes(id) && !seen.includes(id);
+                return (
+                  <NavLink
+                    key={id}
+                    to={PAGES[id].path}
+                    className={({ isActive }) => `nav-link ${isActive ? 'is-active' : ''}`}
+                    aria-label={collapsed ? label : undefined}
+                    onMouseEnter={(event) => showTooltip(event, label)}
+                    onMouseLeave={hideTooltip}
+                    onFocus={(event) => showTooltip(event, label)}
+                    onBlur={hideTooltip}
+                  >
+                    <span className="nav-icon" aria-hidden="true">{PAGES[id].icon}</span>
+                    <span className="nav-label">{label}</span>
+                    {unread && <span className="nav-badge" aria-label={`${unreadChat} ${t('chatUnread')}`}>{unreadChat > 99 ? '99+' : unreadChat}</span>}
+                    {isNew && !unread && <span className="nav-badge nav-badge-new">{t('sidebarNew')}</span>}
+                  </NavLink>
+                );
+              })}
             </div>
           ))}
         </nav>
-        <NavLink className="sidebar-profile" to={PAGES.settings.path} aria-label={t('settings')}>
+        <NavLink className="sidebar-profile" to={PAGES.settings.path} aria-label={t('settings')}
+          onMouseEnter={(event) => showTooltip(event, displayNameFor(profile, user) || t('settings'))} onMouseLeave={hideTooltip}>
           <UserAvatar user={user} profile={profile} />
           <div className="profile-copy">
             <strong>{displayNameFor(profile, user) || t('signedOut')}</strong>
@@ -59,10 +120,11 @@ export default function AppShell() {
           </div>
         </NavLink>
       </aside>
+      {tooltip && <div className="nav-tooltip" role="tooltip" style={{ top: tooltip.top, left: tooltip.left, right: tooltip.right }}>{tooltip.label}</div>}
       <main className="main-area">
         <header className="topbar">
           <div className="topbar-title-wrap">
-            <button className="menu-toggle" onClick={() => setMenuOpen(true)} aria-label={t('openNavigation')}>☰</button>
+            <button className="menu-toggle" onClick={() => setMenuOpen(true)} aria-label={t('openNavigation')} aria-expanded={menuOpen}>☰</button>
             <h1 className="topbar-title">{t(page?.titleKey || (location.pathname === ADMIN_PATHS.ai ? 'adminAiTitle' : 'dashboard'))}</h1>
           </div>
           <div className="topbar-actions">

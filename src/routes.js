@@ -47,24 +47,29 @@ export const PUBLIC_PATHS = { pricing: '/pricing', terms: '/terms', privacy: '/p
 // Pages that are not part of any role's navigation. The platform owner's AI screen is opened by its address only.
 export const ADMIN_PATHS = { ai: '/admin/ai' };
 
+// Each group's group is the translation key of its heading.
 const COACH_NAVIGATION = [
-  { group: 'main', items: ['dashboard', 'generator', 'workoutBuilder', 'programTemplates', 'exerciseLibrary', 'messages', 'campaigns', 'workflows'] },
-  { group: 'clients', items: ['clients', 'tasks', 'team', 'groups', 'contracts', 'sessions', 'schedule', 'store', 'invoicing', 'community', 'leaderboard', 'billing'] },
-  { group: 'account', items: ['settings'] },
+  { group: 'navGrpTraining', items: ['dashboard', 'generator', 'workoutBuilder', 'programTemplates', 'exerciseLibrary', 'workflows'] },
+  { group: 'navGrpClients', items: ['clients', 'messages', 'campaigns', 'tasks', 'groups', 'sessions', 'schedule', 'team', 'community', 'leaderboard'] },
+  { group: 'navGrpBusiness', items: ['store', 'invoicing', 'contracts', 'billing'] },
+  { group: 'navGrpAccount', items: ['settings'] },
 ];
 
 const CLIENT_NAVIGATION = [
-  { group: 'clients', items: ['workouts', 'myTasks', 'progress', 'strength', 'food', 'habits', 'checklist', 'integrations', 'intake', 'assessments', 'myContracts'] },
-  { group: 'community', items: ['coachHub', 'mySessions', 'myGroups', 'myStore', 'community', 'leaderboard'] },
-  { group: 'account', items: ['settings'] },
+  { group: 'navGrpTrainNutrition', items: ['workouts', 'strength', 'food', 'habits'] },
+  { group: 'navGrpTracking', items: ['progress', 'myTasks', 'checklist', 'integrations', 'intake', 'assessments'] },
+  { group: 'navGrpSocial', items: ['coachHub', 'mySessions', 'myGroups', 'myStore', 'myContracts', 'community', 'leaderboard'] },
+  { group: 'navGrpAccount', items: ['settings'] },
 ];
 
 // Assistant trainers work inside the head coach's team and only see their own workspace.
 const TRAINER_NAVIGATION = [
-  { group: 'main', items: ['teamClients'] },
-  { group: 'account', items: ['settings'] },
+  { group: 'navGrpClients', items: ['teamClients'] },
+  { group: 'navGrpAccount', items: ['settings'] },
 ];
 
+// Pages that wear a "New" badge in the sidebar until the person opens them once.
+export const NEW_PAGE_IDS = ['campaigns'];
 // 'trainer' is an assistant on a head coach's team (role 'coach' with access_state 'trainer').
 export function roleOf(profile) {
   if (profile?.role === 'client') return 'client';

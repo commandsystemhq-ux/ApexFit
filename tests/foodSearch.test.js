@@ -103,13 +103,13 @@ test('the endpoint needs a signed-in client and the browser never receives a sec
 });
 
 test('typed text is told apart as a barcode or a name, in Arabic or English', () => {
-  assert.deepEqual(classifyFoodQuery('6001068 595 108'), { barcode: '6001068595108' });
+  assert.deepEqual(classifyFoodQuery('6001068 595 108'), { barcode: '6001068595108', lang: 'en' });
   assert.deepEqual(classifyFoodQuery('  Chicken   breast '), { q: 'Chicken breast', lang: 'en' });
   assert.deepEqual(classifyFoodQuery('دجاج مشوي', 'en'), { q: 'دجاج مشوي', lang: 'ar' });
   assert.deepEqual(classifyFoodQuery('rice', 'ar'), { q: 'rice', lang: 'ar' });
   assert.equal(classifyFoodQuery('a'), null);
   assert.deepEqual(classifyFoodQuery('1234567'), { q: '1234567', lang: 'en' });
-  assert.equal(buildFoodSearchUrl({ barcode: '6001068595108' }), '/api/food-search?barcode=6001068595108');
+  assert.equal(buildFoodSearchUrl({ barcode: '6001068595108', lang: 'ar' }), '/api/food-search?barcode=6001068595108&lang=ar');
   assert.equal(buildFoodSearchUrl({ q: 'دجاج', lang: 'ar' }), `/api/food-search?q=${encodeURIComponent('دجاج')}&lang=ar`);
 });
 

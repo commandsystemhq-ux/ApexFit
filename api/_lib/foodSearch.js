@@ -10,6 +10,7 @@ export const FOOD_CACHE_TTL_MS = 10 * 60_000;
 const MAX_CACHE_ENTRIES = 200;
 const MAX_RESULTS = 12;
 const KJ_PER_KCAL = 4.184;
+const ARABIC_LETTERS = /[\u0600-\u06FF]/;
 
 const round1 = (value) => Math.round(value * 10) / 10;
 
@@ -34,11 +35,14 @@ export function per100gFrom(nutriments) {
   };
 }
 
+// For Arabic users: the Arabic name first, then a general name that is already written in Arabic letters.
 function pickName(product, lang) {
+  const usable = (value) => typeof value === 'string' && value.trim();
+  const arabicGeneral = usable(product.product_name) && ARABIC_LETTERS.test(product.product_name) ? product.product_name : null;
   const ordered = lang === 'ar'
-    ? [product.product_name_ar, product.product_name, product.product_name_en, product.generic_name]
+    ? [product.product_name_ar, arabicGeneral, product.product_name, product.product_name_en, product.generic_name]
     : [product.product_name_en, product.product_name, product.product_name_ar, product.generic_name];
-  const name = ordered.find((value) => typeof value === 'string' && value.trim());
+  const name = ordered.find(usable);
   return name ? name.trim().slice(0, 160) : '';
 }
 
@@ -58,6 +62,12 @@ export function normalizeProduct(product, lang = 'en') {
   };
 }
 
+// For Arabic users the products named in Arabic go first; the order inside each group is kept.
+export function rankByLanguage(items, lang) {
+  if (lang !== 'ar') return items;
+  return [...items.filter((item) => ARABIC_LETTERS.test(item.name)), ...items.filter((item) => !ARABIC_LETTERS.test(item.name))];
+}
+
 export function parseFoodQuery(query = {}) {
   const lang = query.lang === 'ar' ? 'ar' : 'en';
   const barcode = String(query.barcode ?? '').trim();
@@ -71,10 +81,11 @@ export function parseFoodQuery(query = {}) {
   return { type: 'name', value: text, lang };
 }
 
-export function buildFoodUrl({ type, value }) {
-  if (type === 'barcode') return `${OFF_HOST}/api/v2/product/${value}.json?fields=${FIELDS}`;
+// `lc` asks Open Food Facts for the person's language, so Arabic names come back when the product has them.
+export function buildFoodUrl({ type, value, lang = 'en' }) {
+  if (type === 'barcode') return `${OFF_HOST}/api/v2/product/${value}.json?lc=${lang}&fields=${FIELDS}`;
   const params = new URLSearchParams({
-    search_terms: value, search_simple: '1', action: 'process', json: '1', page_size: String(MAX_RESULTS), fields: FIELDS,
+    search_terms: value, search_simple: '1', action: 'process', json: '1', lc: lang, page_size: String(MAX_RESULTS), fields: FIELDS,
   });
   return `${OFF_HOST}/cgi/search.pl?${params}`;
 }
@@ -126,7 +137,7 @@ export async function searchFoods(query, { fetchImpl = fetch, cache = createFood
   }
 
   const products = parsed.type === 'barcode' ? [payload?.product] : (Array.isArray(payload?.products) ? payload.products : []);
-  const items = products.map((product) => normalizeProduct(product, parsed.lang)).filter(Boolean).slice(0, MAX_RESULTS);
+  const items = rankByLanguage(products.map((product) => normalizeProduct(product, parsed.lang)).filter(Boolean), parsed.lang).slice(0, MAX_RESULTS);
   cache.set(key, items);
   return { items, cached: false };
 }
