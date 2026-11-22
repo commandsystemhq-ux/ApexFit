@@ -7,6 +7,7 @@ export const PAGES = {
   exerciseLibrary: { path: '/exercises', titleKey: 'exerciseLibrary', icon: '⌕', access: 'coach' },
   workflows: { path: '/workflows', titleKey: 'workflows', icon: '↻', access: 'coach' },
   messages: { path: '/messages', titleKey: 'messages', icon: '◌', access: 'coach' },
+  campaigns: { path: '/campaigns', titleKey: 'navCampaigns', icon: '\u2709', access: 'coach' },
   groups: { path: '/groups', titleKey: 'navGroups', icon: '\u25CE', access: 'coach' },
   contracts: { path: '/contracts', titleKey: 'navContracts', icon: '\u270E', access: 'coach' },
   team: { path: '/team', titleKey: 'navTeam', icon: '\u2691', access: 'coach' },
@@ -47,7 +48,7 @@ export const PUBLIC_PATHS = { pricing: '/pricing', terms: '/terms', privacy: '/p
 export const ADMIN_PATHS = { ai: '/admin/ai' };
 
 const COACH_NAVIGATION = [
-  { group: 'main', items: ['dashboard', 'generator', 'workoutBuilder', 'programTemplates', 'exerciseLibrary', 'messages', 'workflows'] },
+  { group: 'main', items: ['dashboard', 'generator', 'workoutBuilder', 'programTemplates', 'exerciseLibrary', 'messages', 'campaigns', 'workflows'] },
   { group: 'clients', items: ['clients', 'tasks', 'team', 'groups', 'contracts', 'sessions', 'schedule', 'store', 'invoicing', 'community', 'leaderboard', 'billing'] },
   { group: 'account', items: ['settings'] },
 ];

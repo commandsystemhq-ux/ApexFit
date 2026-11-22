@@ -3,7 +3,8 @@
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "functions": {
-    "api/jack.js": { "maxDuration": 60 }
+    "api/jack.js": { "maxDuration": 60 },
+    "api/send-campaign.js": { "maxDuration": 30 }
   },
   "crons": [
     { "path": "/api/workflows", "schedule": "0 6 * * *" }

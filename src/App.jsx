@@ -35,6 +35,7 @@ const ExerciseLibraryPage = lazy(() => import('./pages/ExerciseLibraryPage.jsx')
 const GeneratorPage = lazy(() => import('./pages/GeneratorPage.jsx'));
 const InvoicingPage = lazy(() => import('./pages/InvoicingPage.jsx'));
 const MessagesPage = lazy(() => import('./pages/MessagesPage.jsx'));
+const CampaignsPage = lazy(() => import('./pages/CampaignsPage.jsx'));
 const ProgramTemplatesPage = lazy(() => import('./pages/ProgramTemplatesPage.jsx'));
 const SchedulePage = lazy(() => import('./pages/SchedulePage.jsx'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage.jsx'));
@@ -89,6 +90,7 @@ export default function App() {
               <Route path={PAGES.workoutBuilder.path} element={<WorkoutBuilderPage onNotify={showToast} />} />
               <Route path={PAGES.programTemplates.path} element={<ProgramTemplatesPage onNavigate={go} onNotify={showToast} />} />
               <Route path={PAGES.messages.path} element={<MessagesPage onNavigate={go} />} />
+              <Route path={PAGES.campaigns.path} element={<CampaignsPage />} />
               <Route path={PAGES.workflows.path} element={<WorkflowsPage onNotify={showToast} />} />
               <Route path={PAGES.groups.path} element={<GroupsPage />} />
               <Route path={PAGES.team.path} element={<TeamPage />} />

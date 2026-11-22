@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Button from '../components/Button.jsx';
+import EmailPreferences from '../components/EmailPreferences.jsx';
 import LanguageToggle from '../components/LanguageToggle.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import ProfileSettings from '../components/ProfileSettings.jsx';
@@ -36,6 +37,7 @@ export default function SettingsPage() {
             <div><h3>{t('account')}</h3><p>{user?.email || t('signedOut')}</p></div>
             <span className="soft-badge badge-blue">{profile ? t(profile.role) : t('signedOut')}</span>
           </div>
+          {profile?.role === 'client' && <EmailPreferences />}
           {platformAdmin && (
             <div className="settings-row">
               <div><h3>{t('adminAiLink')}</h3><p>{t('adminAiLinkHelp')}</p></div>

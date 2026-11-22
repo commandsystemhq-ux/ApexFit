@@ -1,6 +1,7 @@
 import { aiTranslations } from './aiTranslations.js';
 import { billingTranslations } from './billingTranslations.js';
 import { businessTranslations } from './businessTranslations.js';
+import { campaignTranslations } from './campaignTranslations.js';
 import { chatTranslations } from './chatTranslations.js';
 import { checklistTranslations } from './checklistTranslations.js';
 import { communityTranslations } from './communityTranslations.js';
@@ -627,4 +628,5 @@ for (const locale of supportedLocales) {
   Object.assign(translations[locale], billingTranslations[locale]);
   Object.assign(translations[locale], paymentsTranslations[locale]);
   Object.assign(translations[locale], publicPagesTranslations[locale]);
+  Object.assign(translations[locale], campaignTranslations[locale]);
 }
