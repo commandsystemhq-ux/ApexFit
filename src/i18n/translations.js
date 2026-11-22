@@ -5,6 +5,7 @@ import { campaignTranslations } from './campaignTranslations.js';
 import { chatTranslations } from './chatTranslations.js';
 import { checklistTranslations } from './checklistTranslations.js';
 import { communityTranslations } from './communityTranslations.js';
+import { dashboardTranslations } from './dashboardTranslations.js';
 import { engagementTranslations, jackEngagementTranslations } from './engagementTranslations.js';
 import { growthTranslations, jackGrowthTranslations } from './growthTranslations.js';
 import { healthTranslations } from './healthTranslations.js';
@@ -631,4 +632,5 @@ for (const locale of supportedLocales) {
   Object.assign(translations[locale], publicPagesTranslations[locale]);
   Object.assign(translations[locale], campaignTranslations[locale]);
   Object.assign(translations[locale], uxTranslations[locale]);
+  Object.assign(translations[locale], dashboardTranslations[locale]);
 }

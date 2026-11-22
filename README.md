@@ -278,3 +278,15 @@ Migration `20261115002800_coach_food_log_review.sql` (also in `supabase/manual-s
 ## Layout notes
 
 The sidebar is the full menu on desktop, a persistent icon bar on tablets (561-820 px) and a drawer behind the menu button on phones (up to 560 px). The page header is solid so content never shows through it, and the in-page tab strip of the client portal is hidden wherever the sidebar already lists the same pages.
+
+## Coach dashboard
+
+Every number on `/dashboard` comes from one call, `get_coach_dashboard` (migration `20261115002900_coach_dashboard.sql`, also in `supabase/manual-setup.sql`). It runs with the database's permissions but checks everything itself: it answers only for an active coach and only counts that coach's own active clients and records, so another coach's data can never appear. Nothing is estimated, and with no activity the cards show real zeros.
+
+- **Active clients**: clients linked to the coach with status active.
+- **Monthly revenue**: invoices with status paid and `paid_at` in the current calendar month (UTC), plus paid store orders bought this month, added up per currency (one amount per currency, in the currency it was paid in).
+- **Plans created**: training programs the coach created, templates included.
+- **Average adherence**: for each active client, workout days logged in the last 30 days divided by the days expected from the weekly training days in their onboarding form (3 when it is not filled in), capped at 100%; a client who joined recently is judged only on the days since they joined. The dashboard shows the average over active clients (0% with none).
+- **Weekly adherence**: the same idea over the last 7 days for each client, with a link that opens that client's details on the Clients page (`/clients?client=<id>`).
+- **Coaching insights**: built from the same data: no workout for 7+ days or none yet, behind this week (under 50% of the goal after a week as a client), reached the weekly goal, no food log for 3+ days or none yet, and unread messages from the client. Clients who joined in the last 3 days are not flagged. The most urgent 8 are shown.
+

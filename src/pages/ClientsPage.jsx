@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '../components/Button.jsx';
 import ClientCompliancePanel from '../components/ClientCompliancePanel.jsx';
 import ClientFoodReview from '../components/ClientFoodReview.jsx';
@@ -29,6 +29,8 @@ const EQUIPMENT_LABELS = { full_gym: 'fullGym', home_gym: 'equipHomeGym', bodywe
 export default function ClientsPage({ onNotify }) {
   const { locale, t } = useLocale();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const openedFromLink = useRef('');
   const [clients, setClients] = useState([]);
   const [invites, setInvites] = useState([]);
   const [team, setTeam] = useState([]);
@@ -109,6 +111,18 @@ export default function ClientsPage({ onNotify }) {
     }
   }
 
+  // A link such as /clients?client=<id> (from the dashboard) opens that client's details and scrolls to them.
+  const linkedClientId = searchParams.get('client');
+  useEffect(() => {
+    if (!linkedClientId || loading || openedFromLink.current === linkedClientId) return;
+    openedFromLink.current = linkedClientId;
+    if (clients.some((client) => client.client_id === linkedClientId)) {
+      toggleIntake(linkedClientId);
+      window.requestAnimationFrame(() => document.getElementById(`client-${linkedClientId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    }
+    setSearchParams({}, { replace: true });
+  }, [linkedClientId, loading, clients]);
+
   const activeCount = clients.filter((client) => client.status === 'active').length;
   const trainerIndex = assignmentIndex(assignments, team);
   const visibleClients = filterClientsByTrainer(clients, trainerIndex, trainerFilter);
@@ -139,7 +153,7 @@ export default function ClientsPage({ onNotify }) {
           )}
           <div className="clients-list">
             {visibleClients.map((client) => (
-              <article className="client-row" key={client.client_id}>
+              <article className="client-row" id={`client-${client.client_id}`} key={client.client_id}>
                 <div className="client-row-main">
                   <div className="avatar avatar-blue" aria-hidden="true">{clientLabel(client).slice(0, 1).toUpperCase()}</div>
                   <div className="client-row-copy">

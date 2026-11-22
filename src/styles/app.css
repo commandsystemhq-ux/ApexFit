@@ -1431,6 +1431,27 @@ a.sidebar-profile:hover .profile-copy strong { color: #70afff; }
 .food-review-day summary { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; cursor: pointer; font-size: 12px; font-weight: 600; }
 .food-review-day-totals { color: var(--subtle); font-size: 10px; font-weight: 400; }
 .food-review-day[open] summary { margin-bottom: 10px; }
+.insight-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.insight { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: rgba(255, 255, 255, .02); }
+.insight-dot { width: 8px; height: 8px; flex: none; margin-top: 5px; border-radius: 50%; background: var(--subtle); }
+.insight-warning .insight-dot { background: var(--amber); box-shadow: 0 0 8px rgba(240, 162, 75, .6); }
+.insight-success .insight-dot { background: var(--green); }
+.insight-info .insight-dot { background: var(--cyan); }
+.insight-copy { min-width: 0; flex: 1; }
+.insight-copy strong { font-size: 12px; overflow-wrap: anywhere; }
+.insight-copy p { margin: 2px 0 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.adherence-list { max-height: 360px; overflow-y: auto; }
+.adherence-row { grid-template-columns: minmax(110px, 1.3fr) minmax(70px, 1.2fr) auto; }
+.dash-roster { display: grid; gap: 8px; }
+.dash-roster-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; }
+.dash-roster-main { display: grid; min-width: 140px; flex: 1 1 160px; gap: 2px; }
+.dash-roster-main strong { overflow-wrap: anywhere; font-size: 12px; }
+.dash-roster-main small { color: var(--subtle); font-size: 10px; }
+.dash-roster-facts { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0; }
+.dash-roster-facts div { display: grid; gap: 2px; }
+.dash-roster-facts dt { color: var(--subtle); font-size: 9px; }
+.dash-roster-facts dd { margin: 0; font-size: 11px; font-weight: 600; }
+.dash-roster-actions { display: flex; gap: 12px; margin-inline-start: auto; }
 /* ---- Collapsible sectioned sidebar ---- */
 .sidebar { transition: transform .22s ease, width .22s ease; }
 .main-area { transition: margin .22s ease; }
