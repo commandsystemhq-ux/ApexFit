@@ -33,47 +33,6 @@ export async function saveClientBodyMetric({ measuredOn, weight_kg, body_fat_per
   if (error) throw error;
 }
 
-export async function listClientHabitLogs(startDate, endDate) {
-  const { data, error } = await requireSupabase()
-    .from('client_habit_logs')
-    .select('id,habit_date,sleep_hours,water_liters,steps')
-    .gte('habit_date', startDate)
-    .lte('habit_date', endDate)
-    .order('habit_date', { ascending: false });
-  if (error) throw error;
-  return data || [];
-}
-
-export async function saveClientHabitLog({ habitDate, sleepHours, waterLiters, steps }) {
-  const sleep = sleepHours === '' ? null : Number(sleepHours);
-  const water = waterLiters === '' ? null : Number(waterLiters);
-  const stepCount = steps === '' ? null : Number(steps);
-  if (sleep === null && water === null && stepCount === null) {
-    throw new TypeError('Enter at least one habit value before saving.');
-  }
-  if (sleep !== null && (!Number.isFinite(sleep) || sleep < 0 || sleep > 24)) {
-    throw new RangeError('Sleep must be between 0 and 24 hours.');
-  }
-  if (water !== null && (!Number.isFinite(water) || water < 0 || water > 50)) {
-    throw new RangeError('Water must be between 0 and 50 liters.');
-  }
-  if (stepCount !== null && (!Number.isInteger(stepCount) || stepCount < 0 || stepCount > 200000)) {
-    throw new RangeError('Steps must be a whole number between 0 and 200000.');
-  }
-
-  const client = requireSupabase();
-  const { error } = await client
-    .from('client_habit_logs')
-    .upsert({
-      client_id: await getCurrentClientId(client),
-      habit_date: habitDate,
-      sleep_hours: sleep,
-      water_liters: water,
-      steps: stepCount,
-    }, { onConflict: 'client_id,habit_date' });
-  if (error) throw error;
-}
-
 export async function uploadClientProgressPhoto(clientId, file) {
   validateProgressPhoto(file);
   if (!clientId) throw new TypeError('Client identity is required to upload a progress photo.');

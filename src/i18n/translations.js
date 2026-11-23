@@ -8,6 +8,7 @@ import { communityTranslations } from './communityTranslations.js';
 import { dashboardTranslations } from './dashboardTranslations.js';
 import { engagementTranslations, jackEngagementTranslations } from './engagementTranslations.js';
 import { growthTranslations, jackGrowthTranslations } from './growthTranslations.js';
+import { habitsTranslations } from './habitsTranslations.js';
 import { healthTranslations } from './healthTranslations.js';
 import { jackTranslations } from './jackTranslations.js';
 import { launchTranslations } from './launchTranslations.js';
@@ -633,4 +634,5 @@ for (const locale of supportedLocales) {
   Object.assign(translations[locale], campaignTranslations[locale]);
   Object.assign(translations[locale], uxTranslations[locale]);
   Object.assign(translations[locale], dashboardTranslations[locale]);
+  Object.assign(translations[locale], habitsTranslations[locale]);
 }

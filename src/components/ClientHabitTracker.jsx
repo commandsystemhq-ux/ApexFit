@@ -1,164 +1,229 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Button from './Button.jsx';
+import HabitWeekChart from './HabitWeekChart.jsx';
+import { HabitEditorModal, HabitRemoveModal } from './HabitModals.jsx';
 import ProgressBar from './ProgressBar.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
-import { HABIT_GOALS, calculateGoalPercent, getLocalDateString, shiftDate } from '../services/clientTrackingUtils.js';
-import { listClientHabitLogs, saveClientHabitLog } from '../services/clientProgressService.js';
+import { fillText } from '../services/accountabilityUtils.js';
+import { getLocalDateString, shiftDate } from '../services/clientTrackingUtils.js';
+import { deleteHabit, ensureDefaultHabits, listHabitValues, listHabits, logHabit, saveHabit, setHabitStatus } from '../services/habitService.js';
+import {
+  MAX_HABITS, STREAK_LOOKBACK_DAYS, activeHabits, addQuickAmount, archivedHabits, buildHabitValues, calculateStreak, formFromHabit,
+  habitMax, habitMet, habitName, habitPercent, habitUnit, isBoolean, summarizeGoals, weekDays,
+} from '../services/habitUtils.js';
 
-const HABITS = [
-  { key: 'sleepHours', field: 'sleep_hours', label: 'sleepHours', unit: 'hours', max: 24, step: '0.25', quickAdd: 0.5, color: 'blue' },
-  { key: 'waterLiters', field: 'water_liters', label: 'waterLiters', unit: 'liters', max: 50, step: '0.1', quickAdd: 0.25, color: 'green' },
-  { key: 'steps', field: 'steps', label: 'steps', unit: null, max: 200000, step: '1', quickAdd: 1000, color: 'amber' },
-];
-
-function roundValue(value) {
-  return Math.round(value * 100) / 100;
-}
+const savedText = (value) => (value === undefined || value === null ? '' : String(value));
 
 export default function ClientHabitTracker() {
   const { locale, t } = useLocale();
   const today = getLocalDateString();
-  const [form, setForm] = useState({ sleepHours: '', waterLiters: '', steps: '' });
-  const [history, setHistory] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [habits, setHabits] = useState([]);
+  const [values, setValues] = useState({});
+  const [drafts, setDrafts] = useState({});
+  const [status, setStatus] = useState('loading');
   const [loadError, setLoadError] = useState('');
-  const [saveError, setSaveError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [notice, setNotice] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [busyId, setBusyId] = useState('');
+  const [modal, setModal] = useState(null);
 
-  async function refreshHistory() {
-    setLoading(true);
-    setLoadError('');
+  const refresh = useCallback(async ({ resetDrafts = true } = {}) => {
     try {
-      const logs = await listClientHabitLogs(shiftDate(today, -6), today);
-      setHistory(logs);
-      const todayLog = logs.find((log) => log.habit_date === today);
-      if (todayLog) {
-        setForm({
-          sleepHours: todayLog.sleep_hours === null ? '' : String(todayLog.sleep_hours),
-          waterLiters: todayLog.water_liters === null ? '' : String(todayLog.water_liters),
-          steps: todayLog.steps === null ? '' : String(todayLog.steps),
-        });
+      await ensureDefaultHabits();
+      const [list, logs] = await Promise.all([listHabits(), listHabitValues(shiftDate(today, -(STREAK_LOOKBACK_DAYS - 1)), today)]);
+      const nextValues = buildHabitValues(list, logs.dailyLogs, logs.customLogs);
+      setHabits(list);
+      setValues(nextValues);
+      if (resetDrafts) {
+        setDrafts(Object.fromEntries(activeHabits(list).filter((habit) => !isBoolean(habit)).map((habit) => [habit.id, savedText(nextValues[habit.id]?.[today])])));
       }
+      setLoadError('');
+      setStatus('ready');
     } catch (error) {
       setLoadError(error.message);
-    } finally {
-      setLoading(false);
+      setStatus('error');
     }
-  }
-
-  useEffect(() => {
-    refreshHistory();
   }, [today]);
 
-  function updateHabit(key, value) {
-    setSuccess('');
-    setForm((current) => ({ ...current, [key]: value }));
+  useEffect(() => {
+    setStatus('loading');
+    refresh();
+  }, [refresh]);
+
+  const active = useMemo(() => activeHabits(habits), [habits]);
+  const archived = useMemo(() => archivedHabits(habits), [habits]);
+  const goals = summarizeGoals(habits, values, drafts, today);
+  const days = weekDays(today);
+  const dirty = active.filter((habit) => !isBoolean(habit) && savedText(drafts[habit.id]) !== savedText(values[habit.id]?.[today]));
+
+  const say = (kind, text) => setNotice({ kind, text });
+
+  function typeValue(habit, text) {
+    setNotice(null);
+    setDrafts((current) => ({ ...current, [habit.id]: text }));
   }
 
-  function quickAdd(habit) {
-    const current = Number(form[habit.key]) || 0;
-    updateHabit(habit.key, String(Math.min(habit.max, roundValue(current + habit.quickAdd))));
-  }
-
-  async function handleSave(event) {
+  async function saveToday(event) {
     event.preventDefault();
-    setSaveError('');
-    setSuccess('');
+    setNotice(null);
     setSaving(true);
     try {
-      await saveClientHabitLog({
-        habitDate: today,
-        sleepHours: form.sleepHours,
-        waterLiters: form.waterLiters,
-        steps: form.steps,
-      });
-      setSuccess(t('habitsSaved'));
-      await refreshHistory();
+      for (const habit of dirty) {
+        const text = String(drafts[habit.id] ?? '').trim();
+        const value = text === '' ? null : Number(text);
+        const invalid = value !== null && (!Number.isFinite(value) || value < 0 || value > habitMax(habit) || (habit.builtin_key === 'steps' && !Number.isInteger(value)));
+        if (invalid) throw new RangeError(habitName(habit, t));
+        await logHabit(habit.id, today, value);
+      }
+      await refresh();
+      say('info', t('habitsSaved'));
     } catch (error) {
-      setSaveError(`${t('habitSaveError')} ${error.message}`);
+      say('error', `${t('habitSaveError')} ${error.message}`);
+      await refresh({ resetDrafts: false });
     } finally {
       setSaving(false);
     }
   }
 
-  const logsByDate = new Map(history.map((log) => [log.habit_date, log]));
-  const week = Array.from({ length: 7 }, (_, index) => {
-    const date = shiftDate(today, index - 6);
-    return {
-      date,
-      log: logsByDate.get(date) || null,
-      weekday: new Date(`${date}T12:00:00`).toLocaleDateString(locale, { weekday: 'short' }),
-    };
-  });
-  const goalsReached = HABITS.filter((habit) => calculateGoalPercent(form[habit.key], HABIT_GOALS[habit.key]) >= 100).length;
+  async function toggleDone(habit) {
+    setNotice(null);
+    setBusyId(habit.id);
+    try {
+      await logHabit(habit.id, today, habitMet(habit, values[habit.id]?.[today]) ? 0 : 1);
+      await refresh({ resetDrafts: false });
+    } catch (error) {
+      say('error', `${t('habitSaveError')} ${error.message}`);
+    } finally {
+      setBusyId('');
+    }
+  }
+
+  async function submitHabit(payload) {
+    await saveHabit(payload);
+    setModal(null);
+    await refresh();
+    say('info', t('hbSaved'));
+  }
+
+  async function archiveHabit(habit) {
+    await setHabitStatus(habit.id, 'archived');
+    setModal(null);
+    await refresh();
+    say('info', t('hbArchived'));
+  }
+
+  async function restoreHabit(habit) {
+    setNotice(null);
+    try {
+      await setHabitStatus(habit.id, 'active');
+      await refresh();
+      say('info', t('hbRestored'));
+    } catch (error) {
+      say('error', `${t('hbActionError')} ${error.message}`);
+    }
+  }
+
+  async function removeHabit(habit) {
+    await deleteHabit(habit.id);
+    setModal(null);
+    await refresh();
+    say('info', t('hbDeleted'));
+  }
+
+  const goalText = (habit) => (isBoolean(habit)
+    ? t('hbOncePerDay')
+    : `${Number(habit.daily_goal).toLocaleString(locale)} ${habitUnit(habit, t)}`.trim());
+  const limitReached = habits.length >= MAX_HABITS;
 
   return (
     <div className="client-habits-layout">
-      <form className="panel client-habit-form" onSubmit={handleSave}>
-        <div className="panel-heading"><div><span className="eyebrow">{t('habitTracker')}</span><h3>{t('habitToday')} · {today}</h3></div>
-          <span className="soft-badge badge-muted">{goalsReached} / {HABITS.length} {t('goalsReached')}</span>
+      <form className="panel client-habit-form" onSubmit={saveToday}>
+        <div className="panel-heading">
+          <div><span className="eyebrow">{t('habitTracker')}</span><h3>{t('habitToday')} · {today}</h3></div>
+          <span className="soft-badge badge-muted">{goals.reached} / {goals.total} {t('goalsReached')}</span>
         </div>
+        <div className="habit-toolbar">
+          <Button variant="primary" size="small" type="button" disabled={limitReached || status !== 'ready'} onClick={() => setModal({ type: 'edit', initial: null })}>{t('hbAddHabit')}</Button>
+          {limitReached && <small className="muted-copy">{fillText(t('hbMaxReached'), { n: MAX_HABITS })}</small>}
+        </div>
+
+        {status === 'loading' && <div className="empty-state" role="status">{t('loadingProgress')}</div>}
+        {status === 'error' && <div className="notice notice-error" role="alert">{t('habitLoadError')} {loadError}</div>}
+        {status === 'ready' && active.length === 0 && <div className="empty-state">{t('hbNoHabits')}</div>}
+
         <div className="habit-goal-list">
-          {HABITS.map((habit) => {
-            const percent = calculateGoalPercent(form[habit.key], HABIT_GOALS[habit.key]);
+          {active.map((habit) => {
+            const name = habitName(habit, t);
+            const saved = values[habit.id]?.[today];
+            const boolean = isBoolean(habit);
+            const percent = habitPercent(habit, boolean ? saved : drafts[habit.id]);
+            const streak = calculateStreak(habit, values[habit.id], today);
+            const unit = habitUnit(habit, t);
+            const done = habitMet(habit, saved);
             return (
-              <div className="habit-goal-card" key={habit.key}>
-                <label className="form-label">{t(habit.label)}
-                  <input className="field" type="number" min="0" max={habit.max} step={habit.step} value={form[habit.key]} onChange={(event) => updateHabit(habit.key, event.target.value)} />
-                </label>
+              <div className="habit-goal-card" key={habit.id}>
+                <div className="habit-card-head">
+                  <span className={`habit-dot habit-dot-${habit.color}`} aria-hidden="true" />
+                  <strong dir="auto">{name}</strong>
+                  {streak > 0 && <span className="habit-streak" title={fillText(t('hbStreak'), { n: streak })}>🔥 {fillText(t('hbStreak'), { n: streak })}</span>}
+                  <span className="habit-card-actions">
+                    <button type="button" className="icon-button" onClick={() => setModal({ type: 'edit', initial: formFromHabit(habit) })} aria-label={`${t('hbEdit')}: ${name}`} title={t('hbEdit')}>✏️</button>
+                    <button type="button" className="icon-button" onClick={() => setModal({ type: 'remove', habit })} aria-label={`${t('hbRemove')}: ${name}`} title={t('hbRemove')}>🗑️</button>
+                  </span>
+                </div>
+                {boolean ? (
+                  <button type="button" className={`habit-check ${done ? 'is-done' : ''}`} aria-pressed={done} disabled={busyId === habit.id} onClick={() => toggleDone(habit)}>
+                    <span aria-hidden="true">{done ? '✅' : '⬜'}</span> {done ? t('hbDoneToday') : t('hbMarkDone')}
+                  </button>
+                ) : (
+                  <input className="field" type="number" inputMode="decimal" min="0" max={habitMax(habit)} step="any" aria-label={name} value={drafts[habit.id] ?? ''} onChange={(event) => typeValue(habit, event.target.value)} />
+                )}
                 <ProgressBar value={percent} color={habit.color} />
                 <div className="habit-goal-meta">
-                  <span>{t('dailyGoal')}: {HABIT_GOALS[habit.key].toLocaleString()} {habit.unit ? t(habit.unit) : ''}</span>
+                  <span>{t('dailyGoal')}: {goalText(habit)}</span>
                   <strong>{percent}%</strong>
                 </div>
-                <Button variant="secondary" size="small" type="button" onClick={() => quickAdd(habit)}>+ {habit.quickAdd.toLocaleString()} {habit.unit ? t(habit.unit) : t('steps')}</Button>
+                {!boolean && (
+                  <Button variant="secondary" size="small" type="button" onClick={() => typeValue(habit, addQuickAmount(habit, drafts[habit.id]))}>
+                    + {Number(habit.quick_add).toLocaleString(locale)} {unit || t('steps')}
+                  </Button>
+                )}
               </div>
             );
           })}
         </div>
-        {saveError && <div className="notice notice-error" role="alert">{saveError}</div>}
-        {success && <div className="notice notice-info" role="status">{success}</div>}
-        <Button variant="primary" type="submit" disabled={saving}>{saving ? t('savingHabits') : t('saveHabits')}</Button>
+        {notice && <div className={`notice ${notice.kind === 'error' ? 'notice-error' : 'notice-info'}`} role={notice.kind === 'error' ? 'alert' : 'status'}>{notice.text}</div>}
+        <Button variant="primary" type="submit" disabled={saving || dirty.length === 0}>{saving ? t('savingHabits') : t('saveHabits')}</Button>
+
+        {archived.length > 0 && (
+          <details className="habit-archived">
+            <summary>{fillText(t('hbArchivedTitle'), { n: archived.length })}</summary>
+            <ul>
+              {archived.map((habit) => (
+                <li key={habit.id}>
+                  <span><span className={`habit-dot habit-dot-${habit.color}`} aria-hidden="true" /> <strong dir="auto">{habitName(habit, t)}</strong> <small>{goalText(habit)}</small></span>
+                  <span className="habit-card-actions">
+                    <button type="button" className="text-action" onClick={() => restoreHabit(habit)}>{t('hbRestore')}</button>
+                    <button type="button" className="icon-button" onClick={() => setModal({ type: 'remove', habit })} aria-label={`${t('hbRemove')}: ${habitName(habit, t)}`} title={t('hbRemove')}>🗑️</button>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
       </form>
 
       <section className="panel client-habit-history">
         <div className="panel-heading"><div><span className="eyebrow">{t('habitTracker')}</span><h3>{t('habitHistory')}</h3></div></div>
-        {loadError && <div className="notice notice-error" role="alert">{t('habitLoadError')} {loadError}</div>}
-        {loading && <div className="empty-state" role="status">{t('loadingProgress')}</div>}
-        {!loading && !loadError && history.length === 0 && <div className="empty-state">{t('noHabitHistory')}</div>}
-        {!loading && history.length > 0 && (
-          <>
-            {HABITS.map((habit) => (
-              <div className="habit-week-chart" key={habit.key}>
-                <h4>{t(habit.label)}</h4>
-                <div className="habit-week-bars">
-                  {week.map(({ date, log, weekday }) => {
-                    const value = log?.[habit.field];
-                    const percent = calculateGoalPercent(value, HABIT_GOALS[habit.key]);
-                    return (
-                      <div className="habit-week-bar" key={date} title={`${date}: ${value ?? '—'}`}>
-                        <div className="habit-week-track"><span className={`progress-${habit.color}`} style={{ height: `${percent}%` }} /></div>
-                        <small>{weekday}</small>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-            <div className="habit-history-list">
-              {history.map((log) => (
-                <article className="habit-history-row" key={log.id}>
-                  <strong>{log.habit_date}</strong>
-                  <span>{t('sleepHours')}: {log.sleep_hours ?? '—'} {t('hours')}</span>
-                  <span>{t('waterLiters')}: {log.water_liters ?? '—'} {t('liters')}</span>
-                  <span>{t('steps')}: {log.steps === null ? '—' : Number(log.steps).toLocaleString()}</span>
-                </article>
-              ))}
-            </div>
-          </>
-        )}
+        {status === 'loading' && <div className="empty-state" role="status">{t('loadingProgress')}</div>}
+        {status === 'ready' && active.length === 0 && <div className="empty-state">{t('noHabitHistory')}</div>}
+        {status === 'ready' && active.map((habit) => (
+          <HabitWeekChart key={habit.id} habit={habit} valuesByDate={values[habit.id]} days={days} streak={calculateStreak(habit, values[habit.id], today)} />
+        ))}
       </section>
+
+      {modal?.type === 'edit' && <HabitEditorModal initial={modal.initial} onSave={submitHabit} onClose={() => setModal(null)} />}
+      {modal?.type === 'remove' && <HabitRemoveModal habit={modal.habit} onArchive={() => archiveHabit(modal.habit)} onDelete={() => removeHabit(modal.habit)} onClose={() => setModal(null)} />}
     </div>
   );
 }

@@ -290,3 +290,13 @@ Every number on `/dashboard` comes from one call, `get_coach_dashboard` (migrati
 - **Weekly adherence**: the same idea over the last 7 days for each client, with a link that opens that client's details on the Clients page (`/clients?client=<id>`).
 - **Coaching insights**: built from the same data: no workout for 7+ days or none yet, behind this week (under 50% of the goal after a week as a client), reached the weekly goal, no food log for 3+ days or none yet, and unread messages from the client. Clients who joined in the last 3 days are not flagged. The most urgent 8 are shown.
 
+
+## Custom habits
+
+Migration `20261115003000_custom_habits.sql` (also in `supabase/manual-setup.sql`; run it again to apply, it is safe to repeat). On `/habits` a client keeps their own list of habits:
+
+- **Two types.** *Number* habits have a unit, a daily goal and a quick-add (+) amount (water, steps, reading minutes). *Done / not done* habits are marked with one tap (creatine, no sugar, morning stretch). The type cannot be changed after the habit is created.
+- **Sleep, water and steps** are every client's starting habits (added the first time they open the tracker, and by the migration for clients that already exist). Their goal, quick-add amount and color can be edited like any other habit, and their values still live in `client_habit_logs`, so earlier history, points and reports are unchanged. A habit a client deletes is never added back.
+- **Add, edit, archive, delete.** The **+ Add new habit** window has quick picks (creatine, vitamins, no sugar, 15 minutes of stretching, a walk after meals) or a name of their own, the type, goal, unit and color. **Archive** hides a habit but keeps its history and can be restored; **Delete for good** removes the habit and everything logged for it. Up to 30 habits per client.
+- **Screen.** The `X / Y goals reached` badge counts every active habit, the last-seven-days view shows every active habit, and each habit shows its streak (days in a row the goal was met; today still being open does not break it).
+- **Database.** `client_custom_habits` (name, type, unit, daily goal, quick-add amount, color, order, `active`/`archived`), `client_custom_habit_logs` (one value per habit per day) and `client_habit_settings` (so deleted starting habits stay deleted). A client reads only their own rows and writes only through the functions `ensure_my_default_habits`, `save_my_habit`, `set_my_habit_status`, `delete_my_habit` and `log_my_habit`, which check who is asking; direct inserts, updates and deletes are refused. An active coach can read, never change, the habits and values of their active clients (select-only policies, including on `client_habit_logs`); on **Clients** each client has a **Habits** tab.

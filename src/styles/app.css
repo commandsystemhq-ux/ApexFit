@@ -1506,3 +1506,64 @@ a.sidebar-profile:hover .profile-copy strong { color: #70afff; }
   .sidebar, .main-area, .sidebar-toggle-icon { transition: none; }
 }
 @media (min-width: 561px) { .client-feature-tabs.portal-tabs { display: none; } }
+
+/* Custom habits */
+.habit-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.habit-card-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.habit-card-head > strong { min-width: 0; overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.habit-card-actions { display: inline-flex; align-items: center; gap: 6px; margin-inline-start: auto; }
+.habit-card-actions .icon-button { width: 26px; height: 26px; font-size: 11px; }
+.habit-dot { display: inline-block; width: 9px; height: 9px; flex: none; border-radius: 50%; background: var(--blue, #328aff); }
+.habit-dot-green { background: var(--green); }
+.habit-dot-amber { background: var(--amber); }
+.habit-dot-purple { background: #9a7bff; }
+.habit-dot-pink { background: #f06fb0; }
+.habit-dot-teal { background: #2fc7c7; }
+.habit-streak { padding: 2px 7px; border-radius: 999px; background: rgba(240, 181, 76, .12); color: var(--amber); font-size: 9px; font-weight: 700; white-space: nowrap; }
+.habit-week-chart h4 .habit-streak { margin-inline-start: 6px; }
+.habit-check { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 38px; padding: 8px 12px; border: 1px solid var(--line-strong); border-radius: 9px; background: rgba(255, 255, 255, .03); color: var(--text); cursor: pointer; font-size: 12px; font-weight: 600; }
+.habit-check.is-done { border-color: rgba(50, 212, 154, .35); background: rgba(50, 212, 154, .1); color: var(--green); }
+.habit-check:disabled { cursor: progress; opacity: .7; }
+.progress-purple { background: #9a7bff; }
+.progress-pink { background: #f06fb0; }
+.progress-teal { background: #2fc7c7; }
+.habit-week-track span.progress-purple { background: #9a7bff; }
+.habit-week-track span.progress-pink { background: #f06fb0; }
+.habit-week-track span.progress-teal { background: #2fc7c7; }
+.habit-archived { padding: 10px; border: 1px dashed var(--line-strong); border-radius: 9px; font-size: 11px; }
+.habit-archived summary { cursor: pointer; color: var(--muted); }
+.habit-archived ul { display: grid; gap: 8px; margin: 10px 0 0; padding: 0; list-style: none; }
+.habit-archived li { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.habit-modal-backdrop { position: fixed; z-index: 50; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(0, 0, 0, .72); overflow-y: auto; }
+.habit-modal { width: min(520px, 100%); max-height: calc(100vh - 40px); overflow-y: auto; padding: 18px; border: 1px solid var(--line-strong); border-radius: 14px; background: #0c1119; box-shadow: 0 25px 90px rgba(0, 0, 0, .6); }
+.habit-modal-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.habit-modal-heading h2 { margin: 0; font: 600 15px var(--font-display); }
+.habit-modal-form { display: grid; gap: 14px; }
+.habit-modal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.habit-suggestions { display: grid; gap: 8px; }
+.habit-suggestion-list { display: flex; flex-wrap: wrap; gap: 7px; }
+.habit-modal fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+.habit-modal legend { padding: 0; margin-bottom: 6px; color: #aab5c5; font-size: 10px; font-weight: 600; }
+.habit-kind-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.habit-kind-picker legend { grid-column: 1 / -1; }
+.habit-kind-option { display: flex; align-items: flex-start; gap: 8px; padding: 10px; border: 1px solid var(--line-strong); border-radius: 9px; cursor: pointer; font-size: 11px; }
+.habit-kind-option.is-selected { border-color: rgba(53, 140, 250, .45); background: rgba(50, 138, 255, .1); }
+.habit-kind-option span { display: grid; gap: 3px; }
+.habit-kind-option small { color: var(--subtle); font-size: 9px; }
+.habit-swatches { display: flex; flex-wrap: wrap; gap: 9px; }
+.habit-swatch { width: 28px; height: 28px; border: 2px solid transparent; border-radius: 50%; cursor: pointer; background: #328aff; }
+.habit-swatch-green { background: var(--green); }
+.habit-swatch-amber { background: var(--amber); }
+.habit-swatch-purple { background: #9a7bff; }
+.habit-swatch-pink { background: #f06fb0; }
+.habit-swatch-teal { background: #2fc7c7; }
+.habit-swatch.is-selected { border-color: #fff; box-shadow: 0 0 0 2px rgba(255, 255, 255, .25); }
+.habit-modal-actions { display: flex; justify-content: flex-end; gap: 9px; }
+.habit-remove-option { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 9px; }
+.habit-remove-option p { margin: 0; }
+.habit-review { display: grid; gap: 12px; }
+@media (max-width: 640px) {
+  .habit-kind-picker { grid-template-columns: 1fr; }
+  .habit-modal-actions { flex-direction: column-reverse; }
+  .habit-modal-actions .button { width: 100%; }
+}
