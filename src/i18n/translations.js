@@ -8,6 +8,7 @@ import { checklistTranslations } from './checklistTranslations.js';
 import { communityTranslations } from './communityTranslations.js';
 import { dashboardTranslations } from './dashboardTranslations.js';
 import { engagementTranslations, jackEngagementTranslations } from './engagementTranslations.js';
+import { exerciseVideoTranslations } from './exerciseVideoTranslations.js';
 import { growthTranslations, jackGrowthTranslations } from './growthTranslations.js';
 import { habitsTranslations } from './habitsTranslations.js';
 import { healthTranslations } from './healthTranslations.js';
@@ -644,5 +645,6 @@ for (const locale of supportedLocales) {
   Object.assign(translations[locale], mealPlanTranslations[locale]);
   Object.assign(translations[locale], progressionTranslations[locale]);
   Object.assign(translations[locale], jackAssistantTranslations[locale]);
+  Object.assign(translations[locale], exerciseVideoTranslations[locale]);
   Object.assign(translations[locale], teamErrorTranslations[locale]);
 }

@@ -1,0 +1,4 @@
+{
+  "_readme": "Maps an exercise slug to a clean demo video: a YouTube link, a Vimeo link or a direct MP4/WebM address. Fill it in, then run: node scripts/seed-exercise-videos.mjs --dry-run --check-urls",
+  "_example": { "barbell-squat": "https://www.youtube.com/watch?v=XXXXXXXXXXX" }
+}

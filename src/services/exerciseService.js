@@ -1,4 +1,6 @@
 import { searchTokens } from './exerciseI18n.js';
+import { listVideoOverrides } from './exerciseVideoService.js';
+import { mergeVideoOverrides } from './exerciseVideo.js';
 import { requireSupabase } from './supabaseClient.js';
 
 const EXERCISE_FIELDS = 'id,slug,name,name_i18n,category,primary_muscles,equipment,difficulty,instructions,instructions_i18n,demo_video_url,thumbnail_url,animation_url,image_frames';
@@ -35,5 +37,6 @@ export async function searchExercises({
     .range((page - 1) * pageSize, page * pageSize - 1);
   if (error) throw error;
 
-  return { exercises: data || [], total: count || 0 };
+  const exercises = data || [];
+  return { exercises: mergeVideoOverrides(exercises, await listVideoOverrides(exercises.map((exercise) => exercise.id))), total: count || 0 };
 }

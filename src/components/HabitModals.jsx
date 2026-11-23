@@ -7,7 +7,7 @@ import {
   emptyHabitForm, formFromSuggestion, habitName, validateHabitForm,
 } from '../services/habitUtils.js';
 
-function ModalShell({ title, titleId, onClose, children }) {
+export function ModalShell({ title, titleId, onClose, children }) {
   useEffect(() => {
     const onKey = (event) => { if (event.key === 'Escape') onClose(); };
     document.addEventListener('keydown', onKey);

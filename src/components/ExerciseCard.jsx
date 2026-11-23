@@ -3,6 +3,7 @@ import Button from './Button.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import { getExerciseVideoSource } from '../services/exerciseCatalogUtils.js';
 import ExerciseMedia from './ExerciseMedia.jsx';
+import ExerciseVideoPlayer from './ExerciseVideoPlayer.jsx';
 import { chooseMedia } from '../services/exerciseMedia.js';
 import { useExerciseBundle } from '../hooks/useExerciseBundle.js';
 import { displayName, localizedInstructions, localizedName, textDirection } from '../services/exerciseI18n.js';
@@ -46,28 +47,13 @@ function ExerciseDemoDialog({ exercise, onClose }) {
           <h2><ExerciseTitle exercise={exercise} locale={locale} bundle={bundle} /></h2>
           <button ref={closeButton} className="icon-button" type="button" onClick={onClose} aria-label={t('close')}>×</button>
         </div>
-        {source?.kind === 'iframe' && (
-          <iframe
-            className="exercise-video"
-            src={source.src}
-            title={fullName}
-            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            referrerPolicy="strict-origin-when-cross-origin"
-            allowFullScreen
-          />
-        )}
-        {source?.kind === 'video' && (
-          <video className="exercise-video" src={source.src} controls playsInline>
-            {t('videoUnsupported')}
-          </video>
-        )}
-        {!source && <ExerciseMedia exercise={exercise} large />}
+        {source ? <ExerciseVideoPlayer exercise={exercise} large autoPlay /> : <ExerciseMedia exercise={exercise} large />}
       </section>
     </div>
   );
 }
 
-export default function ExerciseCard({ exercise, onAdd, addLabel }) {
+export default function ExerciseCard({ exercise, onAdd, addLabel, onEditVideo }) {
   const [demoOpen, setDemoOpen] = useState(false);
   const { t, locale } = useLocale();
   const videoSource = getExerciseVideoSource(exercise.demo_video_url);
@@ -100,6 +86,8 @@ export default function ExerciseCard({ exercise, onAdd, addLabel }) {
           ? <Button variant="secondary" size="small" type="button" onClick={() => setDemoOpen(true)}>{t('demoVideo')}</Button>
           : exercise.demo_video_url && <span className="muted-copy">{t('videoUnavailable')}</span>}
         {!videoSource && hasMotion && <Button variant="secondary" size="small" type="button" onClick={() => setDemoOpen(true)}>{t('exerciseViewLarger')}</Button>}
+        {exercise.video_origin === 'coach' && <span className="soft-badge badge-blue">{t('evCoachBadge')}</span>}
+        {onEditVideo && <button className="text-action" type="button" onClick={() => onEditVideo(exercise)}>{'\u270E'} {t('evEdit')}</button>}
         {onAdd && <Button variant="primary" size="small" type="button" onClick={() => onAdd(exercise)}>{addLabel || t('addExercise')}</Button>}
       </div>
       {demoOpen && <ExerciseDemoDialog exercise={exercise} onClose={() => setDemoOpen(false)} />}

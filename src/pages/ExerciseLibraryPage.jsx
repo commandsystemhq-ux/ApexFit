@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import ExerciseCard from '../components/ExerciseCard.jsx';
+import ExerciseVideoEditor from '../components/ExerciseVideoEditor.jsx';
 import PageHeader from '../components/PageHeader.jsx';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
+import { roleOf } from '../routes.js';
 import { searchExercises } from '../services/exerciseService.js';
 
 const PAGE_SIZE = 24;
@@ -12,6 +15,9 @@ const difficulties = ['beginner', 'intermediate', 'advanced'];
 
 export default function ExerciseLibraryPage() {
   const { t } = useLocale();
+  const { profile } = useAuth();
+  const canEditVideo = roleOf(profile) === 'coach';
+  const [editing, setEditing] = useState(null);
   const [filters, setFilters] = useState({ search: '', category: '', equipment: '', muscle: '', difficulty: '' });
   const [page, setPage] = useState(1);
   const [exercises, setExercises] = useState([]);
@@ -106,8 +112,21 @@ export default function ExerciseLibraryPage() {
         )}
         {!loading && exercises.length > 0 && (
           <div className="exercise-grid">
-            {exercises.map((exercise) => <ExerciseCard key={exercise.id} exercise={exercise} />)}
+            {exercises.map((exercise) => <ExerciseCard key={exercise.id} exercise={exercise} onEditVideo={canEditVideo ? setEditing : undefined} />)}
           </div>
+        )}
+        {editing && (
+          <ExerciseVideoEditor
+            exercise={editing}
+            onClose={() => setEditing(null)}
+            onSaved={(url) => {
+              const original = editing.video_origin === 'coach' ? editing.original_video_url ?? null : editing.demo_video_url ?? null;
+              setExercises((current) => current.map((item) => (item.id === editing.id
+                ? { ...item, demo_video_url: url || original, video_origin: url ? 'coach' : undefined, original_video_url: original }
+                : item)));
+              setEditing(null);
+            }}
+          />
         )}
         {pageCount > 1 && (
           <nav className="pagination" aria-label={t('exerciseLibrary')}>

@@ -1,0 +1,1133 @@
+{
+  "note": "The essential exercises that should have a demo video. Built by scripts/build-essential-exercises.mjs.",
+  "count": 161,
+  "exercises": [
+    {
+      "slug": "barbell-squat",
+      "name": "Barbell Squat",
+      "group": "legs",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "front-squat-clean-grip",
+      "name": "Front Squat (Clean Grip)",
+      "group": "legs",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "goblet-squat",
+      "name": "Goblet Squat",
+      "group": "legs",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "bodyweight-squat",
+      "name": "Bodyweight Squat",
+      "group": "legs",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "leg-press",
+      "name": "Leg Press",
+      "group": "legs",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "hack-squat",
+      "name": "Hack Squat",
+      "group": "legs",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "split-squats",
+      "name": "Split Squats",
+      "group": "legs",
+      "category": "mobility",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "barbell-walking-lunge",
+      "name": "Barbell Walking Lunge",
+      "group": "legs",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "dumbbell-lunges",
+      "name": "Dumbbell Lunges",
+      "group": "legs",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "crossover-reverse-lunge",
+      "name": "Crossover Reverse Lunge",
+      "group": "legs",
+      "category": "mobility",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "step-up-with-knee-raise",
+      "name": "Step-up with Knee Raise",
+      "group": "legs",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "romanian-deadlift",
+      "name": "Romanian Deadlift",
+      "group": "legs",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "stiff-legged-barbell-deadlift",
+      "name": "Stiff-Legged Barbell Deadlift",
+      "group": "legs",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "sumo-deadlift",
+      "name": "Sumo Deadlift",
+      "group": "legs",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "trap-bar-deadlift",
+      "name": "Trap Bar Deadlift",
+      "group": "legs",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "barbell-deadlift",
+      "name": "Barbell Deadlift",
+      "group": "legs",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "leg-extensions",
+      "name": "Leg Extensions",
+      "group": "legs",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "lying-leg-curls",
+      "name": "Lying Leg Curls",
+      "group": "legs",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "seated-leg-curl",
+      "name": "Seated Leg Curl",
+      "group": "legs",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "standing-calf-raises",
+      "name": "Standing Calf Raises",
+      "group": "legs",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "seated-calf-raise",
+      "name": "Seated Calf Raise",
+      "group": "legs",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "barbell-hip-thrust",
+      "name": "Barbell Hip Thrust",
+      "group": "legs",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "barbell-glute-bridge",
+      "name": "Barbell Glute Bridge",
+      "group": "legs",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "good-morning",
+      "name": "Good Morning",
+      "group": "legs",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "box-squat",
+      "name": "Box Squat",
+      "group": "legs",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "smith-machine-squat",
+      "name": "Smith Machine Squat",
+      "group": "legs",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "dumbbell-squat",
+      "name": "Dumbbell Squat",
+      "group": "legs",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "one-arm-kettlebell-swings",
+      "name": "One-Arm Kettlebell Swings",
+      "group": "legs",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "kettlebell-pistol-squat",
+      "name": "Kettlebell Pistol Squat",
+      "group": "legs",
+      "category": "strength",
+      "difficulty": "advanced"
+    },
+    {
+      "slug": "donkey-calf-raises",
+      "name": "Donkey Calf Raises",
+      "group": "legs",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "adductor",
+      "name": "Adductor",
+      "group": "legs",
+      "category": "mobility",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "thigh-abductor",
+      "name": "Thigh Abductor",
+      "group": "legs",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "freehand-jump-squat",
+      "name": "Freehand Jump Squat",
+      "group": "legs",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "lateral-box-jump",
+      "name": "Lateral Box Jump",
+      "group": "legs",
+      "category": "plyometrics",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "barbell-bench-press-medium-grip",
+      "name": "Barbell Bench Press - Medium Grip",
+      "group": "chest",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "barbell-incline-bench-press-medium-grip",
+      "name": "Barbell Incline Bench Press - Medium Grip",
+      "group": "chest",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "decline-barbell-bench-press",
+      "name": "Decline Barbell Bench Press",
+      "group": "chest",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "dumbbell-bench-press",
+      "name": "Dumbbell Bench Press",
+      "group": "chest",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "incline-dumbbell-press",
+      "name": "Incline Dumbbell Press",
+      "group": "chest",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "decline-dumbbell-bench-press",
+      "name": "Decline Dumbbell Bench Press",
+      "group": "chest",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "pushups",
+      "name": "Pushups",
+      "group": "chest",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "push-ups-with-feet-elevated",
+      "name": "Push-Ups With Feet Elevated",
+      "group": "chest",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "incline-push-up",
+      "name": "Incline Push-Up",
+      "group": "chest",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "decline-push-up",
+      "name": "Decline Push-Up",
+      "group": "chest",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "dumbbell-flyes",
+      "name": "Dumbbell Flyes",
+      "group": "chest",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "incline-dumbbell-flyes",
+      "name": "Incline Dumbbell Flyes",
+      "group": "chest",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "cable-crossover",
+      "name": "Cable Crossover",
+      "group": "chest",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "butterfly",
+      "name": "Butterfly",
+      "group": "chest",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "dips-chest-version",
+      "name": "Dips - Chest Version",
+      "group": "chest",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "machine-bench-press",
+      "name": "Machine Bench Press",
+      "group": "chest",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "smith-machine-bench-press",
+      "name": "Smith Machine Bench Press",
+      "group": "chest",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "close-grip-barbell-bench-press",
+      "name": "Close-Grip Barbell Bench Press",
+      "group": "chest",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "straight-arm-dumbbell-pullover",
+      "name": "Straight-Arm Dumbbell Pullover",
+      "group": "chest",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "floor-press",
+      "name": "Floor Press",
+      "group": "chest",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "cable-chest-press",
+      "name": "Cable Chest Press",
+      "group": "chest",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "incline-cable-flye",
+      "name": "Incline Cable Flye",
+      "group": "chest",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "pullups",
+      "name": "Pullups",
+      "group": "back",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "chin-up",
+      "name": "Chin-Up",
+      "group": "back",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "wide-grip-lat-pulldown",
+      "name": "Wide-Grip Lat Pulldown",
+      "group": "back",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "close-grip-front-lat-pulldown",
+      "name": "Close-Grip Front Lat Pulldown",
+      "group": "back",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "bent-over-barbell-row",
+      "name": "Bent Over Barbell Row",
+      "group": "back",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "one-arm-dumbbell-row",
+      "name": "One-Arm Dumbbell Row",
+      "group": "back",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "seated-cable-rows",
+      "name": "Seated Cable Rows",
+      "group": "back",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "t-bar-row-with-handle",
+      "name": "T-Bar Row with Handle",
+      "group": "back",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "inverted-row",
+      "name": "Inverted Row",
+      "group": "back",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "face-pull",
+      "name": "Face Pull",
+      "group": "back",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "straight-arm-pulldown",
+      "name": "Straight-Arm Pulldown",
+      "group": "back",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "hyperextensions-back-extensions",
+      "name": "Hyperextensions (Back Extensions)",
+      "group": "back",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "barbell-shrug",
+      "name": "Barbell Shrug",
+      "group": "back",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "dumbbell-shrug",
+      "name": "Dumbbell Shrug",
+      "group": "back",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "reverse-flyes",
+      "name": "Reverse Flyes",
+      "group": "back",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "standing-dumbbell-upright-row",
+      "name": "Standing Dumbbell Upright Row",
+      "group": "back",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "smith-machine-upright-row",
+      "name": "Smith Machine Upright Row",
+      "group": "back",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "muscle-up",
+      "name": "Muscle Up",
+      "group": "back",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "rack-pulls",
+      "name": "Rack Pulls",
+      "group": "back",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "smith-machine-bent-over-row",
+      "name": "Smith Machine Bent Over Row",
+      "group": "back",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "band-pull-apart",
+      "name": "Band Pull Apart",
+      "group": "back",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "superman",
+      "name": "Superman",
+      "group": "back",
+      "category": "mobility",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "standing-military-press",
+      "name": "Standing Military Press",
+      "group": "shoulders",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "dumbbell-shoulder-press",
+      "name": "Dumbbell Shoulder Press",
+      "group": "shoulders",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "arnold-dumbbell-press",
+      "name": "Arnold Dumbbell Press",
+      "group": "shoulders",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "side-lateral-raise",
+      "name": "Side Lateral Raise",
+      "group": "shoulders",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "front-dumbbell-raise",
+      "name": "Front Dumbbell Raise",
+      "group": "shoulders",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "upright-barbell-row",
+      "name": "Upright Barbell Row",
+      "group": "shoulders",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "push-press",
+      "name": "Push Press",
+      "group": "shoulders",
+      "category": "strength",
+      "difficulty": "advanced"
+    },
+    {
+      "slug": "seated-dumbbell-press",
+      "name": "Seated Dumbbell Press",
+      "group": "shoulders",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "cable-seated-lateral-raise",
+      "name": "Cable Seated Lateral Raise",
+      "group": "shoulders",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "bent-over-dumbbell-rear-delt-raise-with-head-on-bench",
+      "name": "Bent Over Dumbbell Rear Delt Raise With Head On Bench",
+      "group": "shoulders",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "machine-shoulder-military-press",
+      "name": "Machine Shoulder (Military) Press",
+      "group": "shoulders",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "seated-barbell-military-press",
+      "name": "Seated Barbell Military Press",
+      "group": "shoulders",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "handstand-push-ups",
+      "name": "Handstand Push-Ups",
+      "group": "shoulders",
+      "category": "strength",
+      "difficulty": "advanced"
+    },
+    {
+      "slug": "kettlebell-arnold-press",
+      "name": "Kettlebell Arnold Press",
+      "group": "shoulders",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "front-plate-raise",
+      "name": "Front Plate Raise",
+      "group": "shoulders",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "barbell-curl",
+      "name": "Barbell Curl",
+      "group": "arms",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "dumbbell-bicep-curl",
+      "name": "Dumbbell Bicep Curl",
+      "group": "arms",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "hammer-curls",
+      "name": "Hammer Curls",
+      "group": "arms",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "preacher-curl",
+      "name": "Preacher Curl",
+      "group": "arms",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "concentration-curls",
+      "name": "Concentration Curls",
+      "group": "arms",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "cable-wrist-curl",
+      "name": "Cable Wrist Curl",
+      "group": "arms",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "incline-dumbbell-curl",
+      "name": "Incline Dumbbell Curl",
+      "group": "arms",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "ez-bar-curl",
+      "name": "EZ-Bar Curl",
+      "group": "arms",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "triceps-pushdown",
+      "name": "Triceps Pushdown",
+      "group": "arms",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "lying-triceps-press",
+      "name": "Lying Triceps Press",
+      "group": "arms",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "standing-dumbbell-triceps-extension",
+      "name": "Standing Dumbbell Triceps Extension",
+      "group": "arms",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "cable-rope-overhead-triceps-extension",
+      "name": "Cable Rope Overhead Triceps Extension",
+      "group": "arms",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "bench-dips",
+      "name": "Bench Dips",
+      "group": "arms",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "tricep-dumbbell-kickback",
+      "name": "Tricep Dumbbell Kickback",
+      "group": "arms",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "incline-push-up-close-grip",
+      "name": "Incline Push-Up Close-Grip",
+      "group": "arms",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "palms-down-wrist-curl-over-a-bench",
+      "name": "Palms-Down Wrist Curl Over A Bench",
+      "group": "arms",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "reverse-barbell-curl",
+      "name": "Reverse Barbell Curl",
+      "group": "arms",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "zottman-curl",
+      "name": "Zottman Curl",
+      "group": "arms",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "dips-triceps-version",
+      "name": "Dips - Triceps Version",
+      "group": "arms",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "machine-triceps-extension",
+      "name": "Machine Triceps Extension",
+      "group": "arms",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "plank",
+      "name": "Plank",
+      "group": "core",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "push-up-to-side-plank",
+      "name": "Push Up to Side Plank",
+      "group": "core",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "crunches",
+      "name": "Crunches",
+      "group": "core",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "air-bike",
+      "name": "Air Bike",
+      "group": "core",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "hanging-leg-raise",
+      "name": "Hanging Leg Raise",
+      "group": "core",
+      "category": "strength",
+      "difficulty": "advanced"
+    },
+    {
+      "slug": "russian-twist",
+      "name": "Russian Twist",
+      "group": "core",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "cable-crunch",
+      "name": "Cable Crunch",
+      "group": "core",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "ab-roller",
+      "name": "Ab Roller",
+      "group": "core",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "mountain-climbers",
+      "name": "Mountain Climbers",
+      "group": "core",
+      "category": "plyometrics",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "dead-bug",
+      "name": "Dead Bug",
+      "group": "core",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "flat-bench-leg-pull-in",
+      "name": "Flat Bench Leg Pull-In",
+      "group": "core",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "flutter-kicks",
+      "name": "Flutter Kicks",
+      "group": "core",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "sit-up",
+      "name": "Sit-Up",
+      "group": "core",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "standing-cable-wood-chop",
+      "name": "Standing Cable Wood Chop",
+      "group": "core",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "reverse-crunch",
+      "name": "Reverse Crunch",
+      "group": "core",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "toe-touchers",
+      "name": "Toe Touchers",
+      "group": "core",
+      "category": "mobility",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "pallof-press",
+      "name": "Pallof Press",
+      "group": "core",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "barbell-side-bend",
+      "name": "Barbell Side Bend",
+      "group": "core",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "decline-crunch",
+      "name": "Decline Crunch",
+      "group": "core",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "jackknife-sit-up",
+      "name": "Jackknife Sit-Up",
+      "group": "core",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "rope-jumping",
+      "name": "Rope Jumping",
+      "group": "conditioning",
+      "category": "cardio",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "farmers-walk",
+      "name": "Farmer's Walk",
+      "group": "conditioning",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "sled-push",
+      "name": "Sled Push",
+      "group": "conditioning",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "kettlebell-dead-clean",
+      "name": "Kettlebell Dead Clean",
+      "group": "conditioning",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "double-kettlebell-snatch",
+      "name": "Double Kettlebell Snatch",
+      "group": "conditioning",
+      "category": "strength",
+      "difficulty": "advanced"
+    },
+    {
+      "slug": "kettlebell-turkish-get-up-lunge-style",
+      "name": "Kettlebell Turkish Get-Up (Lunge style)",
+      "group": "conditioning",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "clean-and-press",
+      "name": "Clean and Press",
+      "group": "conditioning",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "power-clean",
+      "name": "Power Clean",
+      "group": "conditioning",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "kettlebell-thruster",
+      "name": "Kettlebell Thruster",
+      "group": "conditioning",
+      "category": "strength",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "one-arm-medicine-ball-slam",
+      "name": "One-Arm Medicine Ball Slam",
+      "group": "conditioning",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "running-treadmill",
+      "name": "Running, Treadmill",
+      "group": "conditioning",
+      "category": "cardio",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "elliptical-trainer",
+      "name": "Elliptical Trainer",
+      "group": "conditioning",
+      "category": "cardio",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "bear-crawl-sled-drags",
+      "name": "Bear Crawl Sled Drags",
+      "group": "conditioning",
+      "category": "strength",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "worlds-greatest-stretch",
+      "name": "World's Greatest Stretch",
+      "group": "mobility",
+      "category": "mobility",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "cat-stretch",
+      "name": "Cat Stretch",
+      "group": "mobility",
+      "category": "mobility",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "childs-pose",
+      "name": "Child's Pose",
+      "group": "mobility",
+      "category": "mobility",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "intermediate-hip-flexor-and-quad-stretch",
+      "name": "Intermediate Hip Flexor and Quad Stretch",
+      "group": "mobility",
+      "category": "mobility",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "hamstring-stretch",
+      "name": "Hamstring Stretch",
+      "group": "mobility",
+      "category": "mobility",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "quad-stretch",
+      "name": "Quad Stretch",
+      "group": "mobility",
+      "category": "mobility",
+      "difficulty": "intermediate"
+    },
+    {
+      "slug": "shoulder-stretch",
+      "name": "Shoulder Stretch",
+      "group": "mobility",
+      "category": "mobility",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "dynamic-chest-stretch",
+      "name": "Dynamic Chest Stretch",
+      "group": "mobility",
+      "category": "mobility",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "side-neck-stretch",
+      "name": "Side Neck Stretch",
+      "group": "mobility",
+      "category": "mobility",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "standing-gastrocnemius-calf-stretch",
+      "name": "Standing Gastrocnemius Calf Stretch",
+      "group": "mobility",
+      "category": "mobility",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "arm-circles",
+      "name": "Arm Circles",
+      "group": "mobility",
+      "category": "mobility",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "hip-circles-prone",
+      "name": "Hip Circles (prone)",
+      "group": "mobility",
+      "category": "mobility",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "torso-rotation",
+      "name": "Torso Rotation",
+      "group": "mobility",
+      "category": "mobility",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "ankle-circles",
+      "name": "Ankle Circles",
+      "group": "mobility",
+      "category": "mobility",
+      "difficulty": "beginner"
+    },
+    {
+      "slug": "groiners",
+      "name": "Groiners",
+      "group": "mobility",
+      "category": "mobility",
+      "difficulty": "intermediate"
+    }
+  ]
+}
