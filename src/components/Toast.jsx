@@ -1,4 +1,4 @@
 export default function Toast({ message }) {
   if (!message) return null;
-  return <div className="toast" role="status">{message}</div>;
+  return <div className="toast" role="status" dir="auto">{message}</div>;
 }

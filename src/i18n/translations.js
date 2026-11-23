@@ -17,6 +17,7 @@ import { paymentsTranslations } from './paymentsTranslations.js';
 import { platformTranslations } from './platformTranslations.js';
 import { priority2Translations } from './priority2Translations.js';
 import { publicPagesTranslations } from './publicPagesTranslations.js';
+import { teamErrorTranslations } from './teamErrorTranslations.js';
 import { uxTranslations } from './uxTranslations.js';
 import { workflowTranslations } from './workflowTranslations.js';
 
@@ -635,4 +636,5 @@ for (const locale of supportedLocales) {
   Object.assign(translations[locale], uxTranslations[locale]);
   Object.assign(translations[locale], dashboardTranslations[locale]);
   Object.assign(translations[locale], habitsTranslations[locale]);
+  Object.assign(translations[locale], teamErrorTranslations[locale]);
 }

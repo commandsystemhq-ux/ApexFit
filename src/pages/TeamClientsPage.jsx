@@ -11,6 +11,7 @@ import { addGroupMembers, postGroupAnnouncement } from '../services/groupService
 import { GROUP_LIMITS, validateAnnouncement } from '../services/groupUtils.js';
 import { assignProgramToClient } from '../services/workflowService.js';
 import { getTrainerOverview, leaveTeam, sendTeamMessage } from '../services/teamService.js';
+import { teamErrorText } from '../services/teamErrors.js';
 
 function ClientCard({ client, overview, can, onChanged }) {
   const { t, locale } = useLocale();
@@ -32,7 +33,7 @@ function ClientCard({ client, overview, can, onChanged }) {
     try {
       setAssessment({ status: 'ready', data: await getClientAssessment(client.client_id) });
     } catch (error) {
-      setAssessment({ status: 'error', data: null, error: error.message });
+      setAssessment({ status: 'error', data: null, error: teamErrorText(error, t) });
     }
   }
 
@@ -44,7 +45,7 @@ function ClientCard({ client, overview, can, onChanged }) {
       await onChanged();
       return true;
     } catch (error) {
-      showToast(`${t(errorKey)} ${error.message}`);
+      showToast(`${t(errorKey)} ${teamErrorText(error, t)}`);
       return false;
     } finally {
       setBusy(false);
@@ -139,7 +140,7 @@ function GroupUpdate({ groups }) {
       setBody('');
       showToast(t('trnPosted'));
     } catch (postError) {
-      showToast(`${t('trnGroupError')} ${postError.message}`);
+      showToast(`${t('trnGroupError')} ${teamErrorText(postError, t)}`);
     } finally {
       setBusy(false);
     }
@@ -176,7 +177,7 @@ export default function TeamClientsPage() {
 
   useEffect(() => {
     refresh()
-      .catch((loadError) => setError(loadError.message))
+      .catch((loadError) => setError(teamErrorText(loadError, t)))
       .finally(() => setLoading(false));
   }, [refresh]);
 
@@ -186,7 +187,7 @@ export default function TeamClientsPage() {
       setProfile(await leaveTeam());
       showToast(t('trnLeft'));
     } catch (leaveError) {
-      showToast(leaveError.message);
+      showToast(teamErrorText(leaveError, t));
     }
   }
 

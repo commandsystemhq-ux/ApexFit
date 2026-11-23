@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import { useToast } from '../contexts/ToastContext.jsx';
 import { acceptTeamInvitation, declineTeamInvitation, getMyTeamInvitations } from '../services/teamService.js';
+import { teamErrorText } from '../services/teamErrors.js';
 import { PAGES, roleOf } from '../routes.js';
 
 // For a coach account: invitations from a head coach to join their team of assistant trainers.
@@ -45,7 +46,7 @@ export default function TeamInvitationNotice() {
         setInvitations((current) => current.filter((item) => item.id !== invitation.id));
       }
     } catch (error) {
-      showToast(`${t('tmInviteActionError')} ${error.message}`);
+      showToast(`${t('tmInviteActionError')} ${teamErrorText(error, t)}`);
     } finally {
       setBusyId('');
     }

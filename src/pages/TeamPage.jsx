@@ -14,6 +14,7 @@ import {
   updateTeamMember,
 } from '../services/teamService.js';
 import { TEAM_LIMITS, TEAM_PERMISSIONS, assignmentIndex, defaultPermissions, memberLabel, normalizePermissions, validateInviteForm } from '../services/teamUtils.js';
+import { teamErrorText } from '../services/teamErrors.js';
 
 function PermissionChecks({ value, onChange, disabled }) {
   const { t } = useLocale();
@@ -110,7 +111,7 @@ export default function TeamPage() {
 
   useEffect(() => {
     refresh()
-      .catch((loadError) => setError(loadError.message))
+      .catch((loadError) => setError(teamErrorText(loadError, t)))
       .finally(() => setLoading(false));
   }, [refresh]);
 
@@ -125,7 +126,7 @@ export default function TeamPage() {
       if (successKey) showToast(t(successKey));
       return true;
     } catch (actionError) {
-      showToast(`${t('tmActionError')} ${actionError.message}`);
+      showToast(`${t('tmActionError')} ${teamErrorText(actionError, t)}`);
       return false;
     } finally {
       setBusy(false);
@@ -140,7 +141,7 @@ export default function TeamPage() {
       showToast(t('tmInvited'));
       return true;
     } catch (inviteError) {
-      showToast(`${t('tmInviteError')} ${inviteError.message}`);
+      showToast(`${t('tmInviteError')} ${teamErrorText(inviteError, t)}`);
       return false;
     } finally {
       setBusy(false);
