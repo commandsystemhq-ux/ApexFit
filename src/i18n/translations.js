@@ -3,6 +3,7 @@ import { billingTranslations } from './billingTranslations.js';
 import { businessTranslations } from './businessTranslations.js';
 import { campaignTranslations } from './campaignTranslations.js';
 import { chatTranslations } from './chatTranslations.js';
+import { checkinTranslations } from './checkinTranslations.js';
 import { checklistTranslations } from './checklistTranslations.js';
 import { communityTranslations } from './communityTranslations.js';
 import { dashboardTranslations } from './dashboardTranslations.js';
@@ -636,5 +637,6 @@ for (const locale of supportedLocales) {
   Object.assign(translations[locale], uxTranslations[locale]);
   Object.assign(translations[locale], dashboardTranslations[locale]);
   Object.assign(translations[locale], habitsTranslations[locale]);
+  Object.assign(translations[locale], checkinTranslations[locale]);
   Object.assign(translations[locale], teamErrorTranslations[locale]);
 }

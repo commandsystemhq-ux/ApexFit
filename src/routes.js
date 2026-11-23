@@ -15,6 +15,7 @@ export const PAGES = {
   sessions: { path: '/sessions', titleKey: 'navSessions', icon: '\u25B6', access: 'coach' },
   teamClients: { path: '/team-clients', titleKey: 'navTeamClients', icon: '\u2691', access: 'trainer' },
   tasks: { path: '/tasks', titleKey: 'navTasks', icon: '\u2714', access: 'coach' },
+  checkins: { path: '/checkins', titleKey: 'navCheckins', icon: '\u2611', access: 'coach' },
   clients: { path: '/clients', titleKey: 'clients', icon: '☺', access: 'coach' },
   schedule: { path: '/schedule', titleKey: 'schedule', icon: '◷', access: 'coach' },
   invoicing: { path: '/invoicing', titleKey: 'invoicing', icon: '$', access: 'coach' },
@@ -23,6 +24,7 @@ export const PAGES = {
   progress: { path: '/progress', titleKey: 'progressTracking', icon: '↗', access: 'client' },
   strength: { path: '/strength', titleKey: 'strengthTab', icon: '▲', access: 'client' },
   food: { path: '/food', titleKey: 'foodTab', icon: '◔', access: 'client' },
+  weeklyCheckin: { path: '/weekly-checkin', titleKey: 'navWeeklyCheckin', icon: '\u2611', access: 'client' },
   habits: { path: '/habits', titleKey: 'habitTracker', icon: '✓', access: 'client' },
   intake: { path: '/intake', titleKey: 'intakeTab', icon: '☰', access: 'client' },
   myTasks: { path: '/my-tasks', titleKey: 'navMyTasks', icon: '\u2605', access: 'client' },
@@ -50,14 +52,14 @@ export const ADMIN_PATHS = { ai: '/admin/ai' };
 // Each group's group is the translation key of its heading.
 const COACH_NAVIGATION = [
   { group: 'navGrpTraining', items: ['dashboard', 'generator', 'workoutBuilder', 'programTemplates', 'exerciseLibrary', 'workflows'] },
-  { group: 'navGrpClients', items: ['clients', 'messages', 'campaigns', 'tasks', 'groups', 'sessions', 'schedule', 'team', 'community', 'leaderboard'] },
+  { group: 'navGrpClients', items: ['clients', 'checkins', 'messages', 'campaigns', 'tasks', 'groups', 'sessions', 'schedule', 'team', 'community', 'leaderboard'] },
   { group: 'navGrpBusiness', items: ['store', 'invoicing', 'contracts', 'billing'] },
   { group: 'navGrpAccount', items: ['settings'] },
 ];
 
 const CLIENT_NAVIGATION = [
   { group: 'navGrpTrainNutrition', items: ['workouts', 'strength', 'food', 'habits'] },
-  { group: 'navGrpTracking', items: ['progress', 'myTasks', 'checklist', 'integrations', 'intake', 'assessments'] },
+  { group: 'navGrpTracking', items: ['progress', 'weeklyCheckin', 'myTasks', 'checklist', 'integrations', 'intake', 'assessments'] },
   { group: 'navGrpSocial', items: ['coachHub', 'mySessions', 'myGroups', 'myStore', 'myContracts', 'community', 'leaderboard'] },
   { group: 'navGrpAccount', items: ['settings'] },
 ];

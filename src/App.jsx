@@ -28,6 +28,8 @@ const ClientContractsPage = lazy(() => import('./pages/ClientContractsPage.jsx')
 const ClientGroupsPage = lazy(() => import('./pages/ClientGroupsPage.jsx'));
 const ClientPortalPage = lazy(() => import('./pages/ClientPortalPage.jsx'));
 const ClientsPage = lazy(() => import('./pages/ClientsPage.jsx'));
+const CheckinInboxPage = lazy(() => import('./pages/CheckinInboxPage.jsx'));
+const WeeklyCheckinPage = lazy(() => import('./pages/WeeklyCheckinPage.jsx'));
 const CoachHubPage = lazy(() => import('./pages/CoachHubPage.jsx'));
 const CommunityPage = lazy(() => import('./pages/CommunityPage.jsx'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage.jsx'));
@@ -99,6 +101,7 @@ export default function App() {
               <Route path={PAGES.contracts.path} element={<ContractsPage />} />
               <Route path={PAGES.clients.path} element={<ClientsPage onNavigate={go} onNotify={showToast} />} />
               <Route path={PAGES.tasks.path} element={<TasksPage onNotify={showToast} />} />
+<Route path={PAGES.checkins.path} element={<CheckinInboxPage />} />
               <Route path={PAGES.schedule.path} element={<SchedulePage onNavigate={go} onNotify={showToast} />} />
               <Route path={PAGES.invoicing.path} element={<InvoicingPage onNavigate={go} onNotify={showToast} />} />
               <Route path={PAGES.billing.path} element={<BillingPage profile={profile} onNotify={showToast} />} />
@@ -113,6 +116,7 @@ export default function App() {
               <Route path={PAGES.integrations.path} element={<IntegrationsPage />} />
 <Route path={PAGES.checklist.path} element={<ChecklistPage />} />
               <Route path={PAGES.myTasks.path} element={<MyTasksPage onNotify={showToast} />} />
+<Route path={PAGES.weeklyCheckin.path} element={<WeeklyCheckinPage />} />
               <Route path={PAGES.assessments.path} element={<AssessmentPage />} />
               <Route path={PAGES.myStore.path} element={<MyStorePage />} />
               <Route path={PAGES.mySessions.path} element={<MySessionsPage />} />

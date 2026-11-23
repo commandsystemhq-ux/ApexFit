@@ -9,6 +9,7 @@ import UserAvatar from './UserAvatar.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import { useChatUnread } from '../hooks/useChatUnread.js';
+import { useCheckinBadge } from '../hooks/useCheckinBadge.js';
 import { displayNameFor } from '../services/profileUtils.js';
 import { DRAWER_MAX_WIDTH, RAIL_MAX_WIDTH, markPageSeen, readCollapsed, readSeenPages, tooltipPosition, writeCollapsed } from '../services/sidebarState.js';
 import { ADMIN_PATHS, NEW_PAGE_IDS, PAGES, homePathFor, navigationFor, pageForPath, roleOf } from '../routes.js';
@@ -47,6 +48,8 @@ export default function AppShell() {
   const page = pageForPath(location.pathname);
   const unreadChat = useChatUnread(user?.id, role === 'coach' || role === 'client');
   const chatPageId = role === 'client' ? 'coachHub' : 'messages';
+  const checkinBadge = useCheckinBadge(user?.id, role);
+  const checkinPageId = role === 'client' ? 'weeklyCheckin' : 'checkins';
 
   useEffect(() => {
     setMenuOpen(false);
@@ -105,6 +108,7 @@ export default function AppShell() {
                 const label = t(PAGES[id].titleKey);
                 const unread = id === chatPageId && unreadChat > 0;
                 const isNew = NEW_PAGE_IDS.includes(id) && !seen.includes(id);
+                const checkinDue = id === checkinPageId && checkinBadge > 0;
                 return (
                   <NavLink
                     key={id}
@@ -119,7 +123,8 @@ export default function AppShell() {
                     <span className="nav-icon" aria-hidden="true">{PAGES[id].icon}</span>
                     <span className="nav-label">{label}</span>
                     {unread && <span className="nav-badge" aria-label={`${unreadChat} ${t('chatUnread')}`}>{unreadChat > 99 ? '99+' : unreadChat}</span>}
-                    {isNew && !unread && <span className="nav-badge nav-badge-new">{t('sidebarNew')}</span>}
+                    {checkinDue && <span className="nav-badge" aria-label={t(role === 'client' ? 'ckDueBadge' : 'ckPendingBadge')}>{role === 'client' ? '!' : checkinBadge > 99 ? '99+' : checkinBadge}</span>}
+                    {isNew && !unread && !checkinDue && <span className="nav-badge nav-badge-new">{t('sidebarNew')}</span>}
                   </NavLink>
                 );
               })}

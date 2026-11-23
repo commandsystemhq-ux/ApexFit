@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '../components/Button.jsx';
+import ClientCheckinsReview from '../components/ClientCheckinsReview.jsx';
 import ClientCompliancePanel from '../components/ClientCompliancePanel.jsx';
 import ClientFoodReview from '../components/ClientFoodReview.jsx';
 import ClientHabitReview from '../components/ClientHabitReview.jsx';
@@ -181,8 +182,12 @@ export default function ClientsPage({ onNotify }) {
                     <button type="button" role="tab" aria-selected={detailTab === 'profile'} className={`client-detail-tab ${detailTab === 'profile' ? 'is-active' : ''}`} onClick={() => setDetailTab('profile')}>{t('clientTabProfile')}</button>
                     <button type="button" role="tab" aria-selected={detailTab === 'food'} className={`client-detail-tab ${detailTab === 'food' ? 'is-active' : ''}`} onClick={() => setDetailTab('food')}>{t('clientTabFood')}</button>
                                         <button type="button" role="tab" aria-selected={detailTab === 'habits'} className={`client-detail-tab ${detailTab === 'habits' ? 'is-active' : ''}`} onClick={() => setDetailTab('habits')}>{t('clientTabHabits')}</button>
+                                                            <button type="button" role="tab" aria-selected={detailTab === 'checkins'} className={`client-detail-tab ${detailTab === 'checkins' ? 'is-active' : ''}`} onClick={() => setDetailTab('checkins')}>{t('clientTabCheckins')}</button>
                   </div>
                 )}
+                                                        {expandedId === client.client_id && detailTab === 'checkins' && (
+                                                          <div className="client-intake-summary" role="tabpanel"><ClientCheckinsReview clientId={client.client_id} /></div>
+                                                        )}
                                     {expandedId === client.client_id && detailTab === 'habits' && (
                                       <div className="client-intake-summary" role="tabpanel"><ClientHabitReview clientId={client.client_id} /></div>
                                     )}

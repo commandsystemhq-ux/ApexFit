@@ -8,12 +8,13 @@ const recentlySent = new Map();
 const RESEND_WINDOW_MS = 60_000;
 
 // Chat notifications (type 'chat' and 'voice') go through notifyChatMessage instead.
-const COACH_TYPES = ['message', 'session', 'invoice', 'video'];
+const COACH_TYPES = ['message', 'session', 'invoice', 'video', 'checkin'];
 
 const SOURCES = {
   message: { table: 'coach_messages', column: 'batch_id' },
   session: { table: 'coach_sessions', column: 'id' },
   invoice: { table: 'invoices', column: 'id' },
+  checkin: { table: 'weekly_checkins', column: 'id' },
 };
 
 async function findVideoRecipients(userClient, id) {

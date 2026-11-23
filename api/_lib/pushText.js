@@ -6,22 +6,25 @@ const TEXT = {
     video: ["New video session", "Your coach scheduled a live video session. Open ApexFit to join."],
     chat: ['New message', 'Open ApexFit to read it.'],
     voice: ['New voice message', 'Open ApexFit to listen to it.'],
+    checkin: ['Your check-in was reviewed', 'Your coach left feedback on your weekly check-in.'],
   },
   ar: {
     message: ['رسالة جديدة من مدربك', 'افتح ApexFit لقراءتها.'],
     session: ['تحديث جلسة التدريب', 'قام مدربك بجدولة جلسة أو تغييرها.'],
     invoice: ['فاتورة جديدة', 'أرسل لك مدربك فاتورة.'],
     video: ["جلسة فيديو جديدة", "حدد مدربك جلسة فيديو مباشرة. افتح ApexFit للانضمام."],
-    chat: ['????? ?????', '???? ApexFit ????????.'],
-    voice: ['????? ????? ?????', '???? ApexFit ???????? ?????.'],
+    chat: ['رسالة جديدة', 'افتح ApexFit لقراءتها.'],
+    voice: ['رسالة صوتية جديدة', 'افتح ApexFit للاستماع إليها.'],
+    checkin: ['تمت مراجعة المتابعة الأسبوعية', 'ترك مدربك ملاحظاته على متابعتك الأسبوعية.'],
   },
   de: {
     message: ['Neue Nachricht von deinem Trainer', 'Öffne ApexFit, um sie zu lesen.'],
     session: ['Update zur Trainingseinheit', 'Dein Trainer hat eine Einheit geplant oder geändert.'],
     invoice: ['Neue Rechnung', 'Dein Trainer hat dir eine Rechnung geschickt.'],
     video: ["Neue Videositzung", "Dein Trainer hat eine Live-Videositzung geplant. Öffne ApexFit zum Beitreten."],
-    chat: ['Neue Nachricht', '?ffne ApexFit, um sie zu lesen.'],
-    voice: ['Neue Sprachnachricht', '?ffne ApexFit, um sie anzuh?ren.'],
+    chat: ['Neue Nachricht', 'Öffne ApexFit, um sie zu lesen.'],
+    voice: ['Neue Sprachnachricht', 'Öffne ApexFit, um sie anzuhören.'],
+    checkin: ['Dein Check-in wurde geprüft', 'Dein Trainer hat Feedback zu deinem wöchentlichen Check-in hinterlassen.'],
   },
   fr: {
     message: ['Nouveau message de votre coach', 'Ouvrez ApexFit pour le lire.'],
@@ -29,7 +32,8 @@ const TEXT = {
     invoice: ['Nouvelle facture', 'Votre coach vous a envoyé une facture.'],
     video: ["Nouvelle séance vidéo", "Votre coach a planifié une séance vidéo en direct. Ouvrez ApexFit pour la rejoindre."],
     chat: ['Nouveau message', 'Ouvrez ApexFit pour le lire.'],
-    voice: ['Nouveau message vocal', 'Ouvrez ApexFit pour l\'?couter.'],
+    voice: ['Nouveau message vocal', 'Ouvrez ApexFit pour l\'écouter.'],
+    checkin: ['Votre bilan a été examiné', 'Votre coach a laissé un retour sur votre bilan hebdomadaire.'],
   },
   es: {
     message: ['Nuevo mensaje de tu entrenador', 'Abre ApexFit para leerlo.'],
@@ -38,13 +42,14 @@ const TEXT = {
     video: ["Nueva sesión de vídeo", "Tu entrenador programó una sesión de vídeo en directo. Abre ApexFit para unirte."],
     chat: ['Nuevo mensaje', 'Abre ApexFit para leerlo.'],
     voice: ['Nuevo mensaje de voz', 'Abre ApexFit para escucharlo.'],
+    checkin: ['Revisaron tu seguimiento', 'Tu entrenador dejó comentarios sobre tu seguimiento semanal.'],
   },
 };
 
 export const NOTIFICATION_TYPES = Object.keys(TEXT.en);
 
 // Where tapping the notification opens the app.
-const PAGE_FOR_TYPE = { video: '/my-sessions' };
+const PAGE_FOR_TYPE = { video: '/my-sessions', checkin: '/weekly-checkin' };
 
 export function buildPushMessage(type, locale) {
   const language = TEXT[locale] ? locale : 'en';
