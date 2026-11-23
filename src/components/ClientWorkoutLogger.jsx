@@ -7,15 +7,18 @@ import { useExerciseBundle } from '../hooks/useExerciseBundle.js';
 import { displayName } from '../services/exerciseI18n.js';
 import { searchExercises } from '../services/exerciseService.js';
 import { listClientWorkoutSessions, saveClientWorkout } from '../services/clientWorkoutService.js';
+import { listMyExerciseTargets } from '../services/progressionService.js';
+import { startingWeight, targetFor, targetText } from '../services/progressionUtils.js';
 import { getLocalDateString, summarizeWorkoutSets } from '../services/clientTrackingUtils.js';
 
 const EXERCISE_PAGE_SIZE = 8;
 
-function createExerciseEntry(exercise) {
+function createExerciseEntry(exercise, target = null) {
   return {
     clientId: crypto.randomUUID(),
     exercise,
-    sets: Array.from({ length: 3 }, () => ({ reps: '10', weight_kg: '', done: false })),
+    target,
+    sets: Array.from({ length: 3 }, () => ({ reps: target?.reps ? String(target.reps) : '10', weight_kg: startingWeight(target), done: false })),
   };
 }
 
@@ -49,6 +52,7 @@ export default function ClientWorkoutLogger() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [success, setSuccess] = useState('');
+  const [targets, setTargets] = useState([]);
   const summary = summarizeWorkoutSets(entries);
 
   useEffect(() => {
@@ -78,6 +82,12 @@ export default function ClientWorkoutLogger() {
 
   useEffect(() => {
     let active = true;
+    listMyExerciseTargets().then((rows) => active && setTargets(rows)).catch(() => {});
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
     listClientWorkoutSessions()
       .then((result) => {
         if (active) setSessions(result);
@@ -95,7 +105,7 @@ export default function ClientWorkoutLogger() {
     setEntries((current) => (
       current.some((entry) => entry.exercise.id === exercise.id)
         ? current
-        : [...current, createExerciseEntry(exercise)]
+        : [...current, createExerciseEntry(exercise, targetFor(targets, exercise.id))]
     ));
     setSuccess('');
   }
@@ -202,6 +212,7 @@ export default function ClientWorkoutLogger() {
               <header className="client-workout-entry-heading">
                 <span className="soft-badge badge-muted">{exerciseIndex + 1}</span>
                 <strong dir="auto">{displayName(entry.exercise, locale, bundle)}</strong>
+                {entry.target && <span className="workout-target">{targetText(entry.target, t)}</span>}
                 <button className="icon-button builder-remove" type="button" onClick={() => removeEntry(entry.clientId)} aria-label={`${t('removeExercise')}: ${entry.exercise.name}`}>×</button>
               </header>
               <div className="client-set-list">

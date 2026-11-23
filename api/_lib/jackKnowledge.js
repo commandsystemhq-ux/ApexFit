@@ -10,7 +10,7 @@ const SHARED_PAGES = `
 
 const COACH_GUIDE = `
 APEXFIT PAGES FOR COACHES
-- Dashboard (${PAGES.dashboard.path}): overview of the workspace and shortcuts.
+- Dashboard (${PAGES.dashboard.path}): overview of the workspace and shortcuts, plus smart progression suggestions: when a client completes the top repetitions of the target on every set in two sessions in a row, the dashboard (and the client's Progression tab in Clients) suggests a heavier weight (+5% rounded to 2.5 kg, at least 2.5 kg) or 2 more repetitions for exercises without weight. The coach presses Apply (the client then sees a target for that exercise in their workout log) or Dismiss; nothing changes by itself.
 - Plan generator (${PAGES.generator.path}): enter a client's goals and requirements to prepare an AI plan request.
 - Workout builder (${PAGES.workoutBuilder.path}): build a training program by arranging real exercises into training days with sets, reps and rest.
 - Program templates (${PAGES.programTemplates.path}): save programs as reusable templates, duplicate them, and use "Assign to client" on a program card to give it to a client (this also starts any active "A program is assigned" workflow).
@@ -47,7 +47,7 @@ COACH HOW-TOS
 
 const CLIENT_GUIDE = `
 APEXFIT PAGES FOR CLIENTS
-- Workout log (${PAGES.workouts.path}): record workouts with exercises, sets, reps and weights, and review history.
+- Workout log (${PAGES.workouts.path}): record workouts with exercises, sets, reps and weights, and review history. When the coach applied a progression target for an exercise, a Target badge shows next to it and the weight starts filled in.
 - Progress (${PAGES.progress.path}): log weight and body fat, see charts, and upload progress photos.
 - Weekly check-in (${PAGES.weeklyCheckin.path}): once a week send weight, sleep, how well you followed your workouts and nutrition, energy and notes, with optional front, side and back photos that only you and your coach can see. You can change the check-in until the coach reviews it; the coach's feedback appears on the same page. The sidebar shows a badge while this week's check-in is missing.
 - Strength (${PAGES.strength.path}): estimated one-rep-max history for lifts.

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Button from '../components/Button.jsx';
 import DashboardCompletion from '../components/DashboardCompletion.jsx';
+import ProgressionSuggestions from '../components/ProgressionSuggestions.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import { fillText, rateTone } from '../services/accountabilityUtils.js';
@@ -71,6 +72,7 @@ export default function DashboardPage({ onNavigate }) {
         ))}
       </section>
       <DashboardCompletion onOpen={() => onNavigate('tasks')} />
+      <ProgressionSuggestions limit={5} />
       <section className="dashboard-grid">
         <article className="panel alert-panel">
           <div className="panel-heading"><div><span className="eyebrow">{t('insights')}</span><h3>{t('insights')}</h3></div></div>
