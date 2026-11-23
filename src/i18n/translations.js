@@ -14,6 +14,7 @@ import { healthTranslations } from './healthTranslations.js';
 import { jackTranslations } from './jackTranslations.js';
 import { launchTranslations } from './launchTranslations.js';
 import { liveRoomTranslations } from './liveRoomTranslations.js';
+import { mealPlanTranslations } from './mealPlanTranslations.js';
 import { paymentsTranslations } from './paymentsTranslations.js';
 import { platformTranslations } from './platformTranslations.js';
 import { priority2Translations } from './priority2Translations.js';
@@ -638,5 +639,6 @@ for (const locale of supportedLocales) {
   Object.assign(translations[locale], dashboardTranslations[locale]);
   Object.assign(translations[locale], habitsTranslations[locale]);
   Object.assign(translations[locale], checkinTranslations[locale]);
+  Object.assign(translations[locale], mealPlanTranslations[locale]);
   Object.assign(translations[locale], teamErrorTranslations[locale]);
 }

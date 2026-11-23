@@ -28,6 +28,7 @@ const ClientContractsPage = lazy(() => import('./pages/ClientContractsPage.jsx')
 const ClientGroupsPage = lazy(() => import('./pages/ClientGroupsPage.jsx'));
 const ClientPortalPage = lazy(() => import('./pages/ClientPortalPage.jsx'));
 const ClientsPage = lazy(() => import('./pages/ClientsPage.jsx'));
+const MealPlansPage = lazy(() => import('./pages/MealPlansPage.jsx'));
 const CheckinInboxPage = lazy(() => import('./pages/CheckinInboxPage.jsx'));
 const WeeklyCheckinPage = lazy(() => import('./pages/WeeklyCheckinPage.jsx'));
 const CoachHubPage = lazy(() => import('./pages/CoachHubPage.jsx'));
@@ -102,6 +103,7 @@ export default function App() {
               <Route path={PAGES.clients.path} element={<ClientsPage onNavigate={go} onNotify={showToast} />} />
               <Route path={PAGES.tasks.path} element={<TasksPage onNotify={showToast} />} />
 <Route path={PAGES.checkins.path} element={<CheckinInboxPage />} />
+<Route path={PAGES.mealPlans.path} element={<MealPlansPage />} />
               <Route path={PAGES.schedule.path} element={<SchedulePage onNavigate={go} onNotify={showToast} />} />
               <Route path={PAGES.invoicing.path} element={<InvoicingPage onNavigate={go} onNotify={showToast} />} />
               <Route path={PAGES.billing.path} element={<BillingPage profile={profile} onNotify={showToast} />} />

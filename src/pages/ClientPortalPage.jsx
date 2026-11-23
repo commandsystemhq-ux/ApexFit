@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import ClientFoodLogger from '../components/ClientFoodLogger.jsx';
+import ClientMealPlan from '../components/ClientMealPlan.jsx';
 import NutritionTracker from '../components/NutritionTracker.jsx';
 import ClientHabitTracker from '../components/ClientHabitTracker.jsx';
 import ClientIntakeForm from '../components/ClientIntakeForm.jsx';
@@ -23,6 +24,7 @@ export default function ClientPortalPage({ section }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [intakeMissing, setIntakeMissing] = useState(false);
+  const [foodVersion, setFoodVersion] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -53,7 +55,8 @@ export default function ClientPortalPage({ section }) {
       {section === 'workouts' && <ClientWorkoutLogger />}
       {section === 'progress' && <ClientProgressTracking clientId={user.id} />}
       {section === 'strength' && <ClientOneRepMax />}
-      {section === 'food' && <ClientFoodLogger />}
+      {section === 'food' && <ClientMealPlan onLogged={() => setFoodVersion((version) => version + 1)} />}
+      {section === 'food' && <ClientFoodLogger key={foodVersion} />}
       {section === 'food' && (
         <section className="nutrition-section" aria-labelledby="nutrition-section-title">
           <h3 id="nutrition-section-title" className="contract-section-title">{t('nutSectionTitle')}</h3>

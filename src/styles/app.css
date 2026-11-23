@@ -1606,3 +1606,40 @@ a.sidebar-profile:hover .profile-copy strong { color: #70afff; }
   .checkin-photo-pickers, .checkin-photo-row { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
   .compare-grid { gap: 8px; }
 }
+/* Meal plans */
+.meal-plan-editor, .client-meal-plan { display: grid; gap: 14px; }
+.meal-plan-lists { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
+.meal-plan-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.meal-plan-row > div:first-child { display: grid; gap: 2px; min-width: 0; }
+.meal-plan-row small { color: var(--subtle); font-size: 10px; }
+.meal-plan-row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.meal-plan-row-actions .field { max-width: 190px; }
+.meal-plan-target-picker { display: grid; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.meal-plan-target-picker legend { padding: 0; margin-bottom: 6px; font-size: 11px; font-weight: 600; }
+.meal-plan-meal { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 11px; background: rgba(255, 255, 255, .015); }
+.meal-plan-meal > header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.meal-plan-meal > header h4 { margin: 0; font-size: 13px; }
+.meal-plan-meal > header small { margin-inline-end: auto; color: var(--subtle); font-size: 10px; }
+.meal-plan-food { display: grid; gap: 5px; padding: 9px; border: 1px solid var(--line); border-radius: 9px; }
+.meal-plan-food small { color: var(--muted); font-size: 10px; }
+.meal-plan-food-main { display: flex; align-items: center; gap: 10px; }
+.meal-plan-food-main > strong { flex: 1; min-width: 0; font-size: 12px; }
+.meal-plan-grams { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; }
+.meal-plan-grams .field, .meal-plan-alt-actions .field { width: 82px; min-height: 32px; padding: 5px 8px; }
+.meal-plan-alternatives { display: grid; gap: 6px; margin: 0; padding: 0 0 0 0; list-style: none; border-inline-start: 2px solid rgba(50, 138, 255, .35); padding-inline-start: 10px; }
+.meal-plan-alternatives li { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; }
+.meal-plan-alt-actions { display: inline-flex; align-items: center; gap: 6px; }
+.meal-plan-choices { display: flex; flex-wrap: wrap; gap: 6px; }
+.meal-plan-total { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-radius: 9px; background: rgba(50, 138, 255, .08); font-size: 12px; }
+.food-picker { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--line-strong); border-radius: 10px; background: rgba(0, 0, 0, .18); }
+.food-picker-bar { display: flex; align-items: center; gap: 8px; }
+.food-picker-bar .field { flex: 1; min-width: 0; }
+.food-picker-results { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.food-picker-results button { display: grid; width: 100%; gap: 2px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: rgba(255, 255, 255, .02); color: inherit; cursor: pointer; text-align: start; }
+.food-picker-results button:hover { border-color: rgba(53, 140, 250, .45); }
+.food-picker-results small { color: var(--subtle); font-size: 10px; }
+.food-picker-manual { display: grid; gap: 8px; }
+.food-picker-manual-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
+@media (max-width: 820px) {
+  .meal-plan-lists { grid-template-columns: 1fr; }
+}

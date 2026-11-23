@@ -5,6 +5,7 @@ export const PAGES = {
   workoutBuilder: { path: '/workout-builder', titleKey: 'workoutBuilder', icon: '↕', access: 'coach' },
   programTemplates: { path: '/templates', titleKey: 'programTemplates', icon: '❖', access: 'coach' },
   exerciseLibrary: { path: '/exercises', titleKey: 'exerciseLibrary', icon: '⌕', access: 'coach' },
+  mealPlans: { path: '/meal-plans', titleKey: 'navMealPlans', icon: '\u2615', access: 'coach' },
   workflows: { path: '/workflows', titleKey: 'workflows', icon: '↻', access: 'coach' },
   messages: { path: '/messages', titleKey: 'messages', icon: '◌', access: 'coach' },
   campaigns: { path: '/campaigns', titleKey: 'navCampaigns', icon: '\u2709', access: 'coach' },
@@ -51,7 +52,7 @@ export const ADMIN_PATHS = { ai: '/admin/ai' };
 
 // Each group's group is the translation key of its heading.
 const COACH_NAVIGATION = [
-  { group: 'navGrpTraining', items: ['dashboard', 'generator', 'workoutBuilder', 'programTemplates', 'exerciseLibrary', 'workflows'] },
+  { group: 'navGrpTraining', items: ['dashboard', 'generator', 'workoutBuilder', 'programTemplates', 'mealPlans', 'exerciseLibrary', 'workflows'] },
   { group: 'navGrpClients', items: ['clients', 'checkins', 'messages', 'campaigns', 'tasks', 'groups', 'sessions', 'schedule', 'team', 'community', 'leaderboard'] },
   { group: 'navGrpBusiness', items: ['store', 'invoicing', 'contracts', 'billing'] },
   { group: 'navGrpAccount', items: ['settings'] },
