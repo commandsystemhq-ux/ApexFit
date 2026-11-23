@@ -4,6 +4,7 @@
   ],
   "functions": {
     "api/jack.js": { "maxDuration": 60 },
+    "api/jack-assistant.js": { "maxDuration": 60 },
     "api/send-campaign.js": { "maxDuration": 30 }
   },
   "crons": [

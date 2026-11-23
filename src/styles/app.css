@@ -1652,3 +1652,25 @@ a.sidebar-profile:hover .profile-copy strong { color: #70afff; }
 .progression-copy small { color: var(--subtle); font-size: 10px; }
 .progression-actions { display: flex; gap: 8px; }
 .workout-target { padding: 2px 8px; border-radius: 999px; background: rgba(50, 212, 154, .12); color: var(--green); font-size: 10px; font-weight: 700; }
+/* Jack assistant */
+.generated-plan { display: grid; gap: 12px; }
+.generated-plan-source { margin: 0; display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+.generated-day { padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; }
+.generated-day h4 { margin: 0 0 6px; font-size: 12px; }
+.generated-day ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; font-size: 11px; }
+.generated-day li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; }
+.generated-plan-actions, .jack-report-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.jack-assistant-panel { display: grid; gap: 14px; }
+.jack-assistant-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.jack-assistant-section { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; }
+.jack-assistant-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.jack-assistant-heading h4 { margin: 0; font-size: 13px; }
+.jack-findings, .jack-recommendations { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; font-size: 12px; }
+.jack-findings .finding { padding: 8px 10px; border-radius: 8px; border-inline-start: 3px solid var(--line-strong); background: rgba(255, 255, 255, .02); }
+.jack-findings .finding-warning { border-inline-start-color: var(--amber); }
+.jack-findings .finding-success { border-inline-start-color: var(--green); }
+.jack-findings .finding-info { border-inline-start-color: #5aa8ff; }
+.jack-recommendations li::before { content: '\2192'; margin-inline-end: 6px; color: #72b3ff; }
+.jack-narrative { margin: 0; padding: 10px; border-radius: 8px; background: rgba(50, 138, 255, .07); white-space: pre-line; font-size: 12px; }
+.jack-report-draft { display: grid; gap: 8px; }
+.jack-tools { display: flex; flex-wrap: wrap; gap: 6px; }

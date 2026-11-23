@@ -11,6 +11,7 @@ import { engagementTranslations, jackEngagementTranslations } from './engagement
 import { growthTranslations, jackGrowthTranslations } from './growthTranslations.js';
 import { habitsTranslations } from './habitsTranslations.js';
 import { healthTranslations } from './healthTranslations.js';
+import { jackAssistantTranslations } from './jackAssistantTranslations.js';
 import { jackTranslations } from './jackTranslations.js';
 import { launchTranslations } from './launchTranslations.js';
 import { liveRoomTranslations } from './liveRoomTranslations.js';
@@ -642,5 +643,6 @@ for (const locale of supportedLocales) {
   Object.assign(translations[locale], checkinTranslations[locale]);
   Object.assign(translations[locale], mealPlanTranslations[locale]);
   Object.assign(translations[locale], progressionTranslations[locale]);
+  Object.assign(translations[locale], jackAssistantTranslations[locale]);
   Object.assign(translations[locale], teamErrorTranslations[locale]);
 }

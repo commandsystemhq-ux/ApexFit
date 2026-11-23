@@ -25,7 +25,7 @@ function StepRow({ step, t }) {
 export default function JackDrawer({
   open, role, messages, busy, draft, onDraftChange, onSend, onClose, onNewChat, prompts, notice,
   view, onViewChange, history, onOpenConversation, onDeleteConversation, activeConversationId,
-  photo, photoError, onPickPhoto, onClearPhoto, onSaveMeal,
+  photo, photoError, onPickPhoto, onClearPhoto, onSaveMeal, onOpenPage,
 }) {
   const { t } = useLocale();
   const listRef = useRef(null);
@@ -129,6 +129,12 @@ export default function JackDrawer({
           <footer className="jack-footer">
             {notice && <div className="notice notice-error jack-notice" role="alert">{notice}</div>}
             {photoError && <div className="notice notice-error jack-notice" role="alert">{photoError}</div>}
+            {role === 'coach' && onOpenPage && (
+              <div className="jack-tools" aria-label={t('jaToolsLabel')}>
+                <button className="jack-chip" type="button" onClick={() => onOpenPage('/generator')}>{'\u2726'} {t('jaToolPlan')}</button>
+                <button className="jack-chip" type="button" onClick={() => onOpenPage('/clients')}>{t('jaToolClients')}</button>
+              </div>
+            )}
             {!busy && !photo && prompts.length > 0 && (
               <div className="jack-prompts" aria-label={t('jackSuggestions')}>
                 {prompts.map((key) => (

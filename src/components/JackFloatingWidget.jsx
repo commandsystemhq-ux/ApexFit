@@ -129,7 +129,7 @@ export default function JackFloatingWidget({ onDataChanged }) {
     } catch (error) {
       failed = true;
       if (error.name !== 'AbortError') {
-        const key = error.status === 503 ? 'jackUnavailable' : error.status === 401 ? 'jackSessionError' : '';
+        const key = error.status === 503 ? (role === 'coach' ? 'jaUnavailableCoach' : 'jackUnavailable') : error.status === 401 ? 'jackSessionError' : '';
         setNotice(key ? t(key) : error instanceof JackRequestError && error.status < 500 ? error.message : t('jackError'));
       }
     } finally {
@@ -273,6 +273,10 @@ export default function JackFloatingWidget({ onDataChanged }) {
         onPickPhoto={pickPhoto}
         onClearPhoto={() => { setPhoto(null); setPhotoError(''); }}
         onSaveMeal={saveMeal}
+        onOpenPage={(path) => {
+          navigate(path);
+          if (window.matchMedia('(max-width: 720px)').matches) setOpen(false);
+        }}
       />
     </>
   );

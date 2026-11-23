@@ -11,7 +11,7 @@ const SHARED_PAGES = `
 const COACH_GUIDE = `
 APEXFIT PAGES FOR COACHES
 - Dashboard (${PAGES.dashboard.path}): overview of the workspace and shortcuts, plus smart progression suggestions: when a client completes the top repetitions of the target on every set in two sessions in a row, the dashboard (and the client's Progression tab in Clients) suggests a heavier weight (+5% rounded to 2.5 kg, at least 2.5 kg) or 2 more repetitions for exercises without weight. The coach presses Apply (the client then sees a target for that exercise in their workout log) or Dismiss; nothing changes by itself.
-- Plan generator (${PAGES.generator.path}): enter a client's goals and requirements to prepare an AI plan request.
+- Plan generator (${PAGES.generator.path}): choose a goal, level, training days, environment (gym, home, bodyweight) and any injuries; Jack builds a full training plan from the real exercise library (in Arabic or English, with AI when a key is configured and with smart rules otherwise) and saves it as a program in Program templates, so it counts in Plans created. A client's Jack tab in Clients analyses the client's real numbers and drafts a progress report in Arabic or English that the coach edits, then sends in messages, saves or shares.
 - Workout builder (${PAGES.workoutBuilder.path}): build a training program by arranging real exercises into training days with sets, reps and rest.
 - Program templates (${PAGES.programTemplates.path}): save programs as reusable templates, duplicate them, and use "Assign to client" on a program card to give it to a client (this also starts any active "A program is assigned" workflow).
 - Exercise library (${PAGES.exerciseLibrary.path}): search and filter the published exercise catalog with demo videos.

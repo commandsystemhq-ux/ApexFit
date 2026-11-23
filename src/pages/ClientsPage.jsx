@@ -5,6 +5,7 @@ import ClientCheckinsReview from '../components/ClientCheckinsReview.jsx';
 import ClientCompliancePanel from '../components/ClientCompliancePanel.jsx';
 import ClientFoodReview from '../components/ClientFoodReview.jsx';
 import ProgressionSuggestions from '../components/ProgressionSuggestions.jsx';
+import ClientJackAssistant from '../components/ClientJackAssistant.jsx';
 import ClientHabitReview from '../components/ClientHabitReview.jsx';
 import ClientHealthPanel from '../components/ClientHealthPanel.jsx';
 import PageHeader from '../components/PageHeader.jsx';
@@ -185,7 +186,11 @@ export default function ClientsPage({ onNotify }) {
                     <button type="button" role="tab" aria-selected={detailTab === 'habits'} className={`client-detail-tab ${detailTab === 'habits' ? 'is-active' : ''}`} onClick={() => setDetailTab('habits')}>{t('clientTabHabits')}</button>
                     <button type="button" role="tab" aria-selected={detailTab === 'checkins'} className={`client-detail-tab ${detailTab === 'checkins' ? 'is-active' : ''}`} onClick={() => setDetailTab('checkins')}>{t('clientTabCheckins')}</button>
                     <button type="button" role="tab" aria-selected={detailTab === 'progression'} className={`client-detail-tab ${detailTab === 'progression' ? 'is-active' : ''}`} onClick={() => setDetailTab('progression')}>{t('clientTabProgression')}</button>
+                    <button type="button" role="tab" aria-selected={detailTab === 'jack'} className={`client-detail-tab ${detailTab === 'jack' ? 'is-active' : ''}`} onClick={() => setDetailTab('jack')}>{'\u2726'} {t('clientTabJack')}</button>
                   </div>
+                )}
+                {expandedId === client.client_id && detailTab === 'jack' && (
+                  <div className="client-intake-summary" role="tabpanel"><ClientJackAssistant clientId={client.client_id} clientName={clientLabel(client)} /></div>
                 )}
                 {expandedId === client.client_id && detailTab === 'progression' && (
                   <div className="client-intake-summary" role="tabpanel"><ProgressionSuggestions clientId={client.client_id} showClient={false} /></div>
