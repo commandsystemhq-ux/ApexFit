@@ -6,6 +6,7 @@ import { chatTranslations } from './chatTranslations.js';
 import { calorieTranslations } from './calorieTranslations.js';
 import { checkinTranslations } from './checkinTranslations.js';
 import { checklistTranslations } from './checklistTranslations.js';
+import { clientTagTranslations } from './clientTagTranslations.js';
 import { communityTranslations } from './communityTranslations.js';
 import { customExerciseTranslations } from './customExerciseTranslations.js';
 import { dashboardTranslations } from './dashboardTranslations.js';
@@ -654,5 +655,6 @@ for (const locale of supportedLocales) {
   Object.assign(translations[locale], tempoTranslations[locale]);
   Object.assign(translations[locale], calorieTranslations[locale]);
   Object.assign(translations[locale], ramadanTranslations[locale]);
+  Object.assign(translations[locale], clientTagTranslations[locale]);
   Object.assign(translations[locale], teamErrorTranslations[locale]);
 }

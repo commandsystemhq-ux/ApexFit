@@ -122,8 +122,8 @@ ApexFit/
 ├─ public/                 Static assets, PWA manifest, service worker
 ├─ scripts/                Node scripts (catalog import, food list build, video seeding, translation)
 ├─ src/                    Web app (React)
-├─ supabase/               migrations/ (35 files) + manual-setup.sql (concatenation)
-├─ tests/                  54 test files, 773 tests, helpers/pgliteSupabase.js
+├─ supabase/               migrations/ (41 files) + manual-setup.sql (concatenation)
+├─ tests/                  61 test files, 846 tests, helpers/pgliteSupabase.js
 ├─ index.html  vite.config.js  vercel.json  package.json  .env.example  .vercelignore  .gitignore  README.md
 └─ ARCHITECTURE.md         (this file)
 ```
@@ -204,8 +204,8 @@ Vercel treats each top-level file as one function; the `_lib/` folder (underscor
 
 ### 2.3 `supabase/`
 
-- `migrations/` — 35 files `20261115000100` … `20261115003600` (there is intentionally **no** `…001600`; a test asserts the removed per-coach AI settings migration does not exist). Full list in [section 8](#8-appendix-migrations-and-conventions).
-- `manual-setup.sql` — the 35 migrations concatenated in filename order with `-- ===== <file> =====` markers; idempotent; run once in the Supabase SQL Editor. **It is also what the tests load into PGlite**, so it must stay in sync with `migrations/`.
+- `migrations/` — 41 files `20261115000100` … `20261115004200` (there is intentionally **no** `…001600`; a test asserts the removed per-coach AI settings migration does not exist). Full list in [section 8](#8-appendix-migrations-and-conventions).
+- `manual-setup.sql` — the 41 migrations concatenated in filename order with `-- ===== <file> =====` markers; idempotent; run once in the Supabase SQL Editor. **It is also what the tests load into PGlite**, so it must stay in sync with `migrations/`.
 
 ### 2.4 `data/`
 
@@ -247,7 +247,7 @@ Expo Router app that talks to the same Supabase project. Uses `EXPO_PUBLIC_*` va
 
 ### 2.7 `tests/`
 
-54 files, **773 tests** (`npm test` = `node --test`, ~75 s). `tests/helpers/pgliteSupabase.js` boots PGlite, stubs Supabase's `auth`, `storage`, `realtime` schemas and roles (`anon`, `authenticated`, `service_role`), loads the real `supabase/manual-setup.sql`, and provides a supabase-js lookalike that runs each call as a chosen user — so RLS and function grants are really enforced.
+61 files, **846 tests** (`npm test` = `node --test`, ~75 s). `tests/helpers/pgliteSupabase.js` boots PGlite, stubs Supabase's `auth`, `storage`, `realtime` schemas and roles (`anon`, `authenticated`, `service_role`), loads the real `supabase/manual-setup.sql`, and provides a supabase-js lookalike that runs each call as a chosen user — so RLS and function grants are really enforced.
 
 | Group | Files |
 | --- | --- |
@@ -566,7 +566,7 @@ Copy `.env.example` to `.env.local` for local work. Names only — never commit 
 | `npm run dev` | Vite dev server (+ dev `/api/food-search`). Use `vercel dev` to exercise other `/api/*` |
 | `npm run build` | Production build to `dist/` |
 | `npm run preview` | Serves the build |
-| `npm test` | `node --test` — 54 files / 773 tests (PGlite, no network, no secrets needed) |
+| `npm test` | `node --test` — 61 files / 846 tests (PGlite, no network, no secrets needed) |
 | `npm run prepare:exercise-catalog` | Regenerate `data/free-exercise-db-apexfit.json` from the pinned upstream commit |
 | `npm run import:exercises -- .\data\free-exercise-db-apexfit.json` | Upsert catalog (+ translations, optional `exercise-media.json`) into Supabase (service role) |
 | `npm run translate:exercises -- <ar｜de｜fr｜es｜all>` | AI-translate steps for newly added exercises |
@@ -593,7 +593,7 @@ Copy `.env.example` to `.env.local` for local work. Names only — never commit 
 - Client: workouts, 1RM, food logger with the **built-in 1,204 foods**, meal plans, custom habits, progress and photos, weekly check-ins, checklist, Apple Health/MyFitnessPal imports, PAR-Q, contracts, store, sessions.
 - **Two-way chat with text and voice messages** (live updates, read receipts, unread badges), broadcast notes/videos, native WebRTC live rooms.
 - Jack works with rule-based output for the coach work screens even with **no AI key**; the chat assistant itself needs an AI provider.
-- Test suite green: 773/773 (baseline run on 2026-11-23).
+- Test suite green: 846/846 (run on 2026-11-27).
 
 ### 7.2 Needs external or optional setup
 
@@ -667,6 +667,12 @@ Copy `.env.example` to `.env.local` for local work. Names only — never commit 
 | 3400 | `progression_suggestions` | Progression engine, client targets |
 | 3500 | `client_report_data` | `get_client_report_data` for Jack reports |
 | 3600 | `coach_exercise_videos` | Per-coach exercise video links |
+| 3700 | `trial_14_days` | 14-day (336 h) coach trial in `provision_my_profile`; `coach_trial_window` also accepts legacy 72 h |
+| 3800 | `coach_custom_exercises` | `exercises.owner_coach_id` (+ description, secondary muscles, `image_path`), owner/client/trainer RLS, `save_custom_exercise`, `delete_custom_exercise`, `apexfit-exercise-images` bucket |
+| 3900 | `program_exercise_tempo` | `training_program_exercises.tempo`, tempo in `save_/duplicate_training_program`, `get_my_assigned_programs` |
+| 4000 | `calorie_calculator` | `client_body_profiles`, `get_client_calculator_data`, `save_client_calculator_profile` |
+| 4100 | `ramadan_meals` | `pre_iftar` / `iftar` / `suhoor` in `client_food_logs` and `meal_plan_items`; `save_meal_plan` / `get_meal_plan` updated |
+| 4200 | `client_tags` | `client_tags`, `client_tag_assignments`, `save_client_tag`, `delete_client_tag`, `set_client_tags` |
 
 (All filenames are prefixed `2026111500`.)
 

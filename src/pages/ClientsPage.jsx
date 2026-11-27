@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '../components/Button.jsx';
 import CalorieCalculator from '../components/CalorieCalculator.jsx';
@@ -8,6 +8,10 @@ import ClientFoodReview from '../components/ClientFoodReview.jsx';
 import ProgressionSuggestions from '../components/ProgressionSuggestions.jsx';
 import ClientJackAssistant from '../components/ClientJackAssistant.jsx';
 import ClientHabitReview from '../components/ClientHabitReview.jsx';
+import ClientTagBadge from '../components/ClientTagBadge.jsx';
+import ClientTagEditor from '../components/ClientTagEditor.jsx';
+import ClientTagFilters from '../components/ClientTagFilters.jsx';
+import ClientTagManager from '../components/ClientTagManager.jsx';
 import ClientHealthPanel from '../components/ClientHealthPanel.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
@@ -22,6 +26,8 @@ import { getTaskCompletionRates } from '../services/accountabilityService.js';
 import { fillText, ratesByClient, rateTone } from '../services/accountabilityUtils.js';
 import { listClearanceFlags } from '../services/assessmentService.js';
 import { clientLabel } from '../services/coachingUtils.js';
+import { listClientTagAssignments, listClientTags } from '../services/clientTagService.js';
+import { countByTag, filterClients, tagsByClient } from '../services/clientTagUtils.js';
 import { getTeam, listAssignments } from '../services/teamService.js';
 import { TRAINER_FILTER_ALL, TRAINER_FILTER_NONE, assignmentIndex, filterClientsByTrainer, memberLabel } from '../services/teamUtils.js';
 
@@ -49,10 +55,16 @@ export default function ClientsPage({ onNotify }) {
   const [expandedId, setExpandedId] = useState('');
   const [detailTab, setDetailTab] = useState('profile');
   const [intake, setIntake] = useState({ state: 'idle', data: null, error: '' });
+  const [tags, setTags] = useState([]);
+  const [tagAssignments, setTagAssignments] = useState([]);
+  const [tagFilters, setTagFilters] = useState({ query: '', typeId: '', tagIds: [] });
+  const [tagEditing, setTagEditing] = useState(null);
 
   async function refresh() {
     try {
-      const [clientRows, inviteRows, flagRows, teamRows, assignmentRows] = await Promise.all([listMyClients(), listOpenInvites(), listClearanceFlags().catch(() => []), getTeam().catch(() => []), listAssignments().catch(() => [])]);
+      const [clientRows, inviteRows, flagRows, teamRows, assignmentRows, tagRows, tagAssignmentRows] = await Promise.all([listMyClients(), listOpenInvites(), listClearanceFlags().catch(() => []), getTeam().catch(() => []), listAssignments().catch(() => []), listClientTags().catch(() => []), listClientTagAssignments().catch(() => [])]);
+      setTags(tagRows);
+      setTagAssignments(tagAssignmentRows);
       getTaskCompletionRates(30).then((rows) => setRates(ratesByClient(rows))).catch(() => {});
       setTeam(teamRows);
       setAssignments(assignmentRows);
@@ -130,7 +142,10 @@ export default function ClientsPage({ onNotify }) {
 
   const activeCount = clients.filter((client) => client.status === 'active').length;
   const trainerIndex = assignmentIndex(assignments, team);
-  const visibleClients = filterClientsByTrainer(clients, trainerIndex, trainerFilter);
+  const tagMap = useMemo(() => tagsByClient(tagAssignments, tags), [tagAssignments, tags]);
+  const tagCounts = useMemo(() => countByTag(tagAssignments), [tagAssignments]);
+  const trainerClients = filterClientsByTrainer(clients, trainerIndex, trainerFilter);
+  const visibleClients = filterClients(trainerClients, tagFilters, tagMap);
 
   return (
     <>
@@ -151,11 +166,13 @@ export default function ClientsPage({ onNotify }) {
               </select>
             </label>
           )}
+          {(tags.length > 0 || clients.length > 5) && <ClientTagFilters tags={tags} counts={tagCounts} filters={tagFilters} onChange={setTagFilters} shown={visibleClients.length} total={trainerClients.length} />}
           {error && <div className="notice notice-error" role="alert">{t('clientsLoadError')} {error}</div>}
           {loading && <div className="empty-state" role="status">{t('loadingProgress')}</div>}
           {!loading && !error && clients.length === 0 && (
             <div className="dashboard-empty"><h3>{t('emptyClients')}</h3><p>{t('clientsEmptyHelp')}</p></div>
           )}
+          {!loading && !error && clients.length > 0 && visibleClients.length === 0 && <div className="empty-state">{t('tgNoMatches')}</div>}
           <div className="clients-list">
             {visibleClients.map((client) => (
               <article className="client-row" id={`client-${client.client_id}`} key={client.client_id}>
@@ -166,6 +183,7 @@ export default function ClientsPage({ onNotify }) {
                     <small>{client.client_email} · {t('joinedOn')} {new Date(client.created_at).toLocaleDateString(locale)}</small>
                   </div>
                   {trainerIndex.get(client.client_id) && <span className="soft-badge badge-cyan" title={t('tmTrainerBadge')}>{t('tmTrainerBadge')}: {memberLabel(trainerIndex.get(client.client_id))}</span>}
+                  {(tagMap.get(client.client_id) || []).map((tag) => <ClientTagBadge key={tag.id} tag={tag} />)}
                   {clearance[client.client_id] && <span className="soft-badge badge-amber">{t('asmClearanceBadge')}</span>}
                   {rates.get(client.client_id)?.rate !== null && rates.get(client.client_id)?.rate !== undefined && (
                     <span className={`soft-badge rate-badge tone-${rateTone(rates.get(client.client_id).rate)}`} title={fillText(t('taskDoneOf'), { done: rates.get(client.client_id).done, n: rates.get(client.client_id).assigned })} dir="ltr">
@@ -176,6 +194,7 @@ export default function ClientsPage({ onNotify }) {
                 </div>
                 <div className="client-row-actions">
                   <button className="text-action" type="button" aria-expanded={expandedId === client.client_id} onClick={() => toggleIntake(client.client_id)}>{t('viewOnboarding')}</button>
+                  <button className="text-action" type="button" onClick={() => setTagEditing(client)}>{t('tgEdit')}</button>
                   <button className="text-action" type="button" onClick={() => navigate(`/messages?with=${client.client_id}`)}>{t('messages')}</button>
                   <button className="text-action" type="button" onClick={() => navigate(`/tasks?client=${client.client_id}`)}>{t('taskManageLink')}</button>
                   <button className="text-action" type="button" onClick={() => toggleStatus(client)}>{client.status === 'active' ? t('archiveClient') : t('restoreClient')}</button>
@@ -236,6 +255,8 @@ export default function ClientsPage({ onNotify }) {
           </div>
         </section>
 
+        <div className="clients-side">
+        <ClientTagManager tags={tags} counts={tagCounts} onChanged={refresh} />
         <section className="panel clients-invites">
           <div className="panel-heading"><div><span className="eyebrow">{t('inviteClient')}</span><h3>{t('inviteCodes')}</h3></div></div>
           <p className="muted-copy">{t('inviteHelp')}</p>
@@ -251,7 +272,22 @@ export default function ClientsPage({ onNotify }) {
             ))}
           </div>
         </section>
+        </div>
       </div>
+      {tagEditing && (
+        <ClientTagEditor
+          clientId={tagEditing.client_id}
+          clientName={clientLabel(tagEditing)}
+          tags={tags}
+          initialIds={tagAssignments.filter((row) => row.client_id === tagEditing.client_id).map((row) => row.tag_id)}
+          onClose={() => setTagEditing(null)}
+          onSaved={(ids) => {
+            setTagAssignments((current) => [...current.filter((row) => row.client_id !== tagEditing.client_id), ...ids.map((tagId) => ({ client_id: tagEditing.client_id, tag_id: tagId }))]);
+            setTagEditing(null);
+            onNotify(t('tgSaved'));
+          }}
+        />
+      )}
     </>
   );
 }

@@ -1737,3 +1737,29 @@ a.sidebar-profile:hover .profile-copy strong { color: #70afff; }
 .ramadan-toggle span { display: grid; gap: 1px; }
 .ramadan-toggle strong { font-size: 12px; }
 .ramadan-toggle small { color: var(--muted); font-size: 10px; }
+/* Client tags and types */
+.clients-side { display: grid; gap: 14px; min-width: 0; align-content: start; }
+.client-tag { display: inline-flex; align-items: center; gap: 2px; padding: 2px 9px; border: 1px solid var(--tag-color); border-radius: 999px; background: color-mix(in srgb, var(--tag-color) 14%, transparent); color: var(--tag-color); font: inherit; font-size: 10px; font-weight: 700; line-height: 1.6; }
+.client-tag.is-type { background: var(--tag-color); color: #05070a; }
+button.client-tag { cursor: pointer; opacity: .7; }
+button.client-tag.is-selected { opacity: 1; box-shadow: 0 0 0 2px color-mix(in srgb, var(--tag-color) 45%, transparent); }
+.tag-color-red { --tag-color: #ff6b6b; }
+.tag-color-orange { --tag-color: #ff9f43; }
+.tag-color-amber { --tag-color: #f5c542; }
+.tag-color-green { --tag-color: #32d49a; }
+.tag-color-teal { --tag-color: #2ec4c9; }
+.tag-color-blue { --tag-color: #4b9cff; }
+.tag-color-purple { --tag-color: #a78bfa; }
+.tag-color-pink { --tag-color: #f472b6; }
+.tag-swatch { width: 24px; height: 24px; padding: 0; border: 2px solid transparent; border-radius: 50%; background: var(--tag-color); cursor: pointer; }
+.tag-swatch.is-selected { border-color: var(--text, #fff); }
+.client-tag-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.client-filters { display: grid; gap: 8px; }
+.client-filter-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 8px; }
+.client-filter-row:has(> :only-child) { grid-template-columns: 1fr; }
+.client-filter-summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 11px; }
+.client-tag-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.client-tag-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.client-tag-actions { display: inline-flex; gap: 10px; }
+.client-tag-form { display: grid; gap: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.client-tag-form h4 { margin: 0; font: 600 12px var(--font-display); }
