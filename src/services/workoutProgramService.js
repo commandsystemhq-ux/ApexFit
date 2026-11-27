@@ -1,3 +1,4 @@
+import { signExerciseImages } from './customExerciseService.js';
 import { requireSupabase } from './supabaseClient.js';
 import { countProgramContents } from './clientPriority2Utils.js';
 
@@ -8,7 +9,7 @@ const PROGRAM_DETAIL_FIELDS = `
   days:training_program_days(
     id,name,order_index,
     exercises:training_program_exercises(
-      id,exercise_id,order_index,sets,reps,rest_seconds,notes,
+      id,exercise_id,order_index,sets,reps,rest_seconds,tempo,notes,
       exercise:exercises(id,slug,name,name_i18n,category,primary_muscles,equipment,difficulty,demo_video_url,thumbnail_url,owner_coach_id,description,image_path)
     )
   )
@@ -70,4 +71,20 @@ export async function duplicateWorkoutProgram(programId, title, asTemplate = fal
   });
   if (error) throw error;
   return data;
+}
+
+// The programs the signed-in client was given (newest first). A custom exercise's private photo gets a temporary link.
+export async function listMyAssignedPrograms() {
+  const { data, error } = await requireSupabase().rpc('get_my_assigned_programs');
+  if (error) throw error;
+  const programs = data || [];
+  const exercises = programs.flatMap((program) => program.days.flatMap((day) => day.exercises.map((item) => item.exercise)));
+  const signed = new Map((await signExerciseImages(exercises)).map((exercise) => [exercise.id, exercise]));
+  return programs.map((program) => ({
+    ...program,
+    days: program.days.map((day) => ({
+      ...day,
+      exercises: day.exercises.map((item) => ({ ...item, exercise: signed.get(item.exercise.id) || item.exercise })),
+    })),
+  }));
 }

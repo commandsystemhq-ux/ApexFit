@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Button from '../components/Button.jsx';
 import PageHeader from '../components/PageHeader.jsx';
+import ProgramPreview from '../components/ProgramPreview.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import { listMyClients } from '../services/coachClientService.js';
 import { clientLabel } from '../services/coachingUtils.js';
@@ -123,6 +124,7 @@ export default function ProgramTemplatesPage({ onNavigate, onNotify }) {
                 <span>{program.exerciseCount} {t('exercises')}</span>
                 <time dateTime={program.updated_at}>{t('updatedOn')} {new Date(program.updated_at).toLocaleDateString(locale)}</time>
               </div>
+              <ProgramPreview programId={program.id} />
               <div className="template-actions">
                 <Button variant="primary" size="small" disabled={busyId === program.id} onClick={() => useProgram(program)}>
                   {program.is_template ? t('useTemplate') : t('duplicateProgram')}

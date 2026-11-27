@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import ClientAssignedProgram from '../components/ClientAssignedProgram.jsx';
 import ClientFoodLogger from '../components/ClientFoodLogger.jsx';
 import ClientMealPlan from '../components/ClientMealPlan.jsx';
 import NutritionTracker from '../components/NutritionTracker.jsx';
@@ -52,7 +53,7 @@ export default function ClientPortalPage({ section }) {
         ))}
       </nav>
       {intakeMissing && section !== 'intake' && <div className="notice notice-info" role="status">{t('intakeCompleteNotice')}</div>}
-      {section === 'workouts' && <ClientWorkoutLogger />}
+      {section === 'workouts' && <><ClientAssignedProgram /><ClientWorkoutLogger /></>}
       {section === 'progress' && <ClientProgressTracking clientId={user.id} />}
       {section === 'strength' && <ClientOneRepMax />}
       {section === 'food' && <ClientMealPlan onLogged={() => setFoodVersion((version) => version + 1)} />}

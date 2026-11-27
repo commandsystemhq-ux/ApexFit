@@ -4,8 +4,10 @@ import ExerciseCard from '../components/ExerciseCard.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import { useExerciseBundle } from '../hooks/useExerciseBundle.js';
+import { TempoBadge, TempoHelp } from '../components/ProgramDaysView.jsx';
 import { displayName } from '../services/exerciseI18n.js';
 import { searchExercises } from '../services/exerciseService.js';
+import { isValidTempo, normalizeTempo } from '../services/tempoUtils.js';
 import { BUILDER_HANDOFF_KEY, getWorkoutProgram, listMyWorkoutPrograms, saveWorkoutProgram } from '../services/workoutProgramService.js';
 
 const PICKER_PAGE_SIZE = 8;
@@ -22,6 +24,7 @@ function createProgramExercise(exercise) {
     sets: '3',
     reps: '8-12',
     rest_seconds: '90',
+    tempo: '',
     notes: '',
   };
 }
@@ -192,6 +195,7 @@ export default function WorkoutBuilderPage({ onNotify }) {
           sets: String(exercise.sets),
           reps: exercise.reps,
           rest_seconds: String(exercise.rest_seconds),
+          tempo: exercise.tempo || '',
           notes: exercise.notes,
         })),
       }));
@@ -217,6 +221,10 @@ export default function WorkoutBuilderPage({ onNotify }) {
       setPageError(t('programTitleRequired'));
       return;
     }
+    if (days.some((day) => day.exercises.some((exercise) => !isValidTempo(exercise.tempo)))) {
+      setPageError(t('tpInvalid'));
+      return;
+    }
     setSaving(true);
     try {
       const savedId = await saveWorkoutProgram({
@@ -231,6 +239,7 @@ export default function WorkoutBuilderPage({ onNotify }) {
             sets: exercise.sets,
             reps: exercise.reps,
             rest_seconds: exercise.rest_seconds,
+            tempo: normalizeTempo(exercise.tempo),
             notes: exercise.notes,
           })),
         })),
@@ -312,6 +321,7 @@ export default function WorkoutBuilderPage({ onNotify }) {
               </label>
               <Button variant="secondary" size="small" type="button" disabled={days.length <= 1} onClick={() => removeDay(activeDayId)}>{t('removeDay')}</Button>
             </div>
+            <TempoHelp />
             {activeDay.exercises.length === 0
               ? <div className="dashboard-empty builder-empty"><p>{t('addExerciseHint')}</p></div>
               : (
@@ -344,6 +354,7 @@ export default function WorkoutBuilderPage({ onNotify }) {
                         <label className="form-label">{t('reps')}<input className="field" value={exercise.reps} maxLength={50} onChange={(event) => updateExercise(exercise.clientId, 'reps', event.target.value)} /></label>
                         <label className="form-label">{t('restSeconds')}<input className="field" type="number" min="0" max="3600" value={exercise.rest_seconds} onChange={(event) => updateExercise(exercise.clientId, 'rest_seconds', event.target.value)} /></label>
                       </div>
+                      <label className="form-label">{t('tpLabel')}<input className="field" dir="ltr" inputMode="text" value={exercise.tempo} maxLength={12} placeholder={t('tpPlaceholder')} aria-invalid={!isValidTempo(exercise.tempo)} onChange={(event) => updateExercise(exercise.clientId, 'tempo', event.target.value)} />{!isValidTempo(exercise.tempo) ? <small className="field-error" role="alert">{t('tpInvalid')}</small> : <TempoBadge tempo={exercise.tempo} />}</label>
                       <label className="form-label">{t('notes')}<input className="field" value={exercise.notes} maxLength={500} onChange={(event) => updateExercise(exercise.clientId, 'notes', event.target.value)} /></label>
                       <div className="builder-reorder-actions">
                         <button className="text-action" type="button" disabled={index === 0} onClick={() => moveExercise(activeDayId, index, index - 1)}>{t('moveUp')}</button>

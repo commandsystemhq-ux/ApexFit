@@ -24,6 +24,7 @@ import { priority2Translations } from './priority2Translations.js';
 import { progressionTranslations } from './progressionTranslations.js';
 import { publicPagesTranslations } from './publicPagesTranslations.js';
 import { teamErrorTranslations } from './teamErrorTranslations.js';
+import { tempoTranslations } from './tempoTranslations.js';
 import { uxTranslations } from './uxTranslations.js';
 import { workflowTranslations } from './workflowTranslations.js';
 
@@ -648,5 +649,6 @@ for (const locale of supportedLocales) {
   Object.assign(translations[locale], jackAssistantTranslations[locale]);
   Object.assign(translations[locale], exerciseVideoTranslations[locale]);
   Object.assign(translations[locale], customExerciseTranslations[locale]);
+  Object.assign(translations[locale], tempoTranslations[locale]);
   Object.assign(translations[locale], teamErrorTranslations[locale]);
 }

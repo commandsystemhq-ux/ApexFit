@@ -1697,3 +1697,19 @@ a.sidebar-profile:hover .profile-copy strong { color: #70afff; }
 .chip.is-selected { border-color: var(--blue, #4b9cff); background: rgba(75, 156, 255, .14); color: var(--text, #fff); }
 .custom-exercise-photo { display: block; width: 100%; max-width: 280px; max-height: 200px; border-radius: 10px; object-fit: cover; }
 .exercise-description { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; white-space: pre-line; }
+/* Tempo and program views */
+.tempo-badge { display: inline-flex; align-items: center; gap: 4px; width: fit-content; padding: 2px 8px; border: 1px solid rgba(53, 136, 249, .25); border-radius: 999px; background: rgba(53, 136, 249, .08); color: #72b5ff; font-size: 10px; font-weight: 700; }
+.tempo-help { padding: 8px 10px; border: 1px dashed var(--line-strong); border-radius: 10px; color: var(--muted); font-size: 11px; }
+.tempo-help summary { cursor: pointer; font-weight: 600; }
+.tempo-help p { margin: 8px 0 0; line-height: 1.6; }
+.program-days { display: grid; gap: 12px; }
+.program-day h4 { margin: 0 0 6px; font: 600 12px var(--font-display); }
+.program-exercise-list { display: grid; gap: 8px; margin: 0; padding-inline-start: 18px; }
+.program-exercise { display: grid; gap: 3px; }
+.program-exercise-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; color: var(--muted); font-size: 11px; }
+.tempo-meaning { line-height: 1.5; }
+.program-preview { padding-top: 6px; border-top: 1px solid var(--line); font-size: 12px; }
+.program-preview summary { cursor: pointer; font-weight: 600; }
+.program-preview .program-days { margin-top: 10px; }
+.assigned-program { display: grid; gap: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.client-assigned-program { display: grid; gap: 10px; margin-bottom: 14px; }
