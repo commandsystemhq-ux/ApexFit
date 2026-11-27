@@ -89,7 +89,7 @@ export default function App() {
             <Route element={<CoachOnly />}>
               <Route path={PAGES.dashboard.path} element={<DashboardPage onNavigate={go} />} />
               <Route path={PAGES.generator.path} element={<GeneratorPage onNotify={showToast} />} />
-              <Route path={PAGES.exerciseLibrary.path} element={<ExerciseLibraryPage />} />
+              <Route path={PAGES.exerciseLibrary.path} element={<ExerciseLibraryPage onNotify={showToast} />} />
               <Route path={PAGES.workoutBuilder.path} element={<WorkoutBuilderPage onNotify={showToast} />} />
               <Route path={PAGES.programTemplates.path} element={<ProgramTemplatesPage onNavigate={go} onNotify={showToast} />} />
               <Route path={PAGES.messages.path} element={<MessagesPage onNavigate={go} />} />

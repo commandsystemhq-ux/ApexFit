@@ -6,6 +6,7 @@ import ExerciseMedia from './ExerciseMedia.jsx';
 import ExerciseVideoPlayer from './ExerciseVideoPlayer.jsx';
 import { chooseMedia } from '../services/exerciseMedia.js';
 import { useExerciseBundle } from '../hooks/useExerciseBundle.js';
+import { isCustomExercise } from '../services/customExerciseUtils.js';
 import { displayName, localizedInstructions, localizedName, textDirection } from '../services/exerciseI18n.js';
 
 // "Push-Up / تمرين الضغط": the English name, then the name in the chosen language. Each part keeps its own direction.
@@ -53,12 +54,13 @@ function ExerciseDemoDialog({ exercise, onClose }) {
   );
 }
 
-export default function ExerciseCard({ exercise, onAdd, addLabel, onEditVideo }) {
+export default function ExerciseCard({ exercise, onAdd, addLabel, onEditVideo, onEditCustom, onDeleteCustom }) {
   const [demoOpen, setDemoOpen] = useState(false);
   const { t, locale } = useLocale();
   const videoSource = getExerciseVideoSource(exercise.demo_video_url);
   const bundle = useExerciseBundle(locale);
   const steps = localizedInstructions(exercise, locale, bundle);
+  const custom = isCustomExercise(exercise);
   const hasMotion = ['video', 'gif', 'frames'].includes(chooseMedia(exercise).mode) || Boolean(exercise.animation_url);
 
   return (
@@ -66,6 +68,7 @@ export default function ExerciseCard({ exercise, onAdd, addLabel, onEditVideo })
       <div className="exercise-card-heading">
         <h3 className="exercise-title"><ExerciseTitle exercise={exercise} locale={locale} bundle={bundle} /></h3>
         <span className="soft-badge badge-blue">{t(`category_${exercise.category}`)}</span>
+        {custom && <span className="soft-badge badge-green">{t('ceBadge')}</span>}
       </div>
       <ExerciseMedia exercise={exercise} />
       <div className="exercise-card-meta">
@@ -75,6 +78,7 @@ export default function ExerciseCard({ exercise, onAdd, addLabel, onEditVideo })
       <div className="exercise-card-muscles">
         {(exercise.primary_muscles || []).map((muscle) => <span key={muscle}>{t(`muscle_${muscle}`)}</span>)}
       </div>
+      {custom && exercise.description && <p className="exercise-description" dir="auto">{exercise.description}</p>}
       {steps.steps.length > 0 && (
         <details className="exercise-instructions">
           <summary>{t('exerciseInstructions')}</summary>
@@ -87,7 +91,9 @@ export default function ExerciseCard({ exercise, onAdd, addLabel, onEditVideo })
           : exercise.demo_video_url && <span className="muted-copy">{t('videoUnavailable')}</span>}
         {!videoSource && hasMotion && <Button variant="secondary" size="small" type="button" onClick={() => setDemoOpen(true)}>{t('exerciseViewLarger')}</Button>}
         {exercise.video_origin === 'coach' && <span className="soft-badge badge-blue">{t('evCoachBadge')}</span>}
-        {onEditVideo && <button className="text-action" type="button" onClick={() => onEditVideo(exercise)}>{'\u270E'} {t('evEdit')}</button>}
+        {custom && onEditCustom && <button className="text-action" type="button" onClick={() => onEditCustom(exercise)}>{'\u270E'} {t('ceEdit')}</button>}
+        {custom && onDeleteCustom && <button className="text-action" type="button" onClick={() => onDeleteCustom(exercise)}>{t('ceDelete')}</button>}
+        {onEditVideo && !custom && <button className="text-action" type="button" onClick={() => onEditVideo(exercise)}>{'\u270E'} {t('evEdit')}</button>}
         {onAdd && <Button variant="primary" size="small" type="button" onClick={() => onAdd(exercise)}>{addLabel || t('addExercise')}</Button>}
       </div>
       {demoOpen && <ExerciseDemoDialog exercise={exercise} onClose={() => setDemoOpen(false)} />}

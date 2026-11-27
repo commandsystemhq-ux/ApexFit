@@ -1,9 +1,10 @@
 import { searchTokens } from './exerciseI18n.js';
 import { listVideoOverrides } from './exerciseVideoService.js';
 import { mergeVideoOverrides } from './exerciseVideo.js';
+import { signExerciseImages } from './customExerciseService.js';
 import { requireSupabase } from './supabaseClient.js';
 
-const EXERCISE_FIELDS = 'id,slug,name,name_i18n,category,primary_muscles,equipment,difficulty,instructions,instructions_i18n,demo_video_url,thumbnail_url,animation_url,image_frames';
+const EXERCISE_FIELDS = 'id,slug,name,name_i18n,category,primary_muscles,equipment,difficulty,instructions,instructions_i18n,demo_video_url,thumbnail_url,animation_url,image_frames,owner_coach_id,description,secondary_muscles,image_path';
 
 export async function searchExercises({
   search = '',
@@ -11,6 +12,7 @@ export async function searchExercises({
   equipment = '',
   muscle = '',
   difficulty = '',
+  scope = '',
   page = 1,
   pageSize = 24,
 } = {}) {
@@ -31,6 +33,9 @@ export async function searchExercises({
   if (equipment) request = request.contains('equipment', [equipment]);
   if (muscle) request = request.contains('primary_muscles', [muscle]);
   if (difficulty) request = request.eq('difficulty', difficulty);
+  // 'custom' = the coach's own exercises (a client sees those of their coach); 'library' = the shared library only.
+  if (scope === 'custom') request = request.not('owner_coach_id', 'is', null);
+  if (scope === 'library') request = request.is('owner_coach_id', null);
 
   const { data, error, count } = await request
     .order('name', { ascending: true })
@@ -38,5 +43,6 @@ export async function searchExercises({
   if (error) throw error;
 
   const exercises = data || [];
-  return { exercises: mergeVideoOverrides(exercises, await listVideoOverrides(exercises.map((exercise) => exercise.id))), total: count || 0 };
+  const withVideos = mergeVideoOverrides(exercises, await listVideoOverrides(exercises.map((exercise) => exercise.id)));
+  return { exercises: await signExerciseImages(withVideos), total: count || 0 };
 }

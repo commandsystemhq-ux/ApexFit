@@ -38,6 +38,7 @@ export default function WorkoutBuilderPage({ onNotify }) {
   const [days, setDays] = useState(() => [createDay(t('day'), 1)]);
   const [activeDayId, setActiveDayId] = useState(days[0].clientId);
   const [pickerSearch, setPickerSearch] = useState('');
+  const [pickerScope, setPickerScope] = useState('');
   const [pickerPage, setPickerPage] = useState(1);
   const [pickerExercises, setPickerExercises] = useState([]);
   const [pickerTotal, setPickerTotal] = useState(0);
@@ -76,7 +77,7 @@ export default function WorkoutBuilderPage({ onNotify }) {
     setPickerLoading(true);
     setPickerError('');
     const timer = window.setTimeout(() => {
-      searchExercises({ search: pickerSearch, page: pickerPage, pageSize: PICKER_PAGE_SIZE })
+      searchExercises({ search: pickerSearch, scope: pickerScope, page: pickerPage, pageSize: PICKER_PAGE_SIZE })
         .then((result) => {
           if (!active) return;
           setPickerExercises(result.exercises);
@@ -97,7 +98,7 @@ export default function WorkoutBuilderPage({ onNotify }) {
       active = false;
       window.clearTimeout(timer);
     };
-  }, [pickerSearch, pickerPage]);
+  }, [pickerSearch, pickerScope, pickerPage]);
 
   function addDay() {
     if (days.length >= 14) return;
@@ -363,6 +364,13 @@ export default function WorkoutBuilderPage({ onNotify }) {
             <span className="soft-badge badge-muted">{pickerTotal}</span>
           </div>
           <label className="form-label">{t('searchExercises')}<input className="field" value={pickerSearch} onChange={(event) => { setPickerSearch(event.target.value); setPickerPage(1); }} placeholder={t('searchExercisePlaceholder')} /></label>
+          <label className="form-label">{t('ceScope')}
+            <select className="field" value={pickerScope} onChange={(event) => { setPickerScope(event.target.value); setPickerPage(1); }}>
+              <option value="">{t('ceScopeAll')}</option>
+              <option value="custom">{t('ceScopeCustom')}</option>
+              <option value="library">{t('ceScopeLibrary')}</option>
+            </select>
+          </label>
           {pickerError && <div className="notice notice-error" role="alert">{t('exerciseLoadError')} {pickerError}</div>}
           {pickerLoading && <div className="empty-state" role="status">{t('loadingExercises')}</div>}
           {!pickerLoading && !pickerError && pickerExercises.length === 0 && <div className="empty-state">{t('noExerciseResults')}</div>}

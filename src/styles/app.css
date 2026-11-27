@@ -300,7 +300,7 @@
 .sidebar-backdrop { display: none; }
 
 .library-panel { display: grid; gap: 15px; }
-.library-filters { display: grid; grid-template-columns: minmax(190px, 2fr) repeat(4, minmax(125px, 1fr)); gap: 10px; align-items: end; }
+.library-filters { display: grid; grid-template-columns: minmax(190px, 2fr) repeat(5, minmax(120px, 1fr)); gap: 10px; align-items: end; }
 .library-results-heading { display: flex; justify-content: space-between; color: var(--muted); font-size: 10px; }
 .exercise-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 11px; }
 .exercise-card { display: grid; min-width: 0; align-content: start; gap: 11px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: rgba(255, 255, 255, .018); }
@@ -1690,3 +1690,10 @@ a.sidebar-profile:hover .profile-copy strong { color: #70afff; }
   .exercise-video-frame { border-radius: 8px; }
   .exercise-video-play { width: 48px; height: 48px; }
 }
+/* Custom exercises */
+.chip-fieldset { display: grid; gap: 6px; margin: 0; padding: 0; border: 0; }
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { padding: 5px 10px; border: 1px solid var(--line-strong); border-radius: 999px; background: transparent; color: var(--muted); cursor: pointer; font: inherit; font-size: 11px; }
+.chip.is-selected { border-color: var(--blue, #4b9cff); background: rgba(75, 156, 255, .14); color: var(--text, #fff); }
+.custom-exercise-photo { display: block; width: 100%; max-width: 280px; max-height: 200px; border-radius: 10px; object-fit: cover; }
+.exercise-description { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; white-space: pre-line; }

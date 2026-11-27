@@ -4,7 +4,7 @@ const WORKOUT_FIELDS = `
   id,workout_date,title,created_at,
   sets:client_workout_set_logs(
     id,exercise_id,exercise_order,set_number,actual_reps,actual_weight_kg,notes,
-    exercise:exercises(id,slug,name,name_i18n,category,primary_muscles,equipment,difficulty,demo_video_url,thumbnail_url)
+    exercise:exercises(id,slug,name,name_i18n,category,primary_muscles,equipment,difficulty,demo_video_url,thumbnail_url,owner_coach_id,image_path)
   )
 `;
 
