@@ -288,7 +288,7 @@ const MEAL_SCHEMA = {
   type: 'object',
   properties: {
     food_name: { type: 'string', description: 'Short name of the meal, for example "Grilled chicken with rice".' },
-    meal_type: { type: 'string', enum: ['breakfast', 'lunch', 'dinner', 'snack'] },
+    meal_type: { type: 'string', enum: ['breakfast', 'lunch', 'pre_iftar', 'iftar', 'dinner', 'snack', 'suhoor'] },
     calories: { type: 'number', description: 'Estimated total calories (kcal).' },
     protein_g: { type: 'number' },
     carbs_g: { type: 'number' },

@@ -1731,3 +1731,9 @@ a.sidebar-profile:hover .profile-copy strong { color: #70afff; }
 .calc-compare li { display: flex; justify-content: space-between; gap: 8px; padding: 4px 8px; border-radius: 8px; }
 .calc-compare li.is-selected { background: rgba(53, 136, 249, .1); }
 .calc-compare summary { cursor: pointer; font-size: 12px; font-weight: 600; }
+/* Ramadan meals switch */
+.ramadan-toggle { display: flex; align-items: center; gap: 10px; width: fit-content; padding: 6px 12px; border: 1px solid var(--line-strong); border-radius: 999px; cursor: pointer; }
+.ramadan-toggle input { width: 16px; height: 16px; accent-color: var(--green, #32d49a); }
+.ramadan-toggle span { display: grid; gap: 1px; }
+.ramadan-toggle strong { font-size: 12px; }
+.ramadan-toggle small { color: var(--muted); font-size: 10px; }

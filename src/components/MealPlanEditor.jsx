@@ -2,12 +2,15 @@ import { useEffect, useMemo, useState } from 'react';
 import Button from './Button.jsx';
 import FoodPicker from './FoodPicker.jsx';
 import FoodTargetProgress from './FoodTargetProgress.jsx';
+import RamadanToggle from './RamadanToggle.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
+import { useRamadanMode } from '../hooks/useRamadanMode.js';
+import { mealTypesFor } from '../services/clientPriority2Utils.js';
 import { clientLabel } from '../services/coachingUtils.js';
 import { buildTargetProgress } from '../services/foodReviewUtils.js';
 import { getNutritionTarget } from '../services/foodReviewService.js';
 import {
-  MAX_ALTERNATIVES, MAX_PLAN_FOODS, MEAL_LABELS, MEAL_TYPES, gramsToMatchCalories, itemsOfMeal, mealTotals, newKey, planTotals, validatePlan, withGrams,
+  MAX_ALTERNATIVES, MAX_PLAN_FOODS, MEAL_LABELS, gramsToMatchCalories, itemsOfMeal, mealTotals, newKey, planTotals, validatePlan, withGrams,
 } from '../services/mealPlanUtils.js';
 import { saveMealPlan } from '../services/mealPlanService.js';
 
@@ -18,6 +21,7 @@ const macroLine = (food, t) => `${food.calories} ${t('kcal')} · ${t('foodProtei
 export default function MealPlanEditor({ initial, clients, onSaved, onCancel }) {
   const { t } = useLocale();
   const [plan, setPlan] = useState(initial);
+  const [ramadan] = useRamadanMode();
   const [picker, setPicker] = useState(null);
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
@@ -118,7 +122,8 @@ export default function MealPlanEditor({ initial, clients, onSaved, onCancel }) 
         {fieldError('client')}
       </fieldset>
 
-      {MEAL_TYPES.map((meal) => {
+      <RamadanToggle />
+      {mealTypesFor(ramadan, plan.items.map((item) => item.meal_type)).map((meal) => {
         const foods = itemsOfMeal(plan.items, meal);
         const subtotal = mealTotals(plan.items, meal);
         return (

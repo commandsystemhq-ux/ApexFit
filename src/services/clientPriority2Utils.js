@@ -1,7 +1,20 @@
 export const INTAKE_GOALS = ['fat_loss', 'muscle_gain', 'strength', 'endurance', 'general_fitness'];
 export const EXPERIENCE_LEVELS = ['beginner', 'intermediate', 'advanced'];
 export const EQUIPMENT_ACCESS = ['full_gym', 'home_gym', 'bodyweight_only'];
-export const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
+// Every meal category the database accepts, in the order a day shows them. The Ramadan ones (before iftar, iftar,
+// suhoor) are offered only when Ramadan meals are switched on, or when the day or plan already uses them.
+export const BASE_MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
+export const RAMADAN_MEAL_TYPES = ['pre_iftar', 'iftar', 'suhoor'];
+export const MEAL_TYPES = ['breakfast', 'lunch', 'pre_iftar', 'iftar', 'dinner', 'snack', 'suhoor'];
+export const MEAL_LABELS = Object.freeze({
+  breakfast: 'mealBreakfast', lunch: 'mealLunch', pre_iftar: 'mealPreIftar', iftar: 'mealIftar', dinner: 'mealDinner', snack: 'mealSnack', suhoor: 'mealSuhoor',
+});
+
+// The meals to offer: the four everyday ones, plus the Ramadan ones when ramadan is on, plus any Ramadan meal in used.
+export function mealTypesFor(ramadan, used = []) {
+  const inUse = new Set(used);
+  return MEAL_TYPES.filter((meal) => BASE_MEAL_TYPES.includes(meal) || ramadan || inUse.has(meal));
+}
 
 function isBlank(value) {
   return value === '' || value === null || value === undefined;

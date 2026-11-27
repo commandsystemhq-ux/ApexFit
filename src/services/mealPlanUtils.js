@@ -1,12 +1,11 @@
 import { basisFromValues } from './foodFormUtils.js';
-import { MEAL_TYPES } from './clientPriority2Utils.js';
+import { MEAL_LABELS, MEAL_TYPES } from './clientPriority2Utils.js';
 import { MAX_PORTION_GRAMS, parsePortionGrams, scaleFoodPortion } from './foodSearchUtils.js';
 
-export { MEAL_TYPES };
+export { MEAL_LABELS, MEAL_TYPES };
 export const MAX_PLAN_FOODS = 60;
 export const MAX_ALTERNATIVES = 5;
 export const MAX_TITLE = 120;
-export const MEAL_LABELS = Object.freeze({ breakfast: 'mealBreakfast', lunch: 'mealLunch', dinner: 'mealDinner', snack: 'mealSnack' });
 
 const round1 = (value) => Math.round(Number(value || 0) * 10) / 10;
 let counter = 0;

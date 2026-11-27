@@ -23,6 +23,7 @@ import { paymentsTranslations } from './paymentsTranslations.js';
 import { platformTranslations } from './platformTranslations.js';
 import { priority2Translations } from './priority2Translations.js';
 import { progressionTranslations } from './progressionTranslations.js';
+import { ramadanTranslations } from './ramadanTranslations.js';
 import { publicPagesTranslations } from './publicPagesTranslations.js';
 import { teamErrorTranslations } from './teamErrorTranslations.js';
 import { tempoTranslations } from './tempoTranslations.js';
@@ -652,5 +653,6 @@ for (const locale of supportedLocales) {
   Object.assign(translations[locale], customExerciseTranslations[locale]);
   Object.assign(translations[locale], tempoTranslations[locale]);
   Object.assign(translations[locale], calorieTranslations[locale]);
+  Object.assign(translations[locale], ramadanTranslations[locale]);
   Object.assign(translations[locale], teamErrorTranslations[locale]);
 }

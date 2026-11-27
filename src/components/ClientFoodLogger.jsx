@@ -7,13 +7,14 @@ import { getNutritionTarget } from '../services/foodReviewService.js';
 import { buildTargetProgress } from '../services/foodReviewUtils.js';
 import { addFoodLog, deleteFoodLog, listFoodLogs, updateFoodLog } from '../services/clientFoodService.js';
 import { MACRO_FIELDS, basisFromValues, entryToForm, joinPortion } from '../services/foodFormUtils.js';
-import { MEAL_TYPES, summarizeFoodDay } from '../services/clientPriority2Utils.js';
+import RamadanToggle from './RamadanToggle.jsx';
+import { useRamadanMode } from '../hooks/useRamadanMode.js';
+import { MEAL_LABELS, MEAL_TYPES, mealTypesFor, summarizeFoodDay } from '../services/clientPriority2Utils.js';
 import { getLocalDateString, shiftDate } from '../services/clientTrackingUtils.js';
 import { searchFoodDatabase } from '../services/foodSearchService.js';
 import { MAX_PORTION_GRAMS, classifyFoodQuery, createDebouncer, defaultPortionGrams, parsePortionGrams, scaleFoodPortion } from '../services/foodSearchUtils.js';
 
 const SOURCE_LABELS = { local: 'foodSourceLocal', usda: 'foodSourceUsda', openfoodfacts: 'foodSourceOff' };
-const MEAL_LABELS = { breakfast: 'mealBreakfast', lunch: 'mealLunch', dinner: 'mealDinner', snack: 'mealSnack' };
 const EMPTY_ENTRY = { meal_type: 'breakfast', food_name: '', ingredients: '', calories: '', protein_g: '', carbs_g: '', fat_g: '' };
 
 export default function ClientFoodLogger() {
@@ -24,6 +25,7 @@ export default function ClientFoodLogger() {
   const [target, setTarget] = useState(null);
   const [selectedDate, setSelectedDate] = useState(today);
   const [entry, setEntry] = useState(EMPTY_ENTRY);
+  const [ramadan] = useRamadanMode();
   const [grams, setGrams] = useState('');
   // Values per 100 g that the amount scales. It comes from a chosen food or from the person's own numbers.
   const [basis, setBasis] = useState(null);
@@ -286,11 +288,12 @@ export default function ClientFoodLogger() {
         <div className="food-details">
           <h4>{t('foodDetailsTitle')}</h4>
           {editingId && <div className="notice notice-info" role="status">{t('foodEditing')}</div>}
+          <RamadanToggle />
           <div className="form-grid">
             <label className="form-label">{t('foodDate')}<input className="field" type="date" value={selectedDate} max={today} disabled={Boolean(editingId)} onChange={(event) => event.target.value && setSelectedDate(event.target.value)} required /></label>
             <label className="form-label">{t('mealType')}
               <select className="field" value={entry.meal_type} onChange={(event) => updateField('meal_type', event.target.value)}>
-                {MEAL_TYPES.map((meal) => <option key={meal} value={meal}>{t(MEAL_LABELS[meal])}</option>)}
+                {mealTypesFor(ramadan, [entry.meal_type, ...dayLogs.map((log) => log.meal_type)]).map((meal) => <option key={meal} value={meal}>{t(MEAL_LABELS[meal])}</option>)}
               </select>
             </label>
           </div>

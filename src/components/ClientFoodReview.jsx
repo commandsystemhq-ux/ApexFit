@@ -2,13 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Button from './Button.jsx';
 import FoodTargetProgress from './FoodTargetProgress.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
+import { MEAL_LABELS } from '../services/clientPriority2Utils.js';
 import { getLocalDateString, shiftDate } from '../services/clientTrackingUtils.js';
 import { getNutritionTarget, listClientFoodLogs } from '../services/foodReviewService.js';
 import { buildTargetProgress, calorieAdherence, groupLogsByDay } from '../services/foodReviewUtils.js';
 import { setClientNutritionTargets } from '../services/healthService.js';
 import { targetsToForm, validateTargetsForm } from '../services/healthUtils.js';
 
-const MEAL_LABELS = { breakfast: 'mealBreakfast', lunch: 'mealLunch', dinner: 'mealDinner', snack: 'mealSnack' };
 const RANGES = [7, 14, 30];
 const GOAL_FIELDS = [
   { key: 'calories', labelKey: 'nutCalories' },

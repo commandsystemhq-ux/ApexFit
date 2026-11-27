@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { useLocale } from '../contexts/LocaleContext.jsx';
-import { normalizeFoodEntry } from '../services/clientPriority2Utils.js';
+import { MEAL_LABELS, MEAL_TYPES, normalizeFoodEntry } from '../services/clientPriority2Utils.js';
 
-const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'];
-const MEAL_LABELS = { breakfast: 'mealBreakfast', lunch: 'mealLunch', dinner: 'mealDinner', snack: 'mealSnack' };
+const MEALS = MEAL_TYPES;
 const num = (value) => (value === null || value === undefined ? '' : String(value));
 
 // Jack's estimate of a meal from a photo. The client corrects the numbers, then saves it to the food log.
