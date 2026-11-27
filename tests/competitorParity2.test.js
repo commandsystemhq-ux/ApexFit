@@ -7,10 +7,10 @@ const root = new URL('../', import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), 'utf8').replace(/\r\n/g, '\n');
 
 const NEW_MIGRATIONS = [
-  '20261115004300_notifications.sql',
   '20261115004400_chat_images_templates.sql',
   '20261115004500_recipes.sql',
   '20261115004600_custom_reminders.sql',
+  '20261115004700_coaches_marketplace.sql',
 ];
 
 const NEW_UI_FILES = [

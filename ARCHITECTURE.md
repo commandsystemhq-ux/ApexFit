@@ -101,7 +101,7 @@ flowchart LR
 | `coach` | `coach` | `trialing` / `active` / `expired` | Head coach. 14-day trial from first sign-in (`trial_ends_at = trial_started_at + 336h`; legacy 72h windows still allowed by the CHECK constraint), then needs an active Paddle subscription. `past_due` keeps access until `current_period_end + 3 days`. |
 | `trainer` | `coach` | `trainer` | Assistant trainer with an active `coach_team_members` row; works under the head coach's plan, sees only assigned clients and only what their permissions allow. |
 | `client` | `client` | `client` | Always free. Linked to a coach through an invite code. |
-| (admin) | any | — | The **platform owner** is not a database role: it is any confirmed sign-in email listed in `PLATFORM_ADMIN_EMAILS` (checked server-side only). |
+| (admin) | any | — | The **platform owner** is not a database role: it is any confirmed sign-in email listed in `PLATFORM_ADMIN_EMAILS` (checked server-side only). | For the **marketplace moderation** screen the database has its own owner list, `platform_admins` (see 3.12): it can only be filled from the SQL editor, and every `admin_*` RPC checks it.
 
 Route protection (`src/components/RouteGuards.jsx`): `RequireAuth` → `CoachOnly` / `ClientOnly` / `TrainerOnly`; `TrialGate` shows `TrialExpiredPage` for expired coaches everywhere except `/billing` and `/settings`; `LandingGate`/`PublicOnly` redirect signed-in users away from `/`, `/login`, `/signup`. `AuthContext` refreshes the access status on window focus and exactly when the trial ends.
 
@@ -124,8 +124,8 @@ ApexFit/
 ├─ public/                 Static assets, PWA manifest, service worker
 ├─ scripts/                Node scripts (catalog import, food list build, video seeding, translation)
 ├─ src/                    Web app (React)
-├─ supabase/               migrations/ (45 files) + manual-setup.sql (concatenation)
-├─ tests/                  67 test files, 925 tests, helpers/pgliteSupabase.js
+├─ supabase/               migrations/ (46 files) + manual-setup.sql (concatenation)
+├─ tests/                  68 test files, 951 tests, helpers/pgliteSupabase.js
 ├─ index.html  vite.config.js  vercel.json  package.json  .env.example  .vercelignore  .gitignore  README.md
 └─ ARCHITECTURE.md         (this file)
 ```
@@ -141,10 +141,10 @@ Root files: `vercel.json` (SPA rewrite `/((?!api/).*)` → `/index.html`; `maxDu
 | `src/routes.js` | 1 | **Single source of truth**: `PAGES` (path, title key, role access), `AUTH_PATHS`, `PUBLIC_PATHS`, `ADMIN_PATHS`, per-role sidebar groups, `roleOf`, `homePathFor`, `safeRedirectPath`, `legacyHashPath`. |
 | `src/contexts/` | 4 | `AuthContext` (session, profile/access state, Google/email sign-in), `LocaleContext` (locale in `localStorage` key `apexfit.locale`, `t(key)` with English fallback), `ThemeContext` (appearance, `localStorage` key `apexfit.theme`), `ToastContext`. |
 | `src/hooks/` | 8 | `useChatUnread`, `useCheckinBadge`, `useExerciseBundle`, `useNotifications` (bell data), `useRamadanMode`, `useSignedPhotos` (5-minute signed URLs), `useVideoRoom`, `useVoiceRecorder`. |
-| `src/pages/` | 44 | One file per screen (see section 3 for the route map). |
-| `src/components/` | 98 | Shell and reusable UI plus feature panels (grouped below). |
-| `src/services/` | 109 | `*Service.js` = Supabase/`fetch` I/O; `*Utils.js` = pure rules; plus engines (`webrtcRoom`, `healthImport`). |
-| `src/i18n/` | 39 | `translations.js` merges 37 domain dictionaries (each has all five languages) + `publicPagesContent.js` (policy text). A test enforces identical keys across locales. |
+| `src/pages/` | 48 | One file per screen (see section 3 for the route map). |
+| `src/components/` | 102 | Shell and reusable UI plus feature panels (grouped below). |
+| `src/services/` | 111 | `*Service.js` = Supabase/`fetch` I/O; `*Utils.js` = pure rules; plus engines (`webrtcRoom`, `healthImport`). |
+| `src/i18n/` | 40 | `translations.js` merges 38 domain dictionaries (each has all five languages) + `publicPagesContent.js` (policy text). A test enforces identical keys across locales. |
 | `src/data/common-foods.json` | 1 | Built-in food list: **1,204 foods**, `version: 2`, values per 100 g, names in `en`/`ar`, aliases, `serving_g`. Generated, do not edit by hand. |
 | `src/styles/` | 2 | `tokens.css`, `app.css` (single large stylesheet incl. RTL rules). |
 
@@ -159,6 +159,7 @@ Root files: `vercel.json` (SPA rewrite `/((?!api/).*)` → `/index.html`; `maxDu
 | Check-ins | `CheckinReviewCard`, `ClientCheckinsReview`, `PhotoCompare` |
 | Chat | `ChatWorkspace`, `ChatConversationList`, `ChatThread`, `VoiceRecorderBar`, `VoicePlayer`, `ChatImage`, `ImageLightbox`, `MessageTemplatesPicker`, `MessageTemplatesManager` |
 | Notifications / appearance | `NotificationBell`, `ThemeToggle` |
+| Marketplace | `CoachCard`, `RatingStars`, `MarketplaceReport`, `MarketplaceVideo` |
 | Video | `NativeRoom`, `VideoTile`, `ClientSessions` |
 | Jack | `JackFloatingWidget`, `JackDrawer`, `JackHistory`, `JackMealCard`, `JackIcon`, `ClientJackAssistant` |
 | Business | `ClientBilling`, `PaymentInstructions`, `PaymentMethodsPanel`, `ClientCoachLink`, `ClientCompliancePanel`, `AssessmentSummary`, `SignaturePad`, `SignedContractView`, `EmailPreferences` |
@@ -178,6 +179,7 @@ Root files: `vercel.json` (SPA rewrite `/((?!api/).*)` → `/index.html`; `maxDu
 | Tracking | `clientProgressService`, `clientTrackingUtils`, `clientIntakeService`, `clientPriority2Utils`, `habitService`, `habitUtils`, `checklistService`, `checklistUtils`, `checkinService`, `checkinUtils`, `accountabilityService`, `accountabilityUtils` |
 | Chat / voice / images / push | `chatService`, `chatRealtime`, `chatUtils`, `voiceService`, `voiceUtils`, `chatImageService`, `chatImageUtils`, `messageTemplateService`, `messageTemplateUtils`, `pushService` |
 | Notifications / reminders | `notificationService`, `notificationUtils`, `reminderService`, `reminderUtils` |
+| Marketplace | `marketplaceService` (RPC wrappers + `/api/push` for contact requests), `marketplaceUtils` (profile form validation, search arguments, stars, contact state, countries/languages via `Intl.DisplayNames`) |
 | Video | `sessionService`, `sessionUtils`, `liveRoom`, `roomSignaling`, `webrtcRoom` (framework-free WebRTC mesh, up to 6 peers) |
 | Business | `storeService`, `storeUtils`, `invoicingService`, `paddleService`, `billingUtils`, `contractService`, `contractUtils`, `groupService`, `groupUtils`, `teamService`, `teamUtils`, `teamErrors`, `assessmentService`, `assessmentUtils`, `campaignService`, `campaignTemplate` (also imported by `api/unsubscribe.js`) |
 | Community | `communityService`, `communityUtils` |
@@ -203,13 +205,13 @@ Vercel treats each top-level file as one function; the `_lib/` folder (underscor
 | `_lib/paddle.js` | Paddle config, API calls, webhook signature check and event → subscription mapping. |
 | `_lib/emailCampaign.js` | Resend sending, signed unsubscribe links, batch sender. |
 | `_lib/foodSearch.js` | Open Food Facts + USDA FoodData Central search, normalization, cache. |
-| `_lib/pushNotify.js`, `pushText.js` | Web Push delivery and localized push texts (types `message｜session｜invoice｜video｜checkin｜chat｜voice｜image`); `deliverReminderPushes` sends custom reminders, whose text comes from the reminder itself (`buildReminderPush`). |
+| `_lib/pushNotify.js`, `pushText.js` | Web Push delivery and localized push texts (types `message｜session｜invoice｜video｜checkin｜chat｜voice｜image｜marketplace_request｜marketplace_accepted`); `deliverReminderPushes` sends custom reminders, whose text comes from the reminder itself (`buildReminderPush`). |
 | `_lib/videoSessions.js`, `zoom.js` | Schedule a session (optionally create a Zoom meeting, roll back on failure). |
 
 ### 2.3 `supabase/`
 
-- `migrations/` — 45 files `20261115000100` … `20261115004600` (there is intentionally **no** `…001600`; a test asserts the removed per-coach AI settings migration does not exist). Full list in [section 8](#8-appendix-migrations-and-conventions).
-- `manual-setup.sql` — the 45 migrations concatenated in filename order with `-- ===== <file> =====` markers; idempotent; run once in the Supabase SQL Editor. **It is also what the tests load into PGlite**, so it must stay in sync with `migrations/`.
+- `migrations/` — 46 files `20261115000100` … `20261115004700` (there is intentionally **no** `…001600`; a test asserts the removed per-coach AI settings migration does not exist). Full list in [section 8](#8-appendix-migrations-and-conventions).
+- `manual-setup.sql` — the 46 migrations concatenated in filename order with `-- ===== <file> =====` markers; idempotent; run once in the Supabase SQL Editor. **It is also what the tests load into PGlite**, so it must stay in sync with `migrations/`.
 
 ### 2.4 `data/`
 
@@ -298,6 +300,7 @@ Notation: **UI** = pages/components; **Svc** = `src/services/*`; **RPC** = Postg
 | **Video sessions** | `/sessions`; room `/sessions/:sessionId/room` | `SessionsPage`, `LiveRoomPage`, `NativeRoom`, `VideoTile` | `sessionService`, `sessionUtils`, `liveRoom`, `webrtcRoom`, `roomSignaling` | See 3.7 |
 | **Schedule** (one-to-one sessions, package credits) | `/schedule` | `SchedulePage` | `scheduleService` | `schedule_coach_session`, `set_coach_session_status` (completing consumes the oldest paid package credit; reopen/cancel restores it); table `coach_sessions`; push type `session` |
 | **Team** (assistant trainers) | `/team` | `TeamPage` | `teamService`, `teamUtils`, `teamErrors` | `invite_trainer`, `update_team_member`, `remove_team_member`, `assign_client_trainer`, `get_team`; tables `coach_team_members` (≤ 10), `client_trainer_assignments`; permissions `manage_programs`, `view_assessments`, `messages`, `manage_groups` |
+| **Marketplace profile** (public coach profile, contact requests, reviews) | `/marketplace` | `MarketplaceProfilePage` | `marketplaceService`, `marketplaceUtils`, `pushService` | See 3.12 |
 | **Program store** | `/store` | `StorePage`, `PaymentMethodsPanel` | `storeService`, `storeUtils` | `save_store_product`, `set_store_product_published`, `delete_store_product`, `get_store_sales`, `confirm_store_payment`, `cancel_store_order`; tables `store_products`, `store_orders` |
 | **Packages and invoicing** (direct payments) | `/invoicing` | `InvoicingPage`, `PaymentMethodsPanel` | `invoicingService`, `paymentMethodsUtils` | `save_payment_methods` (IBAN validated in browser and DB), `create_invoice`, `create_package_invoice`, `void_invoice`, `confirm_invoice_payment`; tables `coach_packages`, `invoices`, `client_package_credits`, `coach_payment_methods`; push type `invoice` |
 | **Contracts / e-signatures** | `/contracts` | `ContractsPage`, `SignedContractView` | `contractService`, `contractUtils` | `save_contract`, `set_contract_archived`, `delete_contract`; tables `contracts`, `contract_signatures` (signed wording locked; signed contracts cannot be deleted) |
@@ -323,6 +326,7 @@ Notation: **UI** = pages/components; **Svc** = `src/services/*`; **RPC** = Postg
 | **Intake form** | `/intake` | `ClientIntakeForm` | `clientIntakeService` | Table `client_intake_forms` (private; coach reads through the link) |
 | **Health assessment (PAR-Q)** | `/assessments` | `AssessmentPage`, `AssessmentSummary` | `assessmentService` | `submit_my_assessment` (`medical_clearance_required` computed in DB), `get_my_onboarding_status`; table `client_assessments` |
 | **Coach hub** (chat, sessions, billing, link) | `/coach-hub` | `CoachHubPage`: tabs `ChatWorkspace`, `ClientSessions`, `ClientBilling`, `ClientCoachLink` | `coachClientService`, `invoicingService`, `pushService` | `redeem_client_invite`, `save_push_subscription`, `delete_push_subscription`, `get_coach_payment_info`, `report_invoice_payment` |
+| **Find a coach** (marketplace search, coach page, reviews, contact request) | `/coaches`, `/coaches/:coachId` | `CoachesPage`, `CoachDetailPage`, `CoachCard` | `marketplaceService`, `marketplaceUtils` | See 3.12 |
 | **My sessions** | `/my-sessions` | `MySessionsPage` | `sessionService` | `get_my_video_sessions`; countdown + "Join" opens 10 min before start |
 | **My groups** | `/my-groups` | `ClientGroupsPage` | `groupService` | `get_my_groups` (members never see each other's names) |
 | **My store** | `/my-store` | `MyStorePage`, `PaymentInstructions` | `storeService` | `get_my_store`, `begin_store_purchase`, `report_store_payment`, `cancel_store_order` |
@@ -405,13 +409,37 @@ Notation: **UI** = pages/components; **Svc** = `src/services/*`; **RPC** = Postg
 - **Reminders.** `custom_reminders (owner_id, target_id, kind, title, message, time_of_day, days_of_week[ISO 1–7], timezone, is_active, last_fired_on)`. `fire_due_reminders(user, mark_pushed)` turns due reminders into notifications once per local day (reminders more than 12 h late are skipped for the day). It runs (1) for the signed-in person inside `get_my_notifications` / `get_my_unread_notification_count`, so reminders appear while the app is open, and (2) for everyone from `run_reminder_engine()` (service role only), called by `/api/workflows` right after the workflow engine; optional `pg_cron` runs `fire_due_reminders` every 15 min. `run_reminder_engine` returns each not-yet-pushed reminder notification once, and `deliverReminderPushes` sends it as Web Push (custom text, opens `link`). **Push timing follows how often `/api/workflows` is called**: daily on Vercel Hobby (see 7.3).
 - **Appearance.** `tokens.css` defines the colour tokens for dark (default, unchanged), light and the always-dark video rooms. `--ink` (`r, g, b`) drives translucent washes (`rgba(var(--ink), .05)`), `--tx-<hex>` are the text colours that used to be hard-coded for the dark background (light maps each to a readable slate or accent), and `--bg-chrome`, `--surface-*`, `--card-*` are the surfaces. A test fails if a light text colour is hard-coded again, if a variable is undefined, or if a light text token drops below 4.5:1 contrast on the light page and cards.
 
+
+### 3.12 Coaches marketplace
+
+A coach can publish a public profile; a client searches, reads reviews and asks a coach to get in touch; the platform owner moderates. Migration `…004700_coaches_marketplace.sql`. No new serverless function (Web Push for contact requests is two more `type` values of `/api/push`).
+
+- **Tables** (all RLS-enabled, **no policy and no grant for `anon`/`authenticated`**: nothing is read or written directly, only through `security definer` RPCs): `coach_marketplace_profiles` (`is_listed` default **false**, `accepting_clients`, headline ≤ 120, bio ≤ 2000, specialties ≤ 10, languages (2-letter codes) ≤ 8, certifications ≤ 10, years 0–60, city, `country_code`, `training_mode` online / in_person / both, `intro_video_url` (https YouTube / Vimeo / MP4-WebM, same validator as exercise videos), moderation columns `is_hidden`, `hidden_reason`, `hidden_by`), `coach_reviews` (one per coach + client; rating 1–5, comment ≤ 1000, one `coach_reply`, `is_hidden`), `marketplace_reports` (target `coach` or `review`, reason, status `open/resolved/dismissed`, one per reporter and target), `coach_contact_requests` (message ≤ 500, status `pending/accepted/declined/cancelled`, one pending per client + coach, private `requester_email` never returned), `marketplace_moderation_log`, `platform_admins` (owner user ids).
+- **Who is listed** (`marketplace_coach_visible`, evaluated on every read, so a lapsed plan hides the profile without a job): `is_listed` **and** not `is_hidden` **and** `workflow_coach_is_active` (live subscription or trial) **and** not an active assistant trainer. The coach sees why they are hidden in `get_my_marketplace_profile` (`hidden_reasons`: `not_listed`, `hidden_by_moderation`, `subscription_inactive`, `assistant_trainer`).
+- **Public reads** (any signed-in user; `anon` has no execute): `search_marketplace_coaches(query, specialty, language, country, city, mode, min_rating, accepting_only, limit ≤ 50, offset)` → `{total, items[]}` and `get_marketplace_coach(id)` (null when not listed), `list_coach_reviews`. They return a fixed whitelist of columns: **never e-mail, phone or client data**; reviewers appear as "Sara A.". Text search uses `position()`, so `%`/`_` are plain text.
+- **Reviews.** `submit_coach_review` needs a `coach_clients` row created at least **14 days** ago (an archived link counts), one review per client and coach (a second call edits it; the reply is kept). `reply_to_coach_review`: the coach adds **one** public reply, no edit. **No delete exists** for anyone: there is no DELETE/UPDATE grant and no RPC; only the owner can hide a review (hidden reviews leave the list and the totals).
+- **Reports.** `report_marketplace(target_type, target_id, reason, details)`: once per person and target (unique indexes), not on yourself, 10 a day.
+- **Contact requests** (instead of open chat). `send_contact_request`: clients only, coach must be visible and `accepting_clients`, **3 requests per rolling 24 h per client**, **one pending request per coach** (advisory lock + partial unique index). `respond_contact_request(id, accept)` (active coach, own request, pending only): *decline* notifies the client; *accept* checks the existing link rule (the platform lets a client have several coaches, so nothing blocks it; an archived link is re-activated, an active one is reported as `already_linked`, and `other_active_coaches` tells the coach about the client's other coaches), inserts the same `coach_clients` row an invite code would, and returns `chat_path` (`/messages?with=<client>`), which `chat_can_message` accepts immediately. `cancel_contact_request`, `list_my_contact_requests`, `list_coach_contact_requests` (client id only after accepting).
+- **Notifications.** New `notifications.type` values `marketplace_request` (→ coach, `/marketplace`), `marketplace_accepted` (→ client, `/coach-hub`), `marketplace_declined`, `marketplace_linked` (→ coach, chat), created inside the RPCs. Web Push: the browser calls `/api/push` with `type: 'marketplace_request' | 'marketplace_accepted'`; `notifyMarketplace` asks `marketplace_push_target(request, event)` (runs as the caller) who may be notified, so only the client of that request can push to its coach and only the coach that accepted can push to its client.
+- **Owner moderation.** `platform_admins(user_id)` is the database's own notion of the owner (the `PLATFORM_ADMIN_EMAILS` list lives in the server environment and the database cannot see it). Fill it once in the SQL editor: `insert into public.platform_admins (user_id) select id from auth.users where lower(email) = lower('owner@example.com');`. `is_platform_admin()` (for the UI) and every `admin_*` RPC (`admin_list_marketplace_reports`, `admin_list_marketplace_coaches`, `admin_list_coach_reviews`, `admin_set_coach_hidden`, `admin_set_review_hidden`, `admin_resolve_marketplace_report`) call `marketplace_require_admin()` first; hiding needs a reason (≥ 3 characters), can close the open reports on that target, and is written to `marketplace_moderation_log`. Saving the profile never lifts a hide.
+- **UI.**
+
+| Feature | Route | UI | Svc |
+| --- | --- | --- | --- |
+| Marketplace profile, contact requests inbox, reviews with reply (coach) | `/marketplace` | `MarketplaceProfilePage`, `RatingStars`, `MarketplaceReport` | `marketplaceService`, `marketplaceUtils` |
+| Find a coach: text search + filters (specialty, language, country, city, online/in person, rating, accepting) with paging; "My requests" (client) | `/coaches` | `CoachesPage`, `CoachCard` | same |
+| Coach page: bio, certifications, intro video (click to load, embed only for allowed https hosts), rating distribution, reviews, review form (eligible clients), request-contact form, report buttons (client) | `/coaches/:coachId` | `CoachDetailPage`, `MarketplaceVideo`, `MarketplaceReport` | same |
+| Owner moderation: reports queue (open / resolved / dismissed), coach profiles, hide / show with a reason (owner only; not in any menu) | `/admin/marketplace` (`ADMIN_PATHS.marketplace`) | `AdminMarketplacePage` (linked from Settings when `is_platform_admin()`) | same |
+
+  The photo is the account avatar (`profiles.avatar_path`, public `avatars` bucket) changed in Settings. Texts: `src/i18n/marketplaceTranslations.js` (5 languages; Arabic is RTL like the rest of the app). Tests: `tests/coachesMarketplace.test.js`.
+
 ---
 
 ## 4. Database, RLS and storage
 
 ### 4.1 Inventory
 
-73 live tables in `public` (all with **RLS enabled**), ~136 policy statements (including `storage.objects` and `realtime.messages`), 220+ `security definer` functions. Authenticated app roles get `select` only (where needed); writes go through RPCs. Several tables additionally grant `all` to `service_role`.
+79 live tables in `public` (all with **RLS enabled**), ~136 policy statements (including `storage.objects` and `realtime.messages`), 220+ `security definer` functions. Authenticated app roles get `select` only (where needed); writes go through RPCs. Several tables additionally grant `all` to `service_role`.
 
 | Domain | Tables |
 | --- | --- |
@@ -434,6 +462,7 @@ Notation: **UI** = pages/components; **Svc** = `src/services/*`; **RPC** = Postg
 | Meal plans | `meal_plans`, `meal_plan_items` (`recipe_id`) |
 | Recipes | `recipes`, `recipe_ingredients` |
 | Notifications / reminders | `notifications`, `custom_reminders` |
+| Marketplace | `coach_marketplace_profiles`, `coach_reviews`, `marketplace_reports`, `coach_contact_requests`, `marketplace_moderation_log`, `platform_admins` |
 
 Tables/functions from removed integrations (Google Calendar, Fitbit/Garmin/Oura, platform integration keys, Stripe-era connected accounts) are dropped by migrations `…001900`, `…002500`; nothing in code references them.
 
@@ -527,7 +556,7 @@ Common behavior (`api/_lib/http.js`): wrong method → 405 + `Allow`; `ConfigErr
 | `/api/jack-assistant` | POST | JWT + **active coach** (`requireRole('coach')`, 402 if plan lapsed) | `{action: 'generate_plan'｜'analyze_client'｜'progress_report', client_id?, days?, language?, …plan inputs}` | Result JSON with `source: 'ai'｜'rules'` | 10/min/user; `maxDuration` 60 s; AI failure → rules fallback (502 only for provider errors in the AI path) |
 | `/api/paddle` | POST | JWT + coach (not trainer) | `{action: 'checkout'｜'portal'}` | `checkout` → `{transactionId, clientToken, environment, email}`; `portal` → Paddle portal links | 409 if already active; 404 if nothing to manage; needs `PADDLE_*` |
 | `/api/paddle-webhook` | POST | **Paddle-Signature** HMAC-SHA256 over `timestamp:rawBody` with `PADDLE_WEBHOOK_SECRET`, ≤ 5 min old; body parser disabled | Raw Paddle event (`subscription.*`, `transaction.completed`) | JSON status; 400 on bad/missing signature; 500 on DB failure so Paddle retries | Uses service role → `apply_subscription_event` |
-| `/api/push` | GET, POST | GET: none (returns the **public** VAPID key). POST: JWT | `{action:'notify', type, id}`; `type` ∈ `message｜session｜invoice｜video｜checkin` (coach or trainer, recipients resolved through RLS) or `chat` (sender of that message only; delivers `chat`, `voice` or `image`) | `{recipients, sent}` | Same item can notify once per 60 s (in-memory, 429 after); expired endpoints (404/410) are deleted; texts localized per recipient (5 languages); needs `VAPID_*` |
+| `/api/push` | GET, POST | GET: none (returns the **public** VAPID key). POST: JWT | `{action:'notify', type, id}`; `type` ∈ `message｜session｜invoice｜video｜checkin` (coach or trainer, recipients resolved through RLS) or `chat` (sender of that message only; delivers `chat`, `voice` or `image`) or `marketplace_request` / `marketplace_accepted` (the client who sent the contact request / the coach who accepted it; the recipient comes from `marketplace_push_target`) | `{recipients, sent}` | Same item can notify once per 60 s (in-memory, 429 after); expired endpoints (404/410) are deleted; texts localized per recipient (5 languages); needs `VAPID_*` |
 | `/api/send-campaign` | POST | JWT + active coach | `{action:'status'}` → `{configured}`; `{action:'send', campaignId}` | Batch result (sent/failed counts, remaining) | 30/min/user; `maxDuration` 30 s; claims 10 recipients per call via `claim_email_campaign_batch`, sends 2 at a time through Resend, 8 s timeout, 1 retry; records each result; reply-to = coach login email |
 | `/api/unsubscribe` | GET, POST | Signed token `u` (client id) + `t` (HMAC with `EMAIL_UNSUBSCRIBE_SECRET`, falls back to `TOKEN_ENCRYPTION_KEY`), `l` (language) | Query/form | HTML page (5 languages, RTL for Arabic); `GET` shows a confirm button, `POST` sets `profiles.email_marketing_opt_out` (also used for List-Unsubscribe one-click) | Service role; 400 on invalid token; imports `src/services/campaignTemplate.js` |
 | `/api/video-sessions` | POST | JWT + active coach | `{action:'config'}` → `{zoom}`; `{action:'schedule', …session fields}` | Saved session (Zoom meeting created when configured and link empty) | Zoom meeting deleted if saving fails; no explicit rate limit |
@@ -588,7 +617,7 @@ Copy `.env.example` to `.env.local` for local work. Names only — never commit 
 | `npm run dev` | Vite dev server (+ dev `/api/food-search`). Use `vercel dev` to exercise other `/api/*` |
 | `npm run build` | Production build to `dist/` |
 | `npm run preview` | Serves the build |
-| `npm test` | `node --test` — 67 files / 925 tests (PGlite, no network, no secrets needed) |
+| `npm test` | `node --test` — 68 files / 951 tests (PGlite, no network, no secrets needed) |
 | `npm run prepare:exercise-catalog` | Regenerate `data/free-exercise-db-apexfit.json` from the pinned upstream commit |
 | `npm run import:exercises -- .\data\free-exercise-db-apexfit.json` | Upsert catalog (+ translations, optional `exercise-media.json`) into Supabase (service role) |
 | `npm run translate:exercises -- <ar｜de｜fr｜es｜all>` | AI-translate steps for newly added exercises |
@@ -616,7 +645,8 @@ Copy `.env.example` to `.env.local` for local work. Names only — never commit 
 - **Two-way chat with text and voice messages** (live updates, read receipts, unread badges), broadcast notes/videos, native WebRTC live rooms.
 - Jack works with rule-based output for the coach work screens even with **no AI key**; the chat assistant itself needs an AI provider.
 - **In-app notification center** (bell, unread count, mark all read), **Dark / Light / System** appearance, **photos in the chat** with a lightbox, **coach message templates**, **recipes** inserted into meal plans, and **custom reminders**.
-- Test suite green: 925/925 (run on 2026-11-27).
+- **Coaches marketplace** (public coach profile, search, verified reviews, reports, contact requests, owner moderation).
+- Test suite green: 951/951 (run on 2026-11-27).
 
 ### 7.2 Needs external or optional setup
 
@@ -702,6 +732,7 @@ Copy `.env.example` to `.env.local` for local work. Names only — never commit 
 | 4400 | `chat_images_templates` | `chat_messages.image_path/image_mime` + `message_type = 'image'`, bucket `apexfit-chat-images`, `send_chat_image_message`, `get_chat_messages` with image fields, `coach_message_templates`, `save_message_template`, `delete_message_template` |
 | 4500 | `recipes` | `recipes`, `recipe_ingredients`, `save_recipe`, `delete_recipe`, `list_my_recipes`, `get_recipe`, `meal_plan_items.recipe_id`, `save_meal_plan` / `assign_meal_plan` / `get_meal_plan` updated |
 | 4600 | `custom_reminders` | `custom_reminders`, `save_reminder`, `delete_reminder`, `fire_due_reminders`, `run_reminder_engine`, `get_my_notifications` / `get_my_unread_notification_count` fire the caller's due reminders, optional `pg_cron` job |
+| 4700 | `coaches_marketplace` | `platform_admins`, `is_platform_admin`, `coach_marketplace_profiles`, `coach_reviews`, `marketplace_reports`, `coach_contact_requests`, `marketplace_moderation_log`; `get_my_marketplace_profile`, `save_my_marketplace_profile`, `search_marketplace_coaches`, `get_marketplace_coach`, `list_coach_reviews`, `submit_coach_review`, `reply_to_coach_review`, `report_marketplace`, `send_contact_request`, `cancel_contact_request`, `list_my_contact_requests`, `list_coach_contact_requests`, `respond_contact_request`, `marketplace_push_target`, `admin_*` moderation RPCs; four new `notifications.type` values |
 
 (All filenames are prefixed `2026111500`.)
 

@@ -29,7 +29,7 @@ test('the server code, pages and routes for the removed services are gone', () =
     'api/_lib/checklistCalendar.js', 'api/_lib/platformIntegrations.js', 'api/_lib/today.js',
     'src/pages/AdminIntegrationsPage.jsx', 'src/components/PlatformIntegrationsPanel.jsx', 'src/services/platformService.js', 'src/i18n/platformIntegrationTranslations.js',
   ]) assert.equal(exists(path), false, path);
-  assert.deepEqual(ADMIN_PATHS, { ai: '/admin/ai' });
+  assert.deepEqual(ADMIN_PATHS, { ai: '/admin/ai', marketplace: '/admin/marketplace' });
   assert.ok(!Object.values(PAGES).some((page) => /integrations\/|google|admin/.test(page.path)));
 
   // The serverless functions that remain: Vercel counts every file in api/ except the _lib folder.

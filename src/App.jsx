@@ -45,6 +45,10 @@ const RemindersPage = lazy(() => import('./pages/RemindersPage.jsx'));
 const SchedulePage = lazy(() => import('./pages/SchedulePage.jsx'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage.jsx'));
 const AdminAiPage = lazy(() => import('./pages/AdminAiPage.jsx'));
+const AdminMarketplacePage = lazy(() => import('./pages/AdminMarketplacePage.jsx'));
+const CoachDetailPage = lazy(() => import('./pages/CoachDetailPage.jsx'));
+const CoachesPage = lazy(() => import('./pages/CoachesPage.jsx'));
+const MarketplaceProfilePage = lazy(() => import('./pages/MarketplaceProfilePage.jsx'));
 const ChecklistPage = lazy(() => import('./pages/ChecklistPage.jsx'));
 const TasksPage = lazy(() => import('./pages/TasksPage.jsx'));
 const MyTasksPage = lazy(() => import('./pages/MyTasksPage.jsx'));
@@ -107,6 +111,7 @@ export default function App() {
 <Route path={PAGES.checkins.path} element={<CheckinInboxPage />} />
 <Route path={PAGES.mealPlans.path} element={<MealPlansPage />} />
               <Route path={PAGES.recipes.path} element={<RecipesPage />} />
+              <Route path={PAGES.marketplace.path} element={<MarketplaceProfilePage />} />
               <Route path={PAGES.schedule.path} element={<SchedulePage onNavigate={go} onNotify={showToast} />} />
               <Route path={PAGES.invoicing.path} element={<InvoicingPage onNavigate={go} onNotify={showToast} />} />
               <Route path={PAGES.billing.path} element={<BillingPage profile={profile} onNotify={showToast} />} />
@@ -127,6 +132,8 @@ export default function App() {
               <Route path={PAGES.mySessions.path} element={<MySessionsPage />} />
               <Route path={PAGES.myContracts.path} element={<ClientContractsPage />} />
               <Route path={PAGES.myGroups.path} element={<ClientGroupsPage />} />
+              <Route path={PAGES.coaches.path} element={<CoachesPage />} />
+              <Route path={`${PAGES.coaches.path}/:coachId`} element={<CoachDetailPage />} />
             </Route>
 
             <Route element={<TrainerOnly />}>
@@ -141,6 +148,7 @@ export default function App() {
             <Route path={PAGES.reminders.path} element={<RemindersPage />} />
             <Route path={PAGES.settings.path} element={<SettingsPage />} />
 <Route path={ADMIN_PATHS.ai} element={<AdminAiPage />} />
+            <Route path={ADMIN_PATHS.marketplace} element={<AdminMarketplacePage />} />
           </Route>
         </Route>
 

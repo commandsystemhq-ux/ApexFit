@@ -20,6 +20,8 @@ const JackFloatingWidget = lazy(() => import('./JackFloatingWidget.jsx'));
 
 const storage = () => (typeof window === 'undefined' ? null : window.localStorage);
 const RAIL_QUERY = `(min-width: ${DRAWER_MAX_WIDTH + 1}px) and (max-width: ${RAIL_MAX_WIDTH}px)`;
+const ADMIN_TITLE_KEYS = { [ADMIN_PATHS.ai]: 'adminAiTitle', [ADMIN_PATHS.marketplace]: 'adminMkTitle' };
+const adminTitleKey = (pathname) => ADMIN_TITLE_KEYS[pathname] || null;
 
 // True on a tablet-sized window, where the menu stays on screen as the icon bar instead of hiding behind a button.
 function useRailMode() {
@@ -147,7 +149,7 @@ export default function AppShell() {
         <header className="topbar">
           <div className="topbar-title-wrap">
             <button className="menu-toggle" onClick={() => setMenuOpen(true)} aria-label={t('openNavigation')} aria-expanded={menuOpen}>☰</button>
-            <h1 className="topbar-title">{t(page?.titleKey || (location.pathname === ADMIN_PATHS.ai ? 'adminAiTitle' : 'dashboard'))}</h1>
+            <h1 className="topbar-title">{t(page?.titleKey || adminTitleKey(location.pathname) || (location.pathname.startsWith(`${PAGES.coaches.path}/`) ? PAGES.coaches.titleKey : 'dashboard'))}</h1>
           </div>
           <div className="topbar-actions">
             <NotificationBell userId={user?.id} enabled={role === 'coach' || role === 'client'} />

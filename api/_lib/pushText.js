@@ -8,6 +8,8 @@ const TEXT = {
     voice: ['New voice message', 'Open ApexFit to listen to it.'],
     image: ['New photo', 'Open ApexFit to view it.'],
     checkin: ['Your check-in was reviewed', 'Your coach left feedback on your weekly check-in.'],
+    marketplace_request: ['New contact request', 'A client wants to train with you. Open ApexFit to answer.'],
+    marketplace_accepted: ['Request accepted', 'Your coach accepted your request. You can chat now.'],
   },
   ar: {
     message: ['رسالة جديدة من مدربك', 'افتح ApexFit لقراءتها.'],
@@ -18,6 +20,8 @@ const TEXT = {
     voice: ['رسالة صوتية جديدة', 'افتح ApexFit للاستماع إليها.'],
     image: ['صورة جديدة', 'افتح ApexFit لعرضها.'],
     checkin: ['تمت مراجعة المتابعة الأسبوعية', 'ترك مدربك ملاحظاته على متابعتك الأسبوعية.'],
+    marketplace_request: ['طلب تواصل جديد', 'يرغب عميل في التدرّب معك. افتح ApexFit للرد.'],
+    marketplace_accepted: ['تم قبول طلبك', 'قبِل المدرب طلبك. يمكنك المحادثة الآن.'],
   },
   de: {
     message: ['Neue Nachricht von deinem Trainer', 'Öffne ApexFit, um sie zu lesen.'],
@@ -28,6 +32,8 @@ const TEXT = {
     voice: ['Neue Sprachnachricht', 'Öffne ApexFit, um sie anzuhören.'],
     image: ['Neues Foto', 'Öffne ApexFit, um es anzusehen.'],
     checkin: ['Dein Check-in wurde geprüft', 'Dein Trainer hat Feedback zu deinem wöchentlichen Check-in hinterlassen.'],
+    marketplace_request: ['Neue Kontaktanfrage', 'Ein Kunde möchte mit dir trainieren. Öffne ApexFit, um zu antworten.'],
+    marketplace_accepted: ['Anfrage angenommen', 'Dein Trainer hat deine Anfrage angenommen. Ihr könnt jetzt chatten.'],
   },
   fr: {
     message: ['Nouveau message de votre coach', 'Ouvrez ApexFit pour le lire.'],
@@ -38,6 +44,8 @@ const TEXT = {
     voice: ['Nouveau message vocal', 'Ouvrez ApexFit pour l\'écouter.'],
     image: ['Nouvelle photo', 'Ouvrez ApexFit pour la voir.'],
     checkin: ['Votre bilan a été examiné', 'Votre coach a laissé un retour sur votre bilan hebdomadaire.'],
+    marketplace_request: ['Nouvelle demande de contact', 'Un client souhaite s\'entraîner avec vous. Ouvrez ApexFit pour répondre.'],
+    marketplace_accepted: ['Demande acceptée', 'Votre coach a accepté votre demande. Vous pouvez discuter maintenant.'],
   },
   es: {
     message: ['Nuevo mensaje de tu entrenador', 'Abre ApexFit para leerlo.'],
@@ -48,13 +56,15 @@ const TEXT = {
     voice: ['Nuevo mensaje de voz', 'Abre ApexFit para escucharlo.'],
     image: ['Nueva foto', 'Abre ApexFit para verla.'],
     checkin: ['Revisaron tu seguimiento', 'Tu entrenador dejó comentarios sobre tu seguimiento semanal.'],
+    marketplace_request: ['Nueva solicitud de contacto', 'Un cliente quiere entrenar contigo. Abre ApexFit para responder.'],
+    marketplace_accepted: ['Solicitud aceptada', 'Tu entrenador aceptó tu solicitud. Ya podéis chatear.'],
   },
 };
 
 export const NOTIFICATION_TYPES = Object.keys(TEXT.en);
 
 // Where tapping the notification opens the app.
-const PAGE_FOR_TYPE = { video: '/my-sessions', checkin: '/weekly-checkin' };
+const PAGE_FOR_TYPE = { video: '/my-sessions', checkin: '/weekly-checkin', marketplace_request: '/marketplace', marketplace_accepted: '/coach-hub' };
 
 // A reminder carries the text its owner wrote, so it is not part of TEXT; it is built from the reminder itself.
 export function buildReminderPush({ title, message, link }) {

@@ -4,7 +4,6 @@ import { readFileSync, readdirSync } from 'node:fs';
 
 const root = new URL('../', import.meta.url);
 const NEW_MIGRATIONS = [
-  '20261115003700_trial_14_days.sql',
   '20261115003800_coach_custom_exercises.sql',
   '20261115003900_program_exercise_tempo.sql',
   '20261115004000_calorie_calculator.sql',
@@ -14,6 +13,7 @@ const NEW_MIGRATIONS = [
   '20261115004400_chat_images_templates.sql',
   '20261115004500_recipes.sql',
   '20261115004600_custom_reminders.sql',
+  '20261115004700_coaches_marketplace.sql',
 ];
 
 test('the new migrations are appended to manual-setup.sql in order, byte for byte', () => {

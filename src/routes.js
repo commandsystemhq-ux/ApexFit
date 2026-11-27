@@ -40,6 +40,8 @@ export const PAGES = {
   coachHub: { path: '/coach-hub', titleKey: 'coachHub', icon: '✉', access: 'client' },
   community: { path: '/community', titleKey: 'community', icon: '★', access: 'any' },
   leaderboard: { path: '/leaderboard', titleKey: 'leaderboardPage', icon: '♛', access: 'any' },
+  marketplace: { path: '/marketplace', titleKey: 'navMarketplace', icon: '\u2606', access: 'coach' },
+  coaches: { path: '/coaches', titleKey: 'navCoaches', icon: '\u25C7', access: 'client' },
   reminders: { path: '/reminders', titleKey: 'navReminders', icon: '\u23F0', access: 'any' },
   settings: { path: '/settings', titleKey: 'settings', icon: '⚙', access: 'any' },
 };
@@ -50,12 +52,12 @@ export const AUTH_PATHS = { home: '/', login: '/login', signup: '/signup' };
 export const PUBLIC_PATHS = { pricing: '/pricing', terms: '/terms', privacy: '/privacy', refunds: '/refunds' };
 
 // Pages that are not part of any role's navigation. The platform owner's AI screen is opened by its address only.
-export const ADMIN_PATHS = { ai: '/admin/ai' };
+export const ADMIN_PATHS = { ai: '/admin/ai', marketplace: '/admin/marketplace' };
 
 // Each group's group is the translation key of its heading.
 const COACH_NAVIGATION = [
   { group: 'navGrpTraining', items: ['dashboard', 'generator', 'workoutBuilder', 'programTemplates', 'mealPlans', 'recipes', 'exerciseLibrary', 'workflows'] },
-  { group: 'navGrpClients', items: ['clients', 'checkins', 'messages', 'campaigns', 'tasks', 'groups', 'sessions', 'schedule', 'team', 'community', 'leaderboard'] },
+  { group: 'navGrpClients', items: ['clients', 'checkins', 'messages', 'campaigns', 'tasks', 'groups', 'sessions', 'schedule', 'team', 'marketplace', 'community', 'leaderboard'] },
   { group: 'navGrpBusiness', items: ['store', 'invoicing', 'contracts', 'billing'] },
   { group: 'navGrpAccount', items: ['reminders', 'settings'] },
 ];
@@ -63,7 +65,7 @@ const COACH_NAVIGATION = [
 const CLIENT_NAVIGATION = [
   { group: 'navGrpTrainNutrition', items: ['workouts', 'strength', 'food', 'habits'] },
   { group: 'navGrpTracking', items: ['progress', 'weeklyCheckin', 'myTasks', 'checklist', 'integrations', 'intake', 'assessments'] },
-  { group: 'navGrpSocial', items: ['coachHub', 'mySessions', 'myGroups', 'myStore', 'myContracts', 'community', 'leaderboard'] },
+  { group: 'navGrpSocial', items: ['coachHub', 'coaches', 'mySessions', 'myGroups', 'myStore', 'myContracts', 'community', 'leaderboard'] },
   { group: 'navGrpAccount', items: ['reminders', 'settings'] },
 ];
 
@@ -74,7 +76,7 @@ const TRAINER_NAVIGATION = [
 ];
 
 // Pages that wear a "New" badge in the sidebar until the person opens them once.
-export const NEW_PAGE_IDS = ['campaigns', 'recipes', 'reminders'];
+export const NEW_PAGE_IDS = ['campaigns', 'recipes', 'reminders', 'marketplace', 'coaches'];
 // 'trainer' is an assistant on a head coach's team (role 'coach' with access_state 'trainer').
 export function roleOf(profile) {
   if (profile?.role === 'client') return 'client';

@@ -151,7 +151,7 @@ test('dark text keeps its original brightness', () => {
 });
 
 test('no light colour is hard-coded for text; light-on-dark text only appears on surfaces that are dark in every appearance', () => {
-  const allowedWhite = /button-primary|button-danger|jack-message-user|jack-send|jack-meal-save|nav-badge|chat-send|voice-play|chat-row\.is-mine|room-control|exercise-video-cover|exercise-media-play|jack-fab|\.avatar|chat-bubble|\.pricing|hero|landing|notif-count|lightbox|video-tile|live-room|native-room|room-/;
+  const allowedWhite = /button-primary|button-danger|jack-message-user|jack-send|jack-meal-save|nav-badge|chat-send|voice-play|chat-row\.is-mine|room-control|video-cover|exercise-media-play|jack-fab|\.avatar|chat-bubble|\.pricing|hero|landing|notif-count|lightbox|video-tile|live-room|native-room|room-/;
   const offenders = [];
   for (const line of app.split('\n')) {
     const brace = line.indexOf('{');

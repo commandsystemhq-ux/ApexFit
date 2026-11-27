@@ -9,6 +9,7 @@ import ThemeToggle from '../components/ThemeToggle.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import { getAiStatus } from '../services/aiSettingsService.js';
+import { isPlatformAdmin } from '../services/marketplaceService.js';
 import { ADMIN_PATHS } from '../routes.js';
 
 export default function SettingsPage() {
@@ -17,10 +18,13 @@ export default function SettingsPage() {
   // The AI provider is chosen by the platform owner for the whole platform. Only the owner is told about it;
   // for everyone else this stays false and nothing about AI appears on this page.
   const [platformAdmin, setPlatformAdmin] = useState(false);
+  // The marketplace moderation screen is open to the owners listed in the database (platform_admins).
+  const [marketplaceAdmin, setMarketplaceAdmin] = useState(false);
 
   useEffect(() => {
     let active = true;
     getAiStatus().then((status) => { if (active) setPlatformAdmin(Boolean(status.admin)); }).catch(() => {});
+    isPlatformAdmin().then((admin) => { if (active) setMarketplaceAdmin(admin === true); }).catch(() => {});
     return () => { active = false; };
   }, [user?.id]);
 
@@ -47,6 +51,12 @@ export default function SettingsPage() {
             <div className="settings-row">
               <div><h3>{t('adminAiLink')}</h3><p>{t('adminAiLinkHelp')}</p></div>
               <Link className="button button-secondary" to={ADMIN_PATHS.ai}>{t('adminAiOpen')}</Link>
+            </div>
+          )}
+          {marketplaceAdmin && (
+            <div className="settings-row">
+              <div><h3>{t('adminMkLink')}</h3><p>{t('adminMkLinkHelp')}</p></div>
+              <Link className="button button-secondary" to={ADMIN_PATHS.marketplace}>{t('adminAiOpen')}</Link>
             </div>
           )}
           <Button variant="secondary" onClick={signOut}>{t('signOut')}</Button>

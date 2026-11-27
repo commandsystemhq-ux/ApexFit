@@ -112,6 +112,22 @@ export async function notifyChatMessage({ user, userClient }, messageId) {
   return deliverPush([data.receiver_id], pushType, (profile) => (profile?.role === 'coach' ? '/messages' : '/coach-hub'));
 }
 
+// Tells the other side of a marketplace contact request: the coach when a client sends one, the client when the coach
+// accepts. The database decides who that is (marketplace_push_target uses the caller's own session), so a browser can
+// only ever push about its own request.
+export async function notifyMarketplace({ user, userClient }, type, requestId) {
+  const event = type === 'marketplace_request' ? 'request' : 'accepted';
+  const key = `${user.id}:${type}:${requestId}`;
+  const now = Date.now();
+  if (now - (recentlySent.get(key) || 0) < RESEND_WINDOW_MS) throw new HttpError(429, 'Notification was just sent.');
+  recentlySent.set(key, now);
+
+  const { data, error } = await userClient.rpc('marketplace_push_target', { p_request_id: requestId, p_event: event });
+  if (error) throw error;
+  if (!data) throw new HttpError(404, 'Nothing to notify for this item.');
+  return deliverPush([data], type, () => (event === 'request' ? '/marketplace' : '/coach-hub'));
+}
+
 // Sends the reminders that came due (the result of run_reminder_engine: [{ user_id, title, message, link }]) to the
 // devices of the people they are for. Called by the scheduled job, not by a browser. Never throws: a push problem must
 // not stop the other scheduled work.

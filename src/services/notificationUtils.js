@@ -3,7 +3,8 @@
 // notifications in their own language. Nothing here touches the network.
 import { fillTemplate } from './textTemplate.js';
 
-export const NOTIFICATION_TYPES = ['message', 'checkin_submitted', 'checkin_reviewed', 'invoice_new', 'invoice_reported', 'invoice_paid', 'progression', 'reminder'];
+export const NOTIFICATION_TYPES = ['message', 'checkin_submitted', 'checkin_reviewed', 'invoice_new', 'invoice_reported', 'invoice_paid', 'progression', 'reminder',
+  'marketplace_request', 'marketplace_accepted', 'marketplace_declined', 'marketplace_linked'];
 export const NOTIFICATION_ICONS = {
   message: '\uD83D\uDCAC',
   checkin_submitted: '\u2611',
@@ -13,6 +14,10 @@ export const NOTIFICATION_ICONS = {
   invoice_paid: '\u2714',
   progression: '\uD83D\uDCC8',
   reminder: '\u23F0',
+  marketplace_request: '\uD83D\uDC4B',
+  marketplace_accepted: '\uD83E\uDD1D',
+  marketplace_declined: '\u2716',
+  marketplace_linked: '\uD83D\uDC64',
 };
 export const NOTIFICATION_PAGE_SIZE = 30;
 
@@ -52,7 +57,7 @@ export function describeNotification(item, t, locale = 'en') {
   }
 
   const values = {
-    name: payload.sender_name || payload.client_name || payload.coach_name || '',
+    name: payload.sender_name || payload.client_name || payload.coach_name || (type.startsWith('marketplace_') ? t('mkSomeone') : ''),
     invoice: payload.invoice_number || '',
     amount: payload.amount_cents !== undefined ? formatInvoiceAmount(payload.amount_cents, payload.currency, locale) : '',
   };

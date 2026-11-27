@@ -354,3 +354,21 @@ Migrations `20261115003700` to `20261115004200` (all also in `supabase/manual-se
 - **Dark / Light / System** appearance. Buttons next to the bell (and in Settings) switch the whole app; the choice is saved in the browser (`apexfit.theme`). All colours are CSS variables in `src/styles/tokens.css`; a test checks the contrast of every light text colour.
 - **Recipes** (`…004500_recipes.sql`). `/recipes`: ingredients from the 1,200+ foods with grams, servings, times and the method; calories and macros are calculated for the recipe and for one serving. *Add recipe* in `/meal-plans` puts a portion into a meal; the client sees a *How to prepare* button on that food.
 - **Custom reminders** (`…004600_custom_reminders.sql`). `/reminders`: water, meal, workout, weekly check-in or custom reminders on chosen days and time (the person's own time zone); a coach can set one for a client. Due reminders appear in the bell, and as Web Push through the existing `/api/workflows` cron job (no new serverless function). Push is as timely as that job's schedule (daily on Vercel Hobby).
+
+## Coaches marketplace
+
+Migration `20261115004700_coaches_marketplace.sql` (also in `supabase/manual-setup.sql`; run it again to apply). Details in [ARCHITECTURE.md](ARCHITECTURE.md#312-coaches-marketplace).
+
+- **Coaches** open **Marketplace profile** (`/marketplace`): headline, bio, specialties, languages, certifications, experience, city and country, online / in person, an intro video link (https YouTube, Vimeo or MP4/WebM) and "accepting new clients". The profile photo is the one from Settings. Listing is **off by default**. The profile is shown only while it is listed, not hidden by the platform owner and the coach has a live trial or subscription (it disappears by itself when that ends).
+- **Clients** open **Find a coach** (`/coaches`): text search, filters (specialty, language, country, city, online / in person, rating, accepting clients), a coach page with reviews and a request-contact form (3 requests a day, one open request per coach). When the coach accepts, the client is linked to them and the chat (`/messages`) opens; both get an in-app notification and a Web Push.
+- **Reviews** need 14 days with the coach (one per client, editable). The coach can add one public reply and can never delete a review. Anyone can report a profile or a review once.
+- **Privacy.** The tables are closed to the app roles; everything goes through `security definer` functions that return only public columns (never e-mail, phone or client data).
+- **Owner moderation** (`/admin/marketplace`, linked from Settings for the owner): open reports, hide a profile or review with a recorded reason, close reports. The database decides who the owner is, from the `platform_admins` table. Add yourself once in the Supabase SQL Editor (replace the e-mail):
+
+  ```sql
+  insert into public.platform_admins (user_id)
+  select id from auth.users where lower(email) = lower('owner@example.com')
+  on conflict do nothing;
+  ```
+
+- **Tests:** `tests/coachesMarketplace.test.js` runs the real migration in PGlite: visibility (listing, lapsed subscription, assistant trainers, moderation), no e-mail/phone in results, the 14-day review rule, no review deletion, the daily request limit, the accept-and-link flow and the owner-only moderation.
