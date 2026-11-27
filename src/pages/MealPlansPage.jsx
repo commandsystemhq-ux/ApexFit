@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Button from '../components/Button.jsx';
+import CalorieCalculatorPanel from '../components/CalorieCalculatorPanel.jsx';
 import MealPlanEditor from '../components/MealPlanEditor.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
@@ -16,6 +17,7 @@ export default function MealPlansPage() {
   const [assignTo, setAssignTo] = useState({});
   const [notice, setNotice] = useState(null);
   const [busyId, setBusyId] = useState('');
+  const [showCalculator, setShowCalculator] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -92,11 +94,12 @@ export default function MealPlansPage() {
 
   return (
     <>
-      <PageHeader eyebrow="APEXFIT" title={t('mpTitle')} description={t('mpDescription')} action={<Button variant="primary" onClick={() => { setNotice(null); setEditing(emptyPlan()); }}>{t('mpNewPlan')}</Button>} />
+      <PageHeader eyebrow="APEXFIT" title={t('mpTitle')} description={t('mpDescription')} action={<><Button variant="secondary" aria-pressed={showCalculator} onClick={() => setShowCalculator((value) => !value)}>{t('ccOpen')}</Button> <Button variant="primary" onClick={() => { setNotice(null); setEditing(emptyPlan()); }}>{t('mpNewPlan')}</Button></>} />
       {notice && <div className={`notice ${notice.kind === 'error' ? 'notice-error' : 'notice-info'}`} role={notice.kind === 'error' ? 'alert' : 'status'}>{notice.text}</div>}
       {state.status === 'loading' && <div className="empty-state" role="status">{t('loadingProgress')}</div>}
       {state.status === 'error' && <div className="notice notice-error" role="alert">{t('mpLoadError')} {state.error}</div>}
 
+      {showCalculator && state.status === 'ready' && <CalorieCalculatorPanel clients={state.clients} />}
       {editing && <MealPlanEditor initial={editing} clients={state.clients} onSaved={saved} onCancel={() => setEditing(null)} />}
 
       {state.status === 'ready' && (

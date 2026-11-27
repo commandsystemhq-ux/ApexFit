@@ -1713,3 +1713,21 @@ a.sidebar-profile:hover .profile-copy strong { color: #70afff; }
 .program-preview .program-days { margin-top: 10px; }
 .assigned-program { display: grid; gap: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
 .client-assigned-program { display: grid; gap: 10px; margin-bottom: 14px; }
+/* Calorie calculator */
+.calorie-calculator { display: grid; gap: 12px; }
+.calc-panel { display: grid; gap: 12px; margin-bottom: 14px; }
+.calc-grid { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.calc-current { margin: 0; padding: 8px 10px; border-radius: 10px; background: rgba(53, 136, 249, .08); color: #72b5ff; font-size: 12px; }
+.calc-results { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); }
+.calc-results h4 { margin: 0; font: 600 13px var(--font-display); }
+.calc-stats, .calc-macros { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.calc-stats > div, .calc-macros > div { display: grid; gap: 2px; padding: 8px 10px; border-radius: 10px; background: rgba(255, 255, 255, .035); }
+.calc-stats small, .calc-macros small { color: var(--muted); font-size: 10px; }
+.calc-stats strong { font-size: 18px; }
+.calc-macros strong { font-size: 15px; }
+.calc-macros span { color: var(--muted); font-size: 10px; }
+.calc-target { background: rgba(50, 212, 154, .09) !important; }
+.calc-compare ul { display: grid; gap: 4px; margin: 8px 0 0; padding: 0; list-style: none; font-size: 12px; }
+.calc-compare li { display: flex; justify-content: space-between; gap: 8px; padding: 4px 8px; border-radius: 8px; }
+.calc-compare li.is-selected { background: rgba(53, 136, 249, .1); }
+.calc-compare summary { cursor: pointer; font-size: 12px; font-weight: 600; }

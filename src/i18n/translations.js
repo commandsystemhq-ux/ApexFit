@@ -3,6 +3,7 @@ import { billingTranslations } from './billingTranslations.js';
 import { businessTranslations } from './businessTranslations.js';
 import { campaignTranslations } from './campaignTranslations.js';
 import { chatTranslations } from './chatTranslations.js';
+import { calorieTranslations } from './calorieTranslations.js';
 import { checkinTranslations } from './checkinTranslations.js';
 import { checklistTranslations } from './checklistTranslations.js';
 import { communityTranslations } from './communityTranslations.js';
@@ -650,5 +651,6 @@ for (const locale of supportedLocales) {
   Object.assign(translations[locale], exerciseVideoTranslations[locale]);
   Object.assign(translations[locale], customExerciseTranslations[locale]);
   Object.assign(translations[locale], tempoTranslations[locale]);
+  Object.assign(translations[locale], calorieTranslations[locale]);
   Object.assign(translations[locale], teamErrorTranslations[locale]);
 }
