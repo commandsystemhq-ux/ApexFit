@@ -2,6 +2,7 @@ import { aiTranslations } from './aiTranslations.js';
 import { billingTranslations } from './billingTranslations.js';
 import { businessTranslations } from './businessTranslations.js';
 import { campaignTranslations } from './campaignTranslations.js';
+import { chatExtrasTranslations } from './chatExtrasTranslations.js';
 import { chatTranslations } from './chatTranslations.js';
 import { calorieTranslations } from './calorieTranslations.js';
 import { checkinTranslations } from './checkinTranslations.js';
@@ -20,14 +21,18 @@ import { jackTranslations } from './jackTranslations.js';
 import { launchTranslations } from './launchTranslations.js';
 import { liveRoomTranslations } from './liveRoomTranslations.js';
 import { mealPlanTranslations } from './mealPlanTranslations.js';
+import { notificationTranslations } from './notificationTranslations.js';
 import { paymentsTranslations } from './paymentsTranslations.js';
 import { platformTranslations } from './platformTranslations.js';
 import { priority2Translations } from './priority2Translations.js';
 import { progressionTranslations } from './progressionTranslations.js';
 import { ramadanTranslations } from './ramadanTranslations.js';
+import { recipeTranslations } from './recipeTranslations.js';
+import { reminderTranslations } from './reminderTranslations.js';
 import { publicPagesTranslations } from './publicPagesTranslations.js';
 import { teamErrorTranslations } from './teamErrorTranslations.js';
 import { tempoTranslations } from './tempoTranslations.js';
+import { themeTranslations } from './themeTranslations.js';
 import { uxTranslations } from './uxTranslations.js';
 import { workflowTranslations } from './workflowTranslations.js';
 
@@ -657,4 +662,9 @@ for (const locale of supportedLocales) {
   Object.assign(translations[locale], ramadanTranslations[locale]);
   Object.assign(translations[locale], clientTagTranslations[locale]);
   Object.assign(translations[locale], teamErrorTranslations[locale]);
+  Object.assign(translations[locale], themeTranslations[locale]);
+  Object.assign(translations[locale], notificationTranslations[locale]);
+  Object.assign(translations[locale], chatExtrasTranslations[locale]);
+  Object.assign(translations[locale], recipeTranslations[locale]);
+  Object.assign(translations[locale], reminderTranslations[locale]);
 }

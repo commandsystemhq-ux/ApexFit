@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import BrandMark from './BrandMark.jsx';
+import ThemeToggle from './ThemeToggle.jsx';
 import LanguageToggle from './LanguageToggle.jsx';
 import PublicFooter from './PublicFooter.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
@@ -11,6 +12,7 @@ export default function AuthLayout({ title, description, footer, children }) {
     <div className="auth-page">
       <header className="auth-header">
         <Link className="landing-brand" to={AUTH_PATHS.home} aria-label={`ApexFit ${t('home')}`}><BrandMark /></Link>
+        <ThemeToggle compact />
         <LanguageToggle />
       </header>
       <main className="auth-main">

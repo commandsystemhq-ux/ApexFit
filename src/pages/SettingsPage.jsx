@@ -5,6 +5,7 @@ import EmailPreferences from '../components/EmailPreferences.jsx';
 import LanguageToggle from '../components/LanguageToggle.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import ProfileSettings from '../components/ProfileSettings.jsx';
+import ThemeToggle from '../components/ThemeToggle.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import { getAiStatus } from '../services/aiSettingsService.js';
@@ -32,6 +33,10 @@ export default function SettingsPage() {
           <div className="settings-row">
             <div><h3>{t('language')}</h3><p>{t('languageHelp')}</p></div>
             <LanguageToggle />
+          </div>
+          <div className="settings-row">
+            <div><h3>{t('themeLabel')}</h3><p>{t('themeHelp')}</p></div>
+            <ThemeToggle />
           </div>
           <div className="settings-row">
             <div><h3>{t('account')}</h3><p>{user?.email || t('signedOut')}</p></div>

@@ -3,8 +3,10 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import BrandMark from './BrandMark.jsx';
 import Button from './Button.jsx';
 import LanguageToggle from './LanguageToggle.jsx';
+import NotificationBell from './NotificationBell.jsx';
 import OnboardingNotice from './OnboardingNotice.jsx';
 import TeamInvitationNotice from './TeamInvitationNotice.jsx';
+import ThemeToggle from './ThemeToggle.jsx';
 import UserAvatar from './UserAvatar.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
@@ -148,6 +150,8 @@ export default function AppShell() {
             <h1 className="topbar-title">{t(page?.titleKey || (location.pathname === ADMIN_PATHS.ai ? 'adminAiTitle' : 'dashboard'))}</h1>
           </div>
           <div className="topbar-actions">
+            <NotificationBell userId={user?.id} enabled={role === 'coach' || role === 'client'} />
+            <ThemeToggle compact />
             <LanguageToggle />
             <Button variant="secondary" size="small" onClick={signOut}>{t('signOut')}</Button>
             {role === 'coach' && <Button variant="primary" size="small" onClick={() => navigate(PAGES.generator.path)}>{t('createPlan')}</Button>}

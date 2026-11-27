@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Button from '../components/Button.jsx';
 import ChatWorkspace from '../components/ChatWorkspace.jsx';
+import MessageTemplatesManager from '../components/MessageTemplatesManager.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import { listMyClients } from '../services/coachClientService.js';
@@ -142,7 +143,7 @@ export default function MessagesPage({ onNavigate }) {
   const [params] = useSearchParams();
   const withClient = params.get('with');
   const [tab, setTab] = useState('chats');
-  const tabs = [{ id: 'chats', label: 'chatTab' }, { id: 'broadcast', label: 'chatBroadcastTab' }];
+  const tabs = [{ id: 'chats', label: 'chatTab' }, { id: 'broadcast', label: 'chatBroadcastTab' }, { id: 'templates', label: 'tplTab' }];
 
   return (
     <>
@@ -169,6 +170,7 @@ export default function MessagesPage({ onNavigate }) {
         />
       )}
       {tab === 'broadcast' && <BroadcastPanel onNavigate={onNavigate} />}
+      {tab === 'templates' && <MessageTemplatesManager />}
     </>
   );
 }

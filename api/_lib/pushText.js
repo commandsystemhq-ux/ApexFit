@@ -6,6 +6,7 @@ const TEXT = {
     video: ["New video session", "Your coach scheduled a live video session. Open ApexFit to join."],
     chat: ['New message', 'Open ApexFit to read it.'],
     voice: ['New voice message', 'Open ApexFit to listen to it.'],
+    image: ['New photo', 'Open ApexFit to view it.'],
     checkin: ['Your check-in was reviewed', 'Your coach left feedback on your weekly check-in.'],
   },
   ar: {
@@ -15,6 +16,7 @@ const TEXT = {
     video: ["جلسة فيديو جديدة", "حدد مدربك جلسة فيديو مباشرة. افتح ApexFit للانضمام."],
     chat: ['رسالة جديدة', 'افتح ApexFit لقراءتها.'],
     voice: ['رسالة صوتية جديدة', 'افتح ApexFit للاستماع إليها.'],
+    image: ['صورة جديدة', 'افتح ApexFit لعرضها.'],
     checkin: ['تمت مراجعة المتابعة الأسبوعية', 'ترك مدربك ملاحظاته على متابعتك الأسبوعية.'],
   },
   de: {
@@ -24,6 +26,7 @@ const TEXT = {
     video: ["Neue Videositzung", "Dein Trainer hat eine Live-Videositzung geplant. Öffne ApexFit zum Beitreten."],
     chat: ['Neue Nachricht', 'Öffne ApexFit, um sie zu lesen.'],
     voice: ['Neue Sprachnachricht', 'Öffne ApexFit, um sie anzuhören.'],
+    image: ['Neues Foto', 'Öffne ApexFit, um es anzusehen.'],
     checkin: ['Dein Check-in wurde geprüft', 'Dein Trainer hat Feedback zu deinem wöchentlichen Check-in hinterlassen.'],
   },
   fr: {
@@ -33,6 +36,7 @@ const TEXT = {
     video: ["Nouvelle séance vidéo", "Votre coach a planifié une séance vidéo en direct. Ouvrez ApexFit pour la rejoindre."],
     chat: ['Nouveau message', 'Ouvrez ApexFit pour le lire.'],
     voice: ['Nouveau message vocal', 'Ouvrez ApexFit pour l\'écouter.'],
+    image: ['Nouvelle photo', 'Ouvrez ApexFit pour la voir.'],
     checkin: ['Votre bilan a été examiné', 'Votre coach a laissé un retour sur votre bilan hebdomadaire.'],
   },
   es: {
@@ -42,6 +46,7 @@ const TEXT = {
     video: ["Nueva sesión de vídeo", "Tu entrenador programó una sesión de vídeo en directo. Abre ApexFit para unirte."],
     chat: ['Nuevo mensaje', 'Abre ApexFit para leerlo.'],
     voice: ['Nuevo mensaje de voz', 'Abre ApexFit para escucharlo.'],
+    image: ['Nueva foto', 'Abre ApexFit para verla.'],
     checkin: ['Revisaron tu seguimiento', 'Tu entrenador dejó comentarios sobre tu seguimiento semanal.'],
   },
 };
@@ -50,6 +55,11 @@ export const NOTIFICATION_TYPES = Object.keys(TEXT.en);
 
 // Where tapping the notification opens the app.
 const PAGE_FOR_TYPE = { video: '/my-sessions', checkin: '/weekly-checkin' };
+
+// A reminder carries the text its owner wrote, so it is not part of TEXT; it is built from the reminder itself.
+export function buildReminderPush({ title, message, link }) {
+  return { title: String(title || 'ApexFit').slice(0, 80), body: String(message || '').slice(0, 200), url: link || '/reminders', tag: 'apexfit-reminder' };
+}
 
 export function buildPushMessage(type, locale) {
   const language = TEXT[locale] ? locale : 'en';

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import BrandMark from '../components/BrandMark.jsx';
+import ThemeToggle from '../components/ThemeToggle.jsx';
 import LanguageToggle from '../components/LanguageToggle.jsx';
 import PublicFooter from '../components/PublicFooter.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
@@ -39,6 +40,7 @@ export default function PublicStorePage() {
     <div className="auth-page">
       <header className="auth-header">
         <Link className="landing-brand" to={AUTH_PATHS.home} aria-label={`ApexFit ${t('home')}`}><BrandMark /></Link>
+        <ThemeToggle compact />
         <LanguageToggle />
       </header>
       <main className="public-store">

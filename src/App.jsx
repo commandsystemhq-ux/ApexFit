@@ -40,6 +40,8 @@ const InvoicingPage = lazy(() => import('./pages/InvoicingPage.jsx'));
 const MessagesPage = lazy(() => import('./pages/MessagesPage.jsx'));
 const CampaignsPage = lazy(() => import('./pages/CampaignsPage.jsx'));
 const ProgramTemplatesPage = lazy(() => import('./pages/ProgramTemplatesPage.jsx'));
+const RecipesPage = lazy(() => import('./pages/RecipesPage.jsx'));
+const RemindersPage = lazy(() => import('./pages/RemindersPage.jsx'));
 const SchedulePage = lazy(() => import('./pages/SchedulePage.jsx'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage.jsx'));
 const AdminAiPage = lazy(() => import('./pages/AdminAiPage.jsx'));
@@ -104,6 +106,7 @@ export default function App() {
               <Route path={PAGES.tasks.path} element={<TasksPage onNotify={showToast} />} />
 <Route path={PAGES.checkins.path} element={<CheckinInboxPage />} />
 <Route path={PAGES.mealPlans.path} element={<MealPlansPage />} />
+              <Route path={PAGES.recipes.path} element={<RecipesPage />} />
               <Route path={PAGES.schedule.path} element={<SchedulePage onNavigate={go} onNotify={showToast} />} />
               <Route path={PAGES.invoicing.path} element={<InvoicingPage onNavigate={go} onNotify={showToast} />} />
               <Route path={PAGES.billing.path} element={<BillingPage profile={profile} onNotify={showToast} />} />
@@ -135,6 +138,7 @@ export default function App() {
               <Route path={PAGES.leaderboard.path} element={<CommunityPage view="leaderboard" />} />
             </Route>
 
+            <Route path={PAGES.reminders.path} element={<RemindersPage />} />
             <Route path={PAGES.settings.path} element={<SettingsPage />} />
 <Route path={ADMIN_PATHS.ai} element={<AdminAiPage />} />
           </Route>

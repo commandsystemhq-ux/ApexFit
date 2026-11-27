@@ -121,7 +121,7 @@ export default function ChatThread() {
               const voice = item.message_type === 'voice';
               return (
                 <Pressable disabled={!item.failed} onPress={() => retry(item)} style={[styles.bubble, mine ? styles.mine : styles.theirs, item.failed && styles.failed]}>
-                  {voice ? <VoiceBubble message={item} /> : <Text style={styles.text}>{item.message_text}</Text>}
+                  {voice ? <VoiceBubble message={item} /> : <Text style={styles.text}>{item.message_type === 'image' ? `\uD83D\uDCF7 ${item.message_text}`.trim() : item.message_text}</Text>}
                   <Text style={styles.meta}>
                     {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     {mine ? (item.failed ? `  ${t('failed')}` : item.pending ? `  ${t('sending')}` : item.is_read ? '  ✓✓' : '  ✓') : ''}

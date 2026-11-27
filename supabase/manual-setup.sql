@@ -13331,3 +13331,1459 @@ revoke all on function public.set_client_tags(uuid, uuid[]) from public, anon;
 grant execute on function public.save_client_tag(uuid, text, text, text) to authenticated;
 grant execute on function public.delete_client_tag(uuid) to authenticated;
 grant execute on function public.set_client_tags(uuid, uuid[]) to authenticated;
+-- ===== 20261115004300_notifications.sql =====
+
+-- In-app notification center. A notification is a small row for one person: what happened (type), the details the
+-- screen needs to word it in the person's language (payload), where tapping it leads (link) and whether it was read.
+-- The bell in the top bar reads them through get_my_notifications.
+--
+-- Security: each person reads only their own notifications (row-level security). Nobody can insert, change or delete
+-- rows directly: they are created by database triggers on the events below (create_notification, which no app role can
+-- call) and marked read through mark_notification_read / mark_all_notifications_read.
+--
+-- Events that create a notification:
+--   message              a chat message (text, voice or image) or a coach broadcast arrived        -> the receiver
+--   checkin_submitted    a client sent their weekly check-in                                        -> the coach
+--   checkin_reviewed     the coach reviewed the check-in and left feedback                          -> the client
+--   invoice_new          the coach sent an invoice                                                  -> the client
+--   invoice_reported     the client says they paid an invoice                                       -> the coach
+--   invoice_paid         the coach confirmed the payment                                            -> the client
+--   progression          the system suggests a heavier weight / more repetitions for a client       -> the coach
+--   reminder             a custom reminder came due (see the custom_reminders migration)            -> its target
+-- Several unread notifications of the same kind from the same source collapse into one with a count.
+
+create table if not exists public.notifications (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  type text not null check (type in ('message', 'checkin_submitted', 'checkin_reviewed', 'invoice_new', 'invoice_reported', 'invoice_paid', 'progression', 'reminder')),
+  payload jsonb not null default '{}'::jsonb check (jsonb_typeof(payload) = 'object' and pg_column_size(payload) <= 4000),
+  link text check (link is null or (char_length(link) <= 200 and link ~ '^/[A-Za-z0-9/_?=&.%:-]*$' and link not like '//%')),
+  source_key text check (source_key is null or char_length(source_key) <= 160),
+  created_at timestamptz not null default now(),
+  read_at timestamptz,
+  pushed_at timestamptz
+);
+
+create index if not exists notifications_user_idx on public.notifications (user_id, created_at desc);
+create index if not exists notifications_unread_idx on public.notifications (user_id) where read_at is null;
+-- One unread notification per source: a second event of the same kind raises its count instead of adding a row.
+create unique index if not exists notifications_unread_source_idx on public.notifications (user_id, source_key) where read_at is null and source_key is not null;
+
+alter table public.notifications enable row level security;
+
+drop policy if exists "People can read their own notifications" on public.notifications;
+create policy "People can read their own notifications"
+  on public.notifications for select
+  to authenticated
+  using (user_id = (select auth.uid()));
+
+revoke all on public.notifications from anon, authenticated;
+grant select on public.notifications to authenticated;
+grant all on public.notifications to service_role;
+
+-- Live updates for the bell. Row-level security still decides who receives which row.
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+     and not exists (
+       select 1 from pg_publication_tables
+       where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'notifications'
+     ) then
+    alter publication supabase_realtime add table public.notifications;
+  end if;
+exception when others then
+  raise warning 'Could not add notifications to the supabase_realtime publication: %. Enable Realtime for this table in the Supabase dashboard (Database > Replication); the bell still refreshes by itself every minute.', sqlerrm;
+end
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Creating notifications (triggers only)
+-- ---------------------------------------------------------------------------
+
+-- A person's name as the other side should see it: a coach by brand name, a client by name.
+create or replace function public.notification_display_name(p_user uuid)
+returns text
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select left(coalesce(
+    case when p.role = 'coach' then nullif(btrim(p.brand_name), '') end,
+    nullif(btrim(p.full_name), ''),
+    nullif(btrim(p.brand_name), ''),
+    (select nullif(btrim(cc.client_name), '') from public.coach_clients cc where cc.client_id = p_user and nullif(btrim(cc.client_name), '') is not null limit 1),
+    'ApexFit'
+  ), 80)
+  from public.profiles p
+  where p.id = p_user;
+$$;
+
+create or replace function public.create_notification(
+  p_user uuid,
+  p_type text,
+  p_payload jsonb,
+  p_link text default null,
+  p_source_key text default null,
+  p_mark_pushed boolean default false
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_id uuid;
+begin
+  if p_user is null then
+    return null;
+  end if;
+  insert into public.notifications (user_id, type, payload, link, source_key, pushed_at)
+  values (p_user, p_type, coalesce(p_payload, '{}'::jsonb), p_link, p_source_key, case when p_mark_pushed then now() end)
+  on conflict (user_id, source_key) where read_at is null and source_key is not null
+  do update set
+    payload = public.notifications.payload || excluded.payload
+              || jsonb_build_object('count', coalesce((public.notifications.payload ->> 'count')::integer, 1) + 1),
+    created_at = now(),
+    pushed_at = case when p_mark_pushed then now() else null end
+  returning id into v_id;
+
+  -- Keep the newest 200 per person.
+  delete from public.notifications
+  where user_id = p_user
+    and id in (select id from public.notifications where user_id = p_user order by created_at desc, id desc offset 200);
+  return v_id;
+end;
+$$;
+
+revoke all on function public.notification_display_name(uuid) from public, anon, authenticated;
+revoke all on function public.create_notification(uuid, text, jsonb, text, text, boolean) from public, anon, authenticated;
+grant execute on function public.create_notification(uuid, text, jsonb, text, text, boolean) to service_role;
+
+-- A new chat message (text, voice or image).
+create or replace function public.notify_on_chat_message()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_receiver_role text;
+begin
+  select role into v_receiver_role from public.profiles where id = new.receiver_id;
+  perform public.create_notification(
+    new.receiver_id,
+    'message',
+    jsonb_build_object('sender_id', new.sender_id, 'sender_name', public.notification_display_name(new.sender_id), 'kind', new.message_type),
+    case when v_receiver_role = 'coach' then '/messages?with=' || new.sender_id::text else '/coach-hub' end,
+    'chat:' || new.sender_id::text
+  );
+  return new;
+exception when others then
+  raise warning 'notify_on_chat_message: %', sqlerrm;
+  return new;
+end;
+$$;
+
+drop trigger if exists chat_messages_notify on public.chat_messages;
+create trigger chat_messages_notify
+  after insert on public.chat_messages
+  for each row execute function public.notify_on_chat_message();
+
+-- A coach broadcast (note or video) reaching a client.
+create or replace function public.notify_on_coach_message()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  perform public.create_notification(
+    new.client_id,
+    'message',
+    jsonb_build_object('sender_id', new.coach_id, 'sender_name', public.notification_display_name(new.coach_id), 'kind', 'broadcast'),
+    '/coach-hub',
+    'chat:' || new.coach_id::text
+  );
+  return new;
+exception when others then
+  raise warning 'notify_on_coach_message: %', sqlerrm;
+  return new;
+end;
+$$;
+
+drop trigger if exists coach_messages_notify on public.coach_messages;
+create trigger coach_messages_notify
+  after insert on public.coach_messages
+  for each row execute function public.notify_on_coach_message();
+
+-- Weekly check-ins: sent by the client, reviewed by the coach.
+create or replace function public.notify_on_weekly_checkin()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if new.status = 'submitted' and new.coach_id is not null then
+    perform public.create_notification(
+      new.coach_id,
+      'checkin_submitted',
+      jsonb_build_object('client_id', new.client_id, 'client_name', public.notification_display_name(new.client_id), 'week_start', new.week_start_date),
+      '/checkins',
+      'checkin:' || new.id::text
+    );
+  elsif new.status = 'reviewed' and tg_op = 'UPDATE' and old.status is distinct from 'reviewed' then
+    perform public.create_notification(
+      new.client_id,
+      'checkin_reviewed',
+      jsonb_build_object('coach_name', public.notification_display_name(coalesce(new.coach_id, new.reviewed_by)), 'week_start', new.week_start_date),
+      '/weekly-checkin',
+      'checkin-reviewed:' || new.id::text
+    );
+  end if;
+  return new;
+exception when others then
+  raise warning 'notify_on_weekly_checkin: %', sqlerrm;
+  return new;
+end;
+$$;
+
+drop trigger if exists weekly_checkins_notify on public.weekly_checkins;
+create trigger weekly_checkins_notify
+  after insert or update on public.weekly_checkins
+  for each row execute function public.notify_on_weekly_checkin();
+
+-- Invoices: sent, reported as paid by the client, confirmed by the coach.
+create or replace function public.notify_on_invoice()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_detail jsonb := jsonb_build_object('invoice_number', new.invoice_number, 'amount_cents', new.amount_cents, 'currency', new.currency);
+begin
+  if tg_op = 'INSERT' then
+    if new.status = 'open' then
+      perform public.create_notification(new.client_id, 'invoice_new',
+        v_detail || jsonb_build_object('coach_name', public.notification_display_name(new.coach_id)),
+        '/coach-hub?tab=billing', 'invoice:' || new.id::text || ':new');
+    end if;
+  else
+    if new.payment_reported_at is not null and old.payment_reported_at is null and new.status = 'open' then
+      perform public.create_notification(new.coach_id, 'invoice_reported',
+        v_detail || jsonb_build_object('client_id', new.client_id, 'client_name', public.notification_display_name(new.client_id)),
+        '/invoicing', 'invoice:' || new.id::text || ':reported');
+    end if;
+    if new.status = 'paid' and old.status is distinct from 'paid' then
+      perform public.create_notification(new.client_id, 'invoice_paid',
+        v_detail || jsonb_build_object('coach_name', public.notification_display_name(new.coach_id)),
+        '/coach-hub?tab=billing', 'invoice:' || new.id::text || ':paid');
+    end if;
+  end if;
+  return new;
+exception when others then
+  raise warning 'notify_on_invoice: %', sqlerrm;
+  return new;
+end;
+$$;
+
+drop trigger if exists invoices_notify on public.invoices;
+create trigger invoices_notify
+  after insert or update on public.invoices
+  for each row execute function public.notify_on_invoice();
+
+-- A new progression suggestion (heavier weight or more repetitions) waiting for the coach's decision.
+create or replace function public.notify_on_progression_suggestion()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if new.status = 'pending' then
+    perform public.create_notification(
+      new.coach_id,
+      'progression',
+      jsonb_build_object('client_id', new.client_id, 'client_name', public.notification_display_name(new.client_id), 'kind', new.kind),
+      '/clients?client=' || new.client_id::text,
+      'progression:' || new.client_id::text
+    );
+  end if;
+  return new;
+exception when others then
+  raise warning 'notify_on_progression_suggestion: %', sqlerrm;
+  return new;
+end;
+$$;
+
+drop trigger if exists progression_suggestions_notify on public.progression_suggestions;
+create trigger progression_suggestions_notify
+  after insert on public.progression_suggestions
+  for each row execute function public.notify_on_progression_suggestion();
+
+-- ---------------------------------------------------------------------------
+-- Reading and marking read
+-- ---------------------------------------------------------------------------
+
+create or replace function public.get_my_notifications(p_limit integer default 30, p_before timestamptz default null)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_me uuid := auth.uid();
+  v_limit integer := greatest(1, least(coalesce(p_limit, 30), 100));
+begin
+  if v_me is null then
+    raise exception 'Sign in first' using errcode = '42501';
+  end if;
+  return jsonb_build_object(
+    'unread_count', (select count(*)::integer from public.notifications where user_id = v_me and read_at is null),
+    'items', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', n.id, 'type', n.type, 'payload', n.payload, 'link', n.link,
+        'created_at', n.created_at, 'read_at', n.read_at, 'is_read', n.read_at is not null
+      ) order by n.created_at desc, n.id desc)
+      from (
+        select * from public.notifications
+        where user_id = v_me and (p_before is null or created_at < p_before)
+        order by created_at desc, id desc
+        limit v_limit
+      ) n
+    ), '[]'::jsonb)
+  );
+end;
+$$;
+
+create or replace function public.get_my_unread_notification_count()
+returns integer
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'Sign in first' using errcode = '42501';
+  end if;
+  return (select count(*)::integer from public.notifications where user_id = auth.uid() and read_at is null);
+end;
+$$;
+
+create or replace function public.mark_notification_read(p_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'Sign in first' using errcode = '42501';
+  end if;
+  update public.notifications set read_at = coalesce(read_at, now()) where id = p_id and user_id = auth.uid();
+end;
+$$;
+
+create or replace function public.mark_all_notifications_read()
+returns integer
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_count integer;
+begin
+  if auth.uid() is null then
+    raise exception 'Sign in first' using errcode = '42501';
+  end if;
+  update public.notifications set read_at = now() where user_id = auth.uid() and read_at is null;
+  get diagnostics v_count = row_count;
+  return v_count;
+end;
+$$;
+
+revoke all on function public.get_my_notifications(integer, timestamptz) from public, anon;
+revoke all on function public.get_my_unread_notification_count() from public, anon;
+revoke all on function public.mark_notification_read(uuid) from public, anon;
+revoke all on function public.mark_all_notifications_read() from public, anon;
+grant execute on function public.get_my_notifications(integer, timestamptz) to authenticated;
+grant execute on function public.get_my_unread_notification_count() to authenticated;
+grant execute on function public.mark_notification_read(uuid) to authenticated;
+grant execute on function public.mark_all_notifications_read() to authenticated;
+
+-- Opening a conversation reads the messages and also clears the bell entry for that person.
+create or replace function public.mark_chat_read(p_partner_id uuid)
+returns integer
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_count integer;
+begin
+  if auth.uid() is null then
+    raise exception 'Sign in first';
+  end if;
+  update public.chat_messages
+  set is_read = true
+  where receiver_id = auth.uid() and sender_id = p_partner_id and not is_read;
+  get diagnostics v_count = row_count;
+  update public.notifications
+  set read_at = now()
+  where user_id = auth.uid() and read_at is null and source_key = 'chat:' || p_partner_id::text;
+  return v_count;
+end;
+$$;
+
+revoke all on function public.mark_chat_read(uuid) from public, anon;
+grant execute on function public.mark_chat_read(uuid) to authenticated;
+
+-- ===== 20261115004400_chat_images_templates.sql =====
+
+-- Photos in the two-way chat and ready-made message templates for coaches.
+--
+-- Photos: an image message is a chat_messages row with message_type = 'image', the path of the file in the private
+-- apexfit-chat-images bucket and an optional caption in message_text. The file is uploaded first, then
+-- send_chat_image_message checks the link between the two people and the file and saves the row. The browser only ever
+-- gets short-lived signed links to the photo. JPG / PNG / WebP, up to 5 MB.
+--
+-- Templates: a coach keeps reusable messages (welcome, encouragement, check-in reminder, diet change, ...) and inserts
+-- them into the chat box with one tap. {client_name} is replaced by the app when the template is inserted. Templates
+-- are private to their coach and are written only through the functions below.
+
+alter table public.chat_messages
+  add column if not exists image_path text,
+  add column if not exists image_mime text;
+
+alter table public.chat_messages drop constraint if exists chat_messages_message_type_check;
+alter table public.chat_messages
+  add constraint chat_messages_message_type_check check (message_type in ('text', 'voice', 'image'));
+
+alter table public.chat_messages drop constraint if exists chat_messages_content_check;
+alter table public.chat_messages
+  add constraint chat_messages_content_check check (
+    (message_type = 'text'
+      and char_length(btrim(message_text)) between 1 and 2000
+      and audio_path is null and audio_duration_seconds is null and audio_mime is null
+      and image_path is null and image_mime is null)
+    or
+    (message_type = 'voice'
+      and message_text = ''
+      and audio_path is not null
+      and audio_duration_seconds between 1 and 120
+      and audio_mime in ('audio/webm', 'audio/mp4', 'audio/ogg')
+      and image_path is null and image_mime is null)
+    or
+    (message_type = 'image'
+      and char_length(message_text) <= 2000
+      and image_path is not null
+      and image_mime in ('image/jpeg', 'image/png', 'image/webp')
+      and audio_path is null and audio_duration_seconds is null and audio_mime is null)
+  );
+
+create unique index if not exists chat_messages_image_path_idx on public.chat_messages (image_path) where image_path is not null;
+
+-- Private bucket: 5 MB per file, images only. Files live in a folder named after the person who sent them.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'apexfit-chat-images',
+  'apexfit-chat-images',
+  false,
+  5242880,
+  array['image/jpeg', 'image/png', 'image/webp']
+)
+on conflict (id) do update
+set public = false,
+    file_size_limit = excluded.file_size_limit,
+    allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "People can upload their own chat images" on storage.objects;
+create policy "People can upload their own chat images"
+  on storage.objects for insert
+  to authenticated
+  with check (
+    bucket_id = 'apexfit-chat-images'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+    and (public.is_client_account() or public.is_active_coach())
+  );
+
+-- The sender can read the file, and so can the other person in the conversation it was sent to.
+drop policy if exists "Chat participants can read chat images" on storage.objects;
+create policy "Chat participants can read chat images"
+  on storage.objects for select
+  to authenticated
+  using (
+    bucket_id = 'apexfit-chat-images'
+    and (
+      (storage.foldername(name))[1] = (select auth.uid())::text
+      or exists (
+        select 1 from public.chat_messages m
+        where m.image_path = storage.objects.name
+          and (m.sender_id = (select auth.uid()) or m.receiver_id = (select auth.uid()))
+      )
+    )
+  );
+
+-- Lets the app remove a photo whose message could not be saved.
+drop policy if exists "People can delete their own chat images" on storage.objects;
+create policy "People can delete their own chat images"
+  on storage.objects for delete
+  to authenticated
+  using (
+    bucket_id = 'apexfit-chat-images'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  );
+
+create or replace function public.send_chat_image_message(
+  p_receiver_id uuid,
+  p_image_path text,
+  p_mime text,
+  p_caption text default '',
+  p_client_ref uuid default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_mime text := lower(btrim(split_part(coalesce(p_mime, ''), ';', 1)));
+  v_caption text := btrim(coalesce(p_caption, ''));
+  v_row public.chat_messages;
+begin
+  if auth.uid() is null then
+    raise exception 'Sign in to send messages';
+  end if;
+  if not public.chat_can_message(p_receiver_id) then
+    raise exception 'You can only message your own coach or your active clients';
+  end if;
+  if v_mime not in ('image/jpeg', 'image/png', 'image/webp') then
+    raise exception 'Choose a JPG, PNG or WebP image';
+  end if;
+  if char_length(v_caption) > 2000 then
+    raise exception 'Messages cannot exceed 2000 characters';
+  end if;
+  if p_image_path is null
+     or p_image_path !~ ('^' || auth.uid()::text || '/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|webp)$') then
+    raise exception 'The image is not valid';
+  end if;
+  if not exists (select 1 from storage.objects o where o.bucket_id = 'apexfit-chat-images' and o.name = p_image_path) then
+    raise exception 'The image was not uploaded';
+  end if;
+
+  if p_client_ref is not null then
+    select * into v_row from public.chat_messages where sender_id = auth.uid() and client_ref = p_client_ref;
+    if found then
+      return to_jsonb(v_row);
+    end if;
+  end if;
+
+  if (select count(*) from public.chat_messages where sender_id = auth.uid() and created_at > statement_timestamp() - interval '1 minute') >= 40 then
+    raise exception 'You are sending messages too fast. Wait a moment';
+  end if;
+
+  insert into public.chat_messages (sender_id, receiver_id, message_type, message_text, image_path, image_mime, client_ref, created_at)
+  values (auth.uid(), p_receiver_id, 'image', v_caption, p_image_path, v_mime, p_client_ref, clock_timestamp())
+  returning * into v_row;
+  return to_jsonb(v_row);
+end;
+$$;
+
+-- Same pages as before, now with the image fields.
+create or replace function public.get_chat_messages(p_partner_id uuid, p_before timestamptz default null, p_limit integer default 50)
+returns jsonb
+language sql
+stable
+security invoker
+set search_path = public, pg_temp
+as $$
+  with params as (select greatest(1, least(coalesce(p_limit, 50), 200)) as lim),
+  page as (
+    select m.id, m.sender_id, m.receiver_id, m.message_text, m.created_at, m.is_read,
+           m.message_type, m.audio_path, m.audio_duration_seconds, m.audio_mime, m.image_path, m.image_mime,
+           row_number() over (order by m.created_at desc, m.id desc) as rn
+    from public.chat_messages m
+    where ((m.sender_id = auth.uid() and m.receiver_id = p_partner_id) or (m.sender_id = p_partner_id and m.receiver_id = auth.uid()))
+      and (p_before is null or m.created_at < p_before)
+    order by m.created_at desc, m.id desc
+    limit (select lim + 1 from params)
+  )
+  select jsonb_build_object(
+    'messages', coalesce(
+      jsonb_agg(jsonb_build_object('id', id, 'sender_id', sender_id, 'receiver_id', receiver_id, 'message_text', message_text, 'created_at', created_at, 'is_read', is_read,
+                                   'message_type', message_type, 'audio_path', audio_path, 'audio_duration_seconds', audio_duration_seconds, 'audio_mime', audio_mime,
+                                   'image_path', image_path, 'image_mime', image_mime)
+                order by created_at, id) filter (where rn <= (select lim from params)),
+      '[]'::jsonb),
+    'has_more', coalesce(bool_or(rn > (select lim from params)), false)
+  )
+  from page;
+$$;
+
+revoke all on function public.send_chat_image_message(uuid, text, text, text, uuid) from public, anon;
+grant execute on function public.send_chat_image_message(uuid, text, text, text, uuid) to authenticated;
+revoke all on function public.get_chat_messages(uuid, timestamptz, integer) from public, anon;
+grant execute on function public.get_chat_messages(uuid, timestamptz, integer) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Message templates (coach)
+-- ---------------------------------------------------------------------------
+create table if not exists public.coach_message_templates (
+  id uuid primary key default gen_random_uuid(),
+  coach_id uuid not null references public.profiles (id) on delete cascade,
+  title text not null check (char_length(btrim(title)) between 1 and 60),
+  category text not null default 'custom' check (category in ('welcome', 'encouragement', 'checkin', 'diet', 'custom')),
+  body text not null check (char_length(btrim(body)) between 1 and 2000),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create unique index if not exists coach_message_templates_title_idx on public.coach_message_templates (coach_id, lower(btrim(title)));
+create index if not exists coach_message_templates_coach_idx on public.coach_message_templates (coach_id, category, created_at);
+
+alter table public.coach_message_templates enable row level security;
+
+drop policy if exists "Coaches can read their message templates" on public.coach_message_templates;
+create policy "Coaches can read their message templates"
+  on public.coach_message_templates for select
+  to authenticated
+  using (coach_id = (select auth.uid()) and public.is_active_coach());
+
+revoke all on public.coach_message_templates from anon, authenticated;
+grant select on public.coach_message_templates to authenticated;
+
+-- Creates (p_id null) or updates one of the coach's templates.
+create or replace function public.save_message_template(p_id uuid, p_title text, p_category text, p_body text)
+returns uuid
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_title text := btrim(coalesce(p_title, ''));
+  v_body text := btrim(coalesce(p_body, ''));
+  v_id uuid;
+begin
+  if auth.uid() is null or not public.is_active_coach() then
+    raise exception 'An active coach account is required to manage message templates' using errcode = '42501';
+  end if;
+  if char_length(v_title) not between 1 and 60 then
+    raise exception 'The template name must be between 1 and 60 characters' using errcode = '22023';
+  end if;
+  if char_length(v_body) not between 1 and 2000 then
+    raise exception 'The template text must be between 1 and 2000 characters' using errcode = '22023';
+  end if;
+  if p_category is null or p_category not in ('welcome', 'encouragement', 'checkin', 'diet', 'custom') then
+    raise exception 'Choose a valid template category' using errcode = '22023';
+  end if;
+  if exists (
+    select 1 from public.coach_message_templates
+    where coach_id = auth.uid() and lower(btrim(title)) = lower(v_title) and id is distinct from p_id
+  ) then
+    raise exception 'A template with this name already exists' using errcode = '23505';
+  end if;
+
+  if p_id is null then
+    if (select count(*) from public.coach_message_templates where coach_id = auth.uid()) >= 50 then
+      raise exception 'You can keep up to 50 message templates' using errcode = '54000';
+    end if;
+    insert into public.coach_message_templates (coach_id, title, category, body)
+    values (auth.uid(), v_title, p_category, v_body)
+    returning id into v_id;
+  else
+    update public.coach_message_templates
+    set title = v_title, category = p_category, body = v_body, updated_at = now()
+    where id = p_id and coach_id = auth.uid()
+    returning id into v_id;
+    if v_id is null then
+      raise exception 'Template was not found' using errcode = 'P0002';
+    end if;
+  end if;
+  return v_id;
+end;
+$$;
+
+create or replace function public.delete_message_template(p_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if auth.uid() is null or not public.is_active_coach() then
+    raise exception 'An active coach account is required to manage message templates' using errcode = '42501';
+  end if;
+  delete from public.coach_message_templates where id = p_id and coach_id = auth.uid();
+  if not found then
+    raise exception 'Template was not found' using errcode = 'P0002';
+  end if;
+end;
+$$;
+
+revoke all on function public.save_message_template(uuid, text, text, text) from public, anon;
+revoke all on function public.delete_message_template(uuid) from public, anon;
+grant execute on function public.save_message_template(uuid, text, text, text) to authenticated;
+grant execute on function public.delete_message_template(uuid) to authenticated;
+
+-- ===== 20261115004500_recipes.sql =====
+
+-- Recipes: a coach builds complete recipes from foods (ingredients with amounts in grams), writes the method, and the
+-- calories and macros of the whole recipe and of one serving are calculated from the ingredients. A recipe can be put
+-- into a meal plan as one meal item (a portion of it); the client who receives that plan can open the recipe to see
+-- the ingredients and how to prepare it.
+--
+-- Security: a coach reads and changes only their own recipes. A client never reads the recipes table: get_recipe lets
+-- them open a recipe only when one of the meal plans given to them contains it. Nobody writes the tables directly.
+
+create table if not exists public.recipes (
+  id uuid primary key default gen_random_uuid(),
+  coach_id uuid not null references public.profiles (id) on delete cascade,
+  title text not null check (char_length(btrim(title)) between 1 and 120),
+  description text not null default '' check (char_length(description) <= 1000),
+  instructions text not null default '' check (char_length(instructions) <= 6000),
+  servings integer not null default 1 check (servings between 1 and 50),
+  prep_minutes integer check (prep_minutes is null or prep_minutes between 0 and 1440),
+  cook_minutes integer check (cook_minutes is null or cook_minutes between 0 and 1440),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists recipes_coach_idx on public.recipes (coach_id, updated_at desc);
+
+create table if not exists public.recipe_ingredients (
+  id uuid primary key default gen_random_uuid(),
+  recipe_id uuid not null references public.recipes (id) on delete cascade,
+  position integer not null check (position >= 0),
+  food_name text not null check (char_length(btrim(food_name)) between 1 and 160),
+  food_ref text check (food_ref is null or char_length(food_ref) <= 80),
+  grams numeric(7, 1) not null check (grams between 1 and 5000),
+  calories numeric(7, 1) not null check (calories between 0 and 10000),
+  protein_g numeric(6, 1) not null default 0 check (protein_g between 0 and 1000),
+  carbs_g numeric(6, 1) not null default 0 check (carbs_g between 0 and 1000),
+  fat_g numeric(6, 1) not null default 0 check (fat_g between 0 and 1000),
+  notes text not null default '' check (char_length(notes) <= 200),
+  unique (recipe_id, position)
+);
+
+create index if not exists recipe_ingredients_recipe_idx on public.recipe_ingredients (recipe_id, position);
+
+alter table public.recipes enable row level security;
+alter table public.recipe_ingredients enable row level security;
+
+drop policy if exists "Coaches can read their recipes" on public.recipes;
+create policy "Coaches can read their recipes"
+  on public.recipes for select
+  to authenticated
+  using (coach_id = (select auth.uid()) and public.is_active_coach());
+
+drop policy if exists "Coaches can read the ingredients of their recipes" on public.recipe_ingredients;
+create policy "Coaches can read the ingredients of their recipes"
+  on public.recipe_ingredients for select
+  to authenticated
+  using (
+    public.is_active_coach()
+    and exists (select 1 from public.recipes r where r.id = recipe_ingredients.recipe_id and r.coach_id = (select auth.uid()))
+  );
+
+revoke all on public.recipes, public.recipe_ingredients from anon, authenticated;
+grant select on public.recipes, public.recipe_ingredients to authenticated;
+
+-- A recipe with its ingredients, totals for the whole recipe and for one serving.
+create or replace function public.recipe_json(p_recipe_id uuid)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select to_jsonb(r) || jsonb_build_object(
+    'ingredients', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', i.id, 'position', i.position, 'food_name', i.food_name, 'food_ref', i.food_ref, 'grams', i.grams,
+        'calories', i.calories, 'protein_g', i.protein_g, 'carbs_g', i.carbs_g, 'fat_g', i.fat_g, 'notes', i.notes
+      ) order by i.position)
+      from public.recipe_ingredients i where i.recipe_id = r.id
+    ), '[]'::jsonb),
+    'totals', t.totals,
+    'per_serving', jsonb_build_object(
+      'grams', round((t.totals ->> 'grams')::numeric / r.servings, 1),
+      'calories', round((t.totals ->> 'calories')::numeric / r.servings, 1),
+      'protein_g', round((t.totals ->> 'protein_g')::numeric / r.servings, 1),
+      'carbs_g', round((t.totals ->> 'carbs_g')::numeric / r.servings, 1),
+      'fat_g', round((t.totals ->> 'fat_g')::numeric / r.servings, 1)
+    )
+  )
+  from public.recipes r
+  cross join lateral (
+    select jsonb_build_object(
+      'grams', coalesce(sum(i.grams), 0), 'calories', coalesce(sum(i.calories), 0), 'protein_g', coalesce(sum(i.protein_g), 0),
+      'carbs_g', coalesce(sum(i.carbs_g), 0), 'fat_g', coalesce(sum(i.fat_g), 0)
+    ) as totals
+    from public.recipe_ingredients i where i.recipe_id = r.id
+  ) t
+  where r.id = p_recipe_id;
+$$;
+
+create or replace function public.require_recipe_coach()
+returns void
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if auth.uid() is null or not public.is_active_coach() then
+    raise exception 'An active coach account is required to manage recipes' using errcode = '42501';
+  end if;
+end;
+$$;
+
+-- Creates (p_recipe_id null) or replaces one of the caller's own recipes. Each ingredient needs a name, grams and numbers
+-- inside the allowed ranges (the same rules as the foods of a meal plan).
+create or replace function public.save_recipe(
+  p_recipe_id uuid,
+  p_title text,
+  p_description text,
+  p_instructions text,
+  p_servings integer,
+  p_prep_minutes integer,
+  p_cook_minutes integer,
+  p_items jsonb
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_coach uuid := auth.uid();
+  v_title text := btrim(coalesce(p_title, ''));
+  v_description text := btrim(coalesce(p_description, ''));
+  v_instructions text := btrim(coalesce(p_instructions, ''));
+  v_id uuid;
+  v_item jsonb;
+  v_position integer := 0;
+begin
+  perform public.require_recipe_coach();
+  if char_length(v_title) not between 1 and 120 then
+    raise exception 'The recipe name must be between 1 and 120 characters' using errcode = '22023';
+  end if;
+  if char_length(v_description) > 1000 then
+    raise exception 'The description can be up to 1000 characters' using errcode = '22023';
+  end if;
+  if char_length(v_instructions) > 6000 then
+    raise exception 'The method can be up to 6000 characters' using errcode = '22023';
+  end if;
+  if p_servings is null or p_servings not between 1 and 50 then
+    raise exception 'Servings must be between 1 and 50' using errcode = '22023';
+  end if;
+  if (p_prep_minutes is not null and p_prep_minutes not between 0 and 1440) or (p_cook_minutes is not null and p_cook_minutes not between 0 and 1440) then
+    raise exception 'Preparation and cooking time must be between 0 and 1440 minutes' using errcode = '22023';
+  end if;
+  if p_items is null or jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) not between 1 and 40 then
+    raise exception 'A recipe needs between 1 and 40 ingredients' using errcode = '22023';
+  end if;
+  for v_item in select value from jsonb_array_elements(p_items) loop
+    if not public.meal_plan_food_valid(v_item) then
+      raise exception 'Each ingredient needs a name, grams and calories within the allowed range' using errcode = '22023';
+    end if;
+    if char_length(coalesce(v_item ->> 'notes', '')) > 200 then
+      raise exception 'An ingredient note can be up to 200 characters' using errcode = '22023';
+    end if;
+  end loop;
+
+  if p_recipe_id is null then
+    if (select count(*) from public.recipes where coach_id = v_coach) >= 300 then
+      raise exception 'You can keep up to 300 recipes' using errcode = '54000';
+    end if;
+    insert into public.recipes (coach_id, title, description, instructions, servings, prep_minutes, cook_minutes)
+    values (v_coach, v_title, v_description, v_instructions, p_servings, p_prep_minutes, p_cook_minutes)
+    returning id into v_id;
+  else
+    update public.recipes
+    set title = v_title, description = v_description, instructions = v_instructions, servings = p_servings,
+        prep_minutes = p_prep_minutes, cook_minutes = p_cook_minutes, updated_at = now()
+    where id = p_recipe_id and coach_id = v_coach
+    returning id into v_id;
+    if v_id is null then
+      raise exception 'Recipe was not found' using errcode = 'P0002';
+    end if;
+    delete from public.recipe_ingredients where recipe_id = v_id;
+  end if;
+
+  for v_item in select value from jsonb_array_elements(p_items) loop
+    insert into public.recipe_ingredients (recipe_id, position, food_name, food_ref, grams, calories, protein_g, carbs_g, fat_g, notes)
+    values (
+      v_id, v_position, btrim(v_item ->> 'food_name'), nullif(btrim(coalesce(v_item ->> 'food_ref', '')), ''),
+      round((v_item ->> 'grams')::numeric, 1), round((v_item ->> 'calories')::numeric, 1),
+      round(coalesce((v_item ->> 'protein_g')::numeric, 0), 1), round(coalesce((v_item ->> 'carbs_g')::numeric, 0), 1),
+      round(coalesce((v_item ->> 'fat_g')::numeric, 0), 1), btrim(coalesce(v_item ->> 'notes', ''))
+    );
+    v_position := v_position + 1;
+  end loop;
+  return v_id;
+end;
+$$;
+
+create or replace function public.delete_recipe(p_recipe_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  perform public.require_recipe_coach();
+  delete from public.recipes where id = p_recipe_id and coach_id = auth.uid();
+  if not found then
+    raise exception 'Recipe was not found' using errcode = 'P0002';
+  end if;
+end;
+$$;
+
+-- The coach's recipes (without ingredients) with per-serving numbers, newest first.
+create or replace function public.list_my_recipes()
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  perform public.require_recipe_coach();
+  return coalesce((
+    select jsonb_agg((public.recipe_json(r.id) - 'ingredients') order by r.updated_at desc, r.id)
+    from public.recipes r where r.coach_id = auth.uid()
+  ), '[]'::jsonb);
+end;
+$$;
+
+-- One recipe in full: for the coach who owns it, or for a client whose meal plan contains it.
+create or replace function public.get_recipe(p_recipe_id uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_owner uuid;
+begin
+  select coach_id into v_owner from public.recipes where id = p_recipe_id;
+  if v_owner is null
+    or not (
+      coalesce(v_owner = auth.uid() and public.is_active_coach(), false)
+      or (
+        coalesce(public.is_client_account(), false)
+        and exists (
+          select 1 from public.meal_plan_items i
+          join public.meal_plans p on p.id = i.plan_id
+          where i.recipe_id = p_recipe_id and p.client_id = auth.uid()
+        )
+      )
+    ) then
+    raise exception 'Recipe was not found' using errcode = 'P0002';
+  end if;
+  return public.recipe_json(p_recipe_id);
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Recipes inside meal plans
+-- ---------------------------------------------------------------------------
+-- A meal plan item can point at the recipe it came from. Its numbers are the portion the coach chose.
+alter table public.meal_plan_items add column if not exists recipe_id uuid references public.recipes (id) on delete set null;
+create index if not exists meal_plan_items_recipe_idx on public.meal_plan_items (recipe_id) where recipe_id is not null;
+
+create or replace function public.save_meal_plan(
+  p_plan_id uuid,
+  p_title text,
+  p_notes text,
+  p_is_template boolean,
+  p_client_id uuid,
+  p_items jsonb
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_coach uuid := auth.uid();
+  v_title text := btrim(coalesce(p_title, ''));
+  v_notes text := btrim(coalesce(p_notes, ''));
+  v_template boolean := coalesce(p_is_template, false);
+  v_plan_id uuid;
+  v_item jsonb;
+  v_index bigint;
+  v_counts jsonb := '{}'::jsonb;
+  v_position integer;
+  v_meal text;
+  v_recipe uuid;
+begin
+  perform public.require_meal_coach();
+  if char_length(v_title) not between 1 and 120 then
+    raise exception 'The plan name must be between 1 and 120 characters' using errcode = '22023';
+  end if;
+  if char_length(v_notes) > 2000 then
+    raise exception 'Notes can be up to 2000 characters' using errcode = '22023';
+  end if;
+  if v_template and p_client_id is not null then
+    raise exception 'A template does not belong to a client' using errcode = '22023';
+  end if;
+  if not v_template and p_client_id is null then
+    raise exception 'Choose an active client, or save the plan as a template' using errcode = '22023';
+  end if;
+  if p_client_id is not null and not exists (
+    select 1 from public.coach_clients where coach_id = v_coach and client_id = p_client_id and status = 'active'
+  ) then
+    raise exception 'Choose an active client' using errcode = '22023';
+  end if;
+  if p_items is null or jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) > 60 then
+    raise exception 'A plan can have up to 60 foods' using errcode = '22023';
+  end if;
+
+  if p_plan_id is null then
+    insert into public.meal_plans (coach_id, client_id, title, notes, is_template)
+    values (v_coach, p_client_id, v_title, v_notes, v_template)
+    returning id into v_plan_id;
+  else
+    update public.meal_plans
+    set title = v_title, notes = v_notes, is_template = v_template, client_id = p_client_id, updated_at = now()
+    where id = p_plan_id and coach_id = v_coach
+    returning id into v_plan_id;
+    if v_plan_id is null then
+      raise exception 'Meal plan was not found' using errcode = 'P0002';
+    end if;
+    delete from public.meal_plan_items where plan_id = v_plan_id;
+  end if;
+
+  for v_item, v_index in select value, ordinality from jsonb_array_elements(p_items) with ordinality loop
+    v_meal := v_item ->> 'meal_type';
+    if v_meal is null or v_meal not in ('breakfast', 'lunch', 'pre_iftar', 'iftar', 'dinner', 'snack', 'suhoor') then
+      raise exception 'Each food needs a meal: breakfast, lunch, dinner, snack or a Ramadan meal (before iftar, iftar, suhoor)' using errcode = '22023';
+    end if;
+    if not public.meal_plan_food_valid(v_item) then
+      raise exception 'Each food needs a name, grams and calories within the allowed range' using errcode = '22023';
+    end if;
+    if char_length(coalesce(v_item ->> 'notes', '')) > 300 then
+      raise exception 'A food note can be up to 300 characters' using errcode = '22023';
+    end if;
+    v_recipe := null;
+    if nullif(btrim(coalesce(v_item ->> 'recipe_id', '')), '') is not null then
+      if (v_item ->> 'recipe_id') !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' then
+        raise exception 'A recipe is not valid' using errcode = '22023';
+      end if;
+      v_recipe := (v_item ->> 'recipe_id')::uuid;
+      if not exists (select 1 from public.recipes where id = v_recipe and coach_id = v_coach) then
+        raise exception 'Choose one of your own recipes' using errcode = '22023';
+      end if;
+    end if;
+    v_position := coalesce((v_counts ->> v_meal)::integer, 0);
+    v_counts := v_counts || jsonb_build_object(v_meal, v_position + 1);
+    insert into public.meal_plan_items (plan_id, meal_type, position, food_name, food_ref, grams, calories, protein_g, carbs_g, fat_g, notes, alternatives, recipe_id)
+    values (
+      v_plan_id, v_meal, v_position, btrim(v_item ->> 'food_name'), nullif(btrim(coalesce(v_item ->> 'food_ref', '')), ''),
+      round((v_item ->> 'grams')::numeric, 1), round((v_item ->> 'calories')::numeric, 1),
+      round(coalesce((v_item ->> 'protein_g')::numeric, 0), 1), round(coalesce((v_item ->> 'carbs_g')::numeric, 0), 1),
+      round(coalesce((v_item ->> 'fat_g')::numeric, 0), 1), btrim(coalesce(v_item ->> 'notes', '')),
+      public.meal_plan_clean_alternatives(v_item -> 'alternatives'), v_recipe
+    );
+  end loop;
+  return v_plan_id;
+end;
+$$;
+
+create or replace function public.assign_meal_plan(p_plan_id uuid, p_client_id uuid)
+returns uuid
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_coach uuid := auth.uid();
+  v_source public.meal_plans%rowtype;
+  v_new uuid;
+begin
+  perform public.require_meal_coach();
+  select * into v_source from public.meal_plans where id = p_plan_id and coach_id = v_coach;
+  if not found then
+    raise exception 'Meal plan was not found' using errcode = 'P0002';
+  end if;
+  if not exists (select 1 from public.coach_clients where coach_id = v_coach and client_id = p_client_id and status = 'active') then
+    raise exception 'Choose an active client' using errcode = '22023';
+  end if;
+  insert into public.meal_plans (coach_id, client_id, title, notes, is_template, source_template_id)
+  values (v_coach, p_client_id, v_source.title, v_source.notes, false, case when v_source.is_template then v_source.id else v_source.source_template_id end)
+  returning id into v_new;
+  insert into public.meal_plan_items (plan_id, meal_type, position, food_name, food_ref, grams, calories, protein_g, carbs_g, fat_g, notes, alternatives, recipe_id)
+  select v_new, meal_type, position, food_name, food_ref, grams, calories, protein_g, carbs_g, fat_g, notes, alternatives, recipe_id
+  from public.meal_plan_items where plan_id = p_plan_id;
+  return v_new;
+end;
+$$;
+
+create or replace function public.get_meal_plan(p_plan_id uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_plan public.meal_plans%rowtype;
+begin
+  select * into v_plan from public.meal_plans where id = p_plan_id;
+  if not found
+    or not (coalesce(v_plan.coach_id = auth.uid() and public.is_active_coach(), false) or coalesce(v_plan.client_id = auth.uid() and public.is_client_account(), false)) then
+    raise exception 'Meal plan was not found' using errcode = 'P0002';
+  end if;
+  return to_jsonb(v_plan) || jsonb_build_object('items', coalesce((
+    select jsonb_agg(
+      jsonb_build_object(
+        'id', i.id, 'meal_type', i.meal_type, 'position', i.position, 'food_name', i.food_name, 'food_ref', i.food_ref,
+        'grams', i.grams, 'calories', i.calories, 'protein_g', i.protein_g, 'carbs_g', i.carbs_g, 'fat_g', i.fat_g,
+        'notes', i.notes, 'alternatives', i.alternatives, 'recipe_id', i.recipe_id
+      )
+      order by case i.meal_type when 'breakfast' then 1 when 'lunch' then 2 when 'pre_iftar' then 3 when 'iftar' then 4 when 'dinner' then 5 when 'snack' then 6 else 7 end, i.position
+    )
+    from public.meal_plan_items i where i.plan_id = v_plan.id
+  ), '[]'::jsonb));
+end;
+$$;
+
+revoke all on function public.recipe_json(uuid) from public, anon, authenticated;
+revoke all on function public.require_recipe_coach() from public, anon, authenticated;
+revoke all on function public.save_recipe(uuid, text, text, text, integer, integer, integer, jsonb) from public, anon;
+revoke all on function public.delete_recipe(uuid) from public, anon;
+revoke all on function public.list_my_recipes() from public, anon;
+revoke all on function public.get_recipe(uuid) from public, anon;
+revoke all on function public.save_meal_plan(uuid, text, text, boolean, uuid, jsonb) from public, anon;
+revoke all on function public.assign_meal_plan(uuid, uuid) from public, anon;
+revoke all on function public.get_meal_plan(uuid) from public, anon;
+grant execute on function public.save_recipe(uuid, text, text, text, integer, integer, integer, jsonb) to authenticated;
+grant execute on function public.delete_recipe(uuid) to authenticated;
+grant execute on function public.list_my_recipes() to authenticated;
+grant execute on function public.get_recipe(uuid) to authenticated;
+grant execute on function public.save_meal_plan(uuid, text, text, boolean, uuid, jsonb) to authenticated;
+grant execute on function public.assign_meal_plan(uuid, uuid) to authenticated;
+grant execute on function public.get_meal_plan(uuid) to authenticated;
+
+-- ===== 20261115004600_custom_reminders.sql =====
+
+-- Custom reminders: a client or a coach schedules reminders (water, a meal, a workout, the weekly check-in or anything
+-- else) for certain days of the week at a certain time. When one comes due it appears in the notification center, and the
+-- scheduled job that already serves workflows (/api/workflows) also sends it to the person's devices as a Web Push.
+-- A coach can also schedule a reminder for one of their active clients.
+--
+-- Security: a person reads the reminders they created and the ones created for them. Nobody writes the table
+-- directly: save_reminder / delete_reminder check who is asking. The times are the person's own local time, kept with
+-- their time zone, so "08:00" means 08:00 where they live.
+--
+-- Delivery: fire_due_reminders turns due reminders into notifications. It runs
+--   - for the signed-in person whenever they open the app or the bell refreshes (get_my_notifications), and
+--   - for everyone from run_reminder_engine (service role: the /api/workflows cron job, or pg_cron when available).
+-- A reminder fires at most once per local day. Reminders that are more than 12 hours late are skipped for that day.
+
+create table if not exists public.custom_reminders (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references public.profiles (id) on delete cascade,
+  target_id uuid not null references public.profiles (id) on delete cascade,
+  kind text not null default 'custom' check (kind in ('water', 'meal', 'workout', 'checkin', 'custom')),
+  title text not null check (char_length(btrim(title)) between 1 and 80),
+  message text not null default '' check (char_length(message) <= 300),
+  time_of_day time not null,
+  -- ISO weekdays: 1 = Monday ... 7 = Sunday
+  days_of_week smallint[] not null check (cardinality(days_of_week) between 1 and 7 and days_of_week <@ array[1, 2, 3, 4, 5, 6, 7]::smallint[]),
+  timezone text not null default 'UTC' check (char_length(timezone) between 1 and 64),
+  is_active boolean not null default true,
+  last_fired_on date,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists custom_reminders_target_idx on public.custom_reminders (target_id, is_active);
+create index if not exists custom_reminders_owner_idx on public.custom_reminders (owner_id, created_at desc);
+
+alter table public.custom_reminders enable row level security;
+
+drop policy if exists "People can read their reminders" on public.custom_reminders;
+create policy "People can read their reminders"
+  on public.custom_reminders for select
+  to authenticated
+  using (owner_id = (select auth.uid()) or target_id = (select auth.uid()));
+
+revoke all on public.custom_reminders from anon, authenticated;
+grant select on public.custom_reminders to authenticated;
+grant all on public.custom_reminders to service_role;
+
+-- Creates (p_id null) or updates a reminder the caller owns. p_target is null for the caller themself, or one of a
+-- coach's active clients.
+create or replace function public.save_reminder(
+  p_id uuid,
+  p_kind text,
+  p_title text,
+  p_message text,
+  p_time time,
+  p_days integer[],
+  p_timezone text,
+  p_active boolean default true,
+  p_target uuid default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_me uuid := auth.uid();
+  v_title text := btrim(coalesce(p_title, ''));
+  v_message text := btrim(coalesce(p_message, ''));
+  v_target uuid := coalesce(p_target, v_me);
+  v_days smallint[];
+  v_id uuid;
+begin
+  if v_me is null or not (public.is_client_account() or public.is_active_coach()) then
+    raise exception 'Sign in with a client or an active coach account to manage reminders' using errcode = '42501';
+  end if;
+  if p_kind is null or p_kind not in ('water', 'meal', 'workout', 'checkin', 'custom') then
+    raise exception 'Choose a valid reminder type' using errcode = '22023';
+  end if;
+  if char_length(v_title) not between 1 and 80 then
+    raise exception 'The reminder title must be between 1 and 80 characters' using errcode = '22023';
+  end if;
+  if char_length(v_message) > 300 then
+    raise exception 'The reminder message can be up to 300 characters' using errcode = '22023';
+  end if;
+  if p_time is null then
+    raise exception 'Choose the time of the reminder' using errcode = '22023';
+  end if;
+  select coalesce(array_agg(distinct d::smallint order by d::smallint), '{}') into v_days from unnest(coalesce(p_days, '{}')) as d where d between 1 and 7;
+  if cardinality(v_days) = 0 then
+    raise exception 'Choose at least one day of the week' using errcode = '22023';
+  end if;
+  if p_timezone is null or not exists (select 1 from pg_timezone_names where name = p_timezone) then
+    raise exception 'Choose a valid time zone' using errcode = '22023';
+  end if;
+  if v_target <> v_me and not (
+    public.is_active_coach()
+    and exists (select 1 from public.coach_clients where coach_id = v_me and client_id = v_target and status = 'active')
+  ) then
+    raise exception 'You can only schedule reminders for your own active clients' using errcode = '42501';
+  end if;
+
+  if p_id is null then
+    if (select count(*) from public.custom_reminders where owner_id = v_me) >= 40 then
+      raise exception 'You can keep up to 40 reminders' using errcode = '54000';
+    end if;
+    insert into public.custom_reminders (owner_id, target_id, kind, title, message, time_of_day, days_of_week, timezone, is_active)
+    values (v_me, v_target, p_kind, v_title, v_message, p_time, v_days, p_timezone, coalesce(p_active, true))
+    returning id into v_id;
+  else
+    update public.custom_reminders
+    set kind = p_kind, title = v_title, message = v_message, time_of_day = p_time, days_of_week = v_days,
+        timezone = p_timezone, is_active = coalesce(p_active, true), target_id = v_target, last_fired_on = null, updated_at = now()
+    where id = p_id and owner_id = v_me
+    returning id into v_id;
+    if v_id is null then
+      raise exception 'Reminder was not found' using errcode = 'P0002';
+    end if;
+  end if;
+  return v_id;
+end;
+$$;
+
+create or replace function public.delete_reminder(p_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'Sign in first' using errcode = '42501';
+  end if;
+  delete from public.custom_reminders where id = p_id and owner_id = auth.uid();
+  if not found then
+    raise exception 'Reminder was not found' using errcode = 'P0002';
+  end if;
+end;
+$$;
+
+-- Where a reminder of this type leads, for a client or for a coach.
+create or replace function public.reminder_link(p_kind text, p_role text)
+returns text
+language sql
+immutable
+set search_path = public, pg_temp
+as $$
+  select case
+    when p_role = 'client' then case p_kind when 'water' then '/habits' when 'meal' then '/food' when 'workout' then '/workouts' when 'checkin' then '/weekly-checkin' else '/reminders' end
+    else case p_kind when 'meal' then '/meal-plans' when 'workout' then '/workout-builder' when 'checkin' then '/checkins' else '/reminders' end
+  end;
+$$;
+
+-- Turns the reminders that are due into notifications. p_user limits it to one person (null = everyone). Returns the
+-- notifications that still need a push: [{ user_id, notification_id, title, message, link }].
+-- p_mark_pushed = true marks them as already delivered (the person is looking at the app right now).
+create or replace function public.fire_due_reminders(p_user uuid default null, p_mark_pushed boolean default false)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_row record;
+  v_local timestamp;
+  v_local_day date;
+  v_late interval;
+  v_role text;
+  v_link text;
+  v_id uuid;
+  v_created jsonb := '[]'::jsonb;
+begin
+  for v_row in
+    select r.*, p.role as target_role
+    from public.custom_reminders r
+    join public.profiles p on p.id = r.target_id
+    where r.is_active and (p_user is null or r.target_id = p_user)
+    for update of r skip locked
+  loop
+    v_local := now() at time zone v_row.timezone;
+    v_local_day := v_local::date;
+    continue when v_row.last_fired_on = v_local_day;
+    continue when not (extract(isodow from v_local)::smallint = any (v_row.days_of_week));
+    continue when v_local::time < v_row.time_of_day;
+
+    update public.custom_reminders set last_fired_on = v_local_day where id = v_row.id;
+    v_late := v_local::time - v_row.time_of_day;
+    continue when v_late > interval '12 hours';
+
+    v_role := v_row.target_role;
+    v_link := public.reminder_link(v_row.kind, v_role);
+    v_id := public.create_notification(
+      v_row.target_id,
+      'reminder',
+      jsonb_build_object(
+        'reminder_id', v_row.id, 'kind', v_row.kind, 'title', v_row.title, 'message', v_row.message,
+        'from_coach', v_row.owner_id <> v_row.target_id,
+        'coach_name', case when v_row.owner_id <> v_row.target_id then public.notification_display_name(v_row.owner_id) end
+      ),
+      v_link,
+      'reminder:' || v_row.id::text || ':' || v_local_day::text,
+      p_mark_pushed
+    );
+    if not p_mark_pushed and v_id is not null then
+      v_created := v_created || jsonb_build_array(jsonb_build_object(
+        'user_id', v_row.target_id, 'notification_id', v_id, 'title', v_row.title, 'message', v_row.message, 'link', v_link
+      ));
+    end if;
+  end loop;
+  return v_created;
+end;
+$$;
+
+-- Everyone, from the scheduled job. Also hands out the reminder notifications that were created but not pushed yet
+-- (for example by pg_cron), so each one is pushed once.
+create or replace function public.run_reminder_engine()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_pending jsonb;
+begin
+  perform public.fire_due_reminders(null, false);
+  with due as (
+    update public.notifications n
+    set pushed_at = now()
+    where n.type = 'reminder' and n.pushed_at is null and n.read_at is null and n.created_at > now() - interval '24 hours'
+    returning n.id, n.user_id, n.payload, n.link
+  )
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'user_id', due.user_id, 'notification_id', due.id, 'title', due.payload ->> 'title', 'message', due.payload ->> 'message', 'link', due.link
+  )), '[]'::jsonb) into v_pending from due;
+  return v_pending;
+end;
+$$;
+
+-- The bell reads: due reminders of the signed-in person first become notifications (already marked as delivered).
+create or replace function public.get_my_notifications(p_limit integer default 30, p_before timestamptz default null)
+returns jsonb
+language plpgsql
+volatile
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_me uuid := auth.uid();
+  v_limit integer := greatest(1, least(coalesce(p_limit, 30), 100));
+begin
+  if v_me is null then
+    raise exception 'Sign in first' using errcode = '42501';
+  end if;
+  perform public.fire_due_reminders(v_me, true);
+  return jsonb_build_object(
+    'unread_count', (select count(*)::integer from public.notifications where user_id = v_me and read_at is null),
+    'items', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', n.id, 'type', n.type, 'payload', n.payload, 'link', n.link,
+        'created_at', n.created_at, 'read_at', n.read_at, 'is_read', n.read_at is not null
+      ) order by n.created_at desc, n.id desc)
+      from (
+        select * from public.notifications
+        where user_id = v_me and (p_before is null or created_at < p_before)
+        order by created_at desc, id desc
+        limit v_limit
+      ) n
+    ), '[]'::jsonb)
+  );
+end;
+$$;
+
+create or replace function public.get_my_unread_notification_count()
+returns integer
+language plpgsql
+volatile
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'Sign in first' using errcode = '42501';
+  end if;
+  perform public.fire_due_reminders(auth.uid(), true);
+  return (select count(*)::integer from public.notifications where user_id = auth.uid() and read_at is null);
+end;
+$$;
+
+revoke all on function public.save_reminder(uuid, text, text, text, time, integer[], text, boolean, uuid) from public, anon;
+revoke all on function public.delete_reminder(uuid) from public, anon;
+revoke all on function public.reminder_link(text, text) from public, anon, authenticated;
+revoke all on function public.fire_due_reminders(uuid, boolean) from public, anon, authenticated;
+revoke all on function public.run_reminder_engine() from public, anon, authenticated;
+revoke all on function public.get_my_notifications(integer, timestamptz) from public, anon;
+revoke all on function public.get_my_unread_notification_count() from public, anon;
+grant execute on function public.save_reminder(uuid, text, text, text, time, integer[], text, boolean, uuid) to authenticated;
+grant execute on function public.delete_reminder(uuid) to authenticated;
+grant execute on function public.fire_due_reminders(uuid, boolean) to service_role;
+grant execute on function public.run_reminder_engine() to service_role;
+grant execute on function public.get_my_notifications(integer, timestamptz) to authenticated;
+grant execute on function public.get_my_unread_notification_count() to authenticated;
+
+-- Hourly pass for in-app delivery when pg_cron is available. Push delivery is done by the /api/workflows cron job,
+-- which also picks up whatever this pass created.
+do $$
+begin
+  if exists (select 1 from pg_extension where extname = 'pg_cron') then
+    perform cron.unschedule(jobid) from cron.job where jobname = 'apexfit-reminder-engine';
+    perform cron.schedule('apexfit-reminder-engine', '*/15 * * * *', 'select public.fire_due_reminders(null, false)');
+  end if;
+exception when others then
+  raise notice 'pg_cron scheduling for reminders skipped: %', sqlerrm;
+end
+$$;

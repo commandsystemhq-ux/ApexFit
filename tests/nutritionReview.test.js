@@ -145,7 +145,7 @@ test('every language has the nutrition review texts', () => {
 
 test('the page header is solid, the menu stays visible on tablets and the duplicate tab strip is gone where the menu is', () => {
   const css = read('src/styles/app.css');
-  assert.match(css, /\.topbar \{[^}]*background: #080a0f;/);
+  assert.match(css, /\.topbar \{[^}]*background: var\(--bg-chrome\);/);
   assert.doesNotMatch(css.match(/\.topbar \{[^}]*\}/)[0], /backdrop-filter|rgba\(8, 10, 15/);
   assert.match(css, /@media \(min-width: 561px\) and \(max-width: 820px\) \{\s*\.sidebar, \[dir='rtl'\] \.sidebar \{ transform: none;/);
   assert.match(css, /@media \(min-width: 561px\) \{ \.client-feature-tabs\.portal-tabs \{ display: none; \} \}/);

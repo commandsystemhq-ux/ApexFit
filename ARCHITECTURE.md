@@ -2,7 +2,7 @@
 
 Single reference for how the ApexFit platform is built: stack, folders, features (route → UI → service → database), database/security model, serverless API, configuration and current status.
 
-- **Verified against the repository on 2026-11-23** (`src/`, `api/`, `supabase/migrations/`, `data/`, `scripts/`, `apps/mobile/`, `tests/`, `vercel.json`, `package.json`). Nothing here comes from memory; counts below were taken from the files.
+- **Verified against the repository on 2026-11-27** (`src/`, `api/`, `supabase/migrations/`, `data/`, `scripts/`, `apps/mobile/`, `tests/`, `vercel.json`, `package.json`). Nothing here comes from memory; counts below were taken from the files.
 - **No secrets.** Only variable *names* appear in this document, never values. Real keys live in Vercel project settings, `.env.local` (git-ignored) or the Supabase dashboard.
 - Companion docs: [README.md](README.md) (setup and per-feature notes), [apps/mobile/README.md](apps/mobile/README.md) (native app), [data/README.md](data/README.md) (exercise catalog source/licence), [.env.example](.env.example) (variable template).
 
@@ -28,12 +28,14 @@ ApexFit is a coaching workspace for fitness coaches and their clients: programs,
 | Layer | Technology | Where |
 | --- | --- | --- |
 | Web app | React 19, React Router 7 (path routing, lazy-loaded pages), Vite 7 | `src/`, `index.html`, `vite.config.js` |
-| Styling | Hand-written CSS with design tokens (no UI framework) | `src/styles/tokens.css`, `src/styles/app.css` |
+| Styling | Hand-written CSS on design tokens (no UI framework). Every colour is a CSS variable, so one stylesheet serves three appearances | `src/styles/tokens.css`, `src/styles/app.css` |
+| Appearance | **Dark / Light / System.** The choice lives in `localStorage` (`apexfit.theme`, default dark); `ThemeProvider` resolves *system* through `prefers-color-scheme` and writes `<html data-theme="dark｜light" data-theme-mode>`; a tiny script in `index.html` sets it before the first paint | `src/contexts/ThemeContext.jsx`, `src/services/themeUtils.js`, `src/components/ThemeToggle.jsx` |
 | i18n | 5 locales: `en`, `ar`, `de`, `fr`, `es`; Arabic switches the layout to RTL | `src/i18n/`, `src/contexts/LocaleContext.jsx` |
 | Backend (data/auth) | Supabase: PostgreSQL + RLS, Auth (email/password + Google), Storage, Realtime | `supabase/` |
 | Serverless | Vercel Functions (Node, ES modules) — 11 endpoints + shared `_lib` | `api/`, `vercel.json` |
 | Native app | Expo 58 / React Native 0.88, expo-router, same Supabase project | `apps/mobile/` |
 | PWA / push | Service worker + Web Push (VAPID, `web-push`) | `public/sw.js`, `public/manifest.webmanifest`, `api/push.js` |
+| In-app notifications | `notifications` table filled by database triggers, read through RPCs; bell with unread count in the top bar, Realtime + 45 s polling | `src/components/NotificationBell.jsx`, `src/hooks/useNotifications.js`, `supabase/migrations/…004300_notifications.sql` |
 | Payments (platform) | Paddle Billing (Merchant of Record) for the $39/month coach plan | `api/paddle*.js`, `api/_lib/paddle.js` |
 | Payments (coach ↔ client) | Direct: bank transfer / custom method, confirmed manually by the coach. No payment gateway, no Stripe | `invoicing*`, `store*` |
 | AI | OpenAI, Google Gemini, Azure AI Foundry, Amazon Bedrock (Converse + SigV4, no AWS SDK), optional Anthropic for the coach work screens | `api/_lib/jack*.js`, `anthropicModel.js` |
@@ -122,8 +124,8 @@ ApexFit/
 ├─ public/                 Static assets, PWA manifest, service worker
 ├─ scripts/                Node scripts (catalog import, food list build, video seeding, translation)
 ├─ src/                    Web app (React)
-├─ supabase/               migrations/ (41 files) + manual-setup.sql (concatenation)
-├─ tests/                  61 test files, 846 tests, helpers/pgliteSupabase.js
+├─ supabase/               migrations/ (45 files) + manual-setup.sql (concatenation)
+├─ tests/                  67 test files, 925 tests, helpers/pgliteSupabase.js
 ├─ index.html  vite.config.js  vercel.json  package.json  .env.example  .vercelignore  .gitignore  README.md
 └─ ARCHITECTURE.md         (this file)
 ```
@@ -137,12 +139,12 @@ Root files: `vercel.json` (SPA rewrite `/((?!api/).*)` → `/index.html`; `maxDu
 | `src/main.jsx` | 1 | Mounts `BrowserRouter` → `LocaleProvider` → `ToastProvider` → `AuthProvider` → `App`. |
 | `src/App.jsx` | 1 | The route table (guards + lazy pages), legacy `/#hash` redirect. |
 | `src/routes.js` | 1 | **Single source of truth**: `PAGES` (path, title key, role access), `AUTH_PATHS`, `PUBLIC_PATHS`, `ADMIN_PATHS`, per-role sidebar groups, `roleOf`, `homePathFor`, `safeRedirectPath`, `legacyHashPath`. |
-| `src/contexts/` | 3 | `AuthContext` (session, profile/access state, Google/email sign-in), `LocaleContext` (locale in `localStorage` key `apexfit.locale`, `t(key)` with English fallback), `ToastContext`. |
-| `src/hooks/` | 6 | `useChatUnread`, `useCheckinBadge`, `useExerciseBundle`, `useSignedPhotos` (5-minute signed URLs), `useVideoRoom`, `useVoiceRecorder`. |
-| `src/pages/` | 42 | One file per screen (see section 3 for the route map). |
-| `src/components/` | 78 | Shell and reusable UI plus feature panels (grouped below). |
-| `src/services/` | 90 | `*Service.js` = Supabase/`fetch` I/O; `*Utils.js` = pure rules; plus engines (`webrtcRoom`, `healthImport`). |
-| `src/i18n/` | 29 | `translations.js` merges 27 domain dictionaries (each has all five languages) + `publicPagesContent.js` (policy text). A test enforces identical keys across locales. |
+| `src/contexts/` | 4 | `AuthContext` (session, profile/access state, Google/email sign-in), `LocaleContext` (locale in `localStorage` key `apexfit.locale`, `t(key)` with English fallback), `ThemeContext` (appearance, `localStorage` key `apexfit.theme`), `ToastContext`. |
+| `src/hooks/` | 8 | `useChatUnread`, `useCheckinBadge`, `useExerciseBundle`, `useNotifications` (bell data), `useRamadanMode`, `useSignedPhotos` (5-minute signed URLs), `useVideoRoom`, `useVoiceRecorder`. |
+| `src/pages/` | 44 | One file per screen (see section 3 for the route map). |
+| `src/components/` | 98 | Shell and reusable UI plus feature panels (grouped below). |
+| `src/services/` | 109 | `*Service.js` = Supabase/`fetch` I/O; `*Utils.js` = pure rules; plus engines (`webrtcRoom`, `healthImport`). |
+| `src/i18n/` | 39 | `translations.js` merges 37 domain dictionaries (each has all five languages) + `publicPagesContent.js` (policy text). A test enforces identical keys across locales. |
 | `src/data/common-foods.json` | 1 | Built-in food list: **1,204 foods**, `version: 2`, values per 100 g, names in `en`/`ar`, aliases, `serving_g`. Generated, do not edit by hand. |
 | `src/styles/` | 2 | `tokens.css`, `app.css` (single large stylesheet incl. RTL rules). |
 
@@ -150,12 +152,13 @@ Root files: `vercel.json` (SPA rewrite `/((?!api/).*)` → `/index.html`; `maxDu
 
 | Area | Components |
 | --- | --- |
-| Shell / generic | `AppShell` (role-aware sidebar: collapsible, rail on tablets, drawer on phones, unread/"New" badges, lazy `JackFloatingWidget`), `RouteGuards`, `AuthLayout`, `PublicFooter`, `PageHeader`, `BrandMark`, `Button`, `StatCard`, `ProgressBar`, `RatingInput`, `Toast`, `UserAvatar`, `ChatAvatar`, `LanguageToggle`, `OnboardingNotice`, `TeamInvitationNotice` |
+| Shell / generic | `AppShell` (role-aware sidebar: collapsible, rail on tablets, drawer on phones, unread/"New" badges, lazy `JackFloatingWidget`; top bar with `NotificationBell`, `ThemeToggle`, `LanguageToggle`), `RouteGuards`, `AuthLayout`, `PublicFooter`, `PageHeader`, `BrandMark`, `Button`, `StatCard`, `ProgressBar`, `RatingInput`, `Toast`, `UserAvatar`, `ChatAvatar`, `LanguageToggle`, `OnboardingNotice`, `TeamInvitationNotice` |
 | Training | `ExerciseCard`, `ExerciseMedia` (looping demo/video/poster), `ExerciseVideoPlayer` (click-to-play YouTube-nocookie / Vimeo-dnt / MP4/WebM), `ExerciseVideoEditor`, `ClientWorkoutLogger`, `ClientOneRepMax`, `ProgressionSuggestions`, `WorkflowBuilder` |
-| Nutrition | `ClientFoodLogger`, `FoodPicker`, `FoodTargetProgress`, `ClientFoodReview`, `ClientMealPlan`, `MealPlanEditor`, `NutritionTracker`, `NutritionViews`, `WearablesPanel`, `HealthMetricsView`, `ClientHealthPanel` |
+| Nutrition | `ClientFoodLogger`, `FoodPicker`, `FoodTargetProgress`, `ClientFoodReview`, `ClientMealPlan`, `MealPlanEditor`, `RecipeEditor`, `RecipePicker`, `RecipeView`, `NutritionTracker`, `NutritionViews`, `WearablesPanel`, `HealthMetricsView`, `ClientHealthPanel` |
 | Habits / progress | `ClientHabitTracker`, `HabitModals`, `HabitWeekChart`, `ClientHabitReview`, `ClientProgressTracking`, `ProgressLineChart`, `ProgressReports`, `TaskList`, `DashboardCompletion` |
 | Check-ins | `CheckinReviewCard`, `ClientCheckinsReview`, `PhotoCompare` |
-| Chat | `ChatWorkspace`, `ChatConversationList`, `ChatThread`, `VoiceRecorderBar`, `VoicePlayer` |
+| Chat | `ChatWorkspace`, `ChatConversationList`, `ChatThread`, `VoiceRecorderBar`, `VoicePlayer`, `ChatImage`, `ImageLightbox`, `MessageTemplatesPicker`, `MessageTemplatesManager` |
+| Notifications / appearance | `NotificationBell`, `ThemeToggle` |
 | Video | `NativeRoom`, `VideoTile`, `ClientSessions` |
 | Jack | `JackFloatingWidget`, `JackDrawer`, `JackHistory`, `JackMealCard`, `JackIcon`, `ClientJackAssistant` |
 | Business | `ClientBilling`, `PaymentInstructions`, `PaymentMethodsPanel`, `ClientCoachLink`, `ClientCompliancePanel`, `AssessmentSummary`, `SignaturePad`, `SignedContractView`, `EmailPreferences` |
@@ -167,13 +170,14 @@ Root files: `vercel.json` (SPA rewrite `/((?!api/).*)` → `/index.html`; `maxDu
 
 | Area | Files |
 | --- | --- |
-| Infrastructure | `supabaseClient` (only reads `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`; `requireSupabase()`), `apiClient` (`callApi(path)` → `fetch('/api/<path>')` with the session's Bearer token), `clientIdentity`, `searchText`, `sidebarState`, `trialService` |
+| Infrastructure | `supabaseClient` (only reads `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`; `requireSupabase()`), `apiClient` (`callApi(path)` → `fetch('/api/<path>')` with the session's Bearer token), `clientIdentity`, `searchText`, `sidebarState`, `trialService`, `themeUtils` (appearance rules), `textTemplate` (`{placeholder}` filling) |
 | Auth / profile | `authService`, `profileService`, `profileUtils` (avatars: 2 MB JPG/PNG/WebP, name ≤ 80) |
 | Coach ↔ client | `coachClientService`, `coachingUtils` (currencies `usd,eur,gbp,egp,sar,aed`, video ≤ 50 MB), `messageService`, `scheduleService`, `invoicingService`, `paymentMethodsUtils` (IBAN mod-97), `dashboardService`, `dashboardUtils` |
 | Training | `exerciseService`, `exerciseCatalogUtils`, `exerciseI18n`, `exerciseBundle`, `exerciseMedia`, `exerciseVideo`, `exerciseVideoService`, `workoutProgramService`, `clientWorkoutService`, `clientStrengthService`, `progressionService`, `progressionUtils`, `workflowService`, `workflowUtils` |
-| Nutrition / health | `clientFoodService`, `foodFormUtils`, `foodReviewService`, `foodReviewUtils`, `foodSearchService`, `foodSearchUtils`, `localFoodSearch` (bundled 1,204 foods), `mealPlanService`, `mealPlanUtils`, `healthService`, `healthUtils`, `healthImport` (Apple Health XML/zip, MyFitnessPal CSV, parsed in the browser) |
+| Nutrition / health | `clientFoodService`, `foodFormUtils`, `foodReviewService`, `foodReviewUtils`, `foodSearchService`, `foodSearchUtils`, `localFoodSearch` (bundled 1,204 foods), `mealPlanService`, `mealPlanUtils`, `recipeService`, `recipeUtils`, `healthService`, `healthUtils`, `healthImport` (Apple Health XML/zip, MyFitnessPal CSV, parsed in the browser) |
 | Tracking | `clientProgressService`, `clientTrackingUtils`, `clientIntakeService`, `clientPriority2Utils`, `habitService`, `habitUtils`, `checklistService`, `checklistUtils`, `checkinService`, `checkinUtils`, `accountabilityService`, `accountabilityUtils` |
-| Chat / voice / push | `chatService`, `chatRealtime`, `chatUtils`, `voiceService`, `voiceUtils`, `pushService` |
+| Chat / voice / images / push | `chatService`, `chatRealtime`, `chatUtils`, `voiceService`, `voiceUtils`, `chatImageService`, `chatImageUtils`, `messageTemplateService`, `messageTemplateUtils`, `pushService` |
+| Notifications / reminders | `notificationService`, `notificationUtils`, `reminderService`, `reminderUtils` |
 | Video | `sessionService`, `sessionUtils`, `liveRoom`, `roomSignaling`, `webrtcRoom` (framework-free WebRTC mesh, up to 6 peers) |
 | Business | `storeService`, `storeUtils`, `invoicingService`, `paddleService`, `billingUtils`, `contractService`, `contractUtils`, `groupService`, `groupUtils`, `teamService`, `teamUtils`, `teamErrors`, `assessmentService`, `assessmentUtils`, `campaignService`, `campaignTemplate` (also imported by `api/unsubscribe.js`) |
 | Community | `communityService`, `communityUtils` |
@@ -193,19 +197,19 @@ Vercel treats each top-level file as one function; the `_lib/` folder (underscor
 | `_lib/aiSettings.js`, `ownerDiagnostics.js` | Platform AI provider storage/test/resolve; owner-only error details with secret redaction. |
 | `_lib/jackModels.js`, `anthropicModel.js`, `awsSigV4.js` | Model adapters (OpenAI, Gemini, Azure Foundry, Bedrock Converse, Anthropic) and AWS Signature V4. |
 | `_lib/jackAgent.js` | Request parsing/sanitizing, agent loop (`runJack`), `createRateLimiter`, context summary, route → page title. |
-| `_lib/jackKnowledge.js` | System prompt per role/locale/page. |
+| `_lib/jackKnowledge.js` | System prompt per role/locale/page (covers recipes, reminders, the bell, appearance, chat photos and templates). |
 | `_lib/jackTools.js`, `jackChatTools.js`, `jackChecklistTools.js`, `jackEngagementTools.js`, `jackGrowthTools.js`, `jackHealthTools.js`, `jackAccountabilityTools.js`, `jackShared.js` | 38 tool definitions (section 3.8) + `ToolError`, `matchOne`. |
 | `_lib/jackAssistant.js`, `jackAssistantRules.js` | Plan generator / client analysis / progress report: AI path with validation + deterministic rule-based fallback. |
 | `_lib/paddle.js` | Paddle config, API calls, webhook signature check and event → subscription mapping. |
 | `_lib/emailCampaign.js` | Resend sending, signed unsubscribe links, batch sender. |
 | `_lib/foodSearch.js` | Open Food Facts + USDA FoodData Central search, normalization, cache. |
-| `_lib/pushNotify.js`, `pushText.js` | Web Push delivery and localized push texts. |
+| `_lib/pushNotify.js`, `pushText.js` | Web Push delivery and localized push texts (types `message｜session｜invoice｜video｜checkin｜chat｜voice｜image`); `deliverReminderPushes` sends custom reminders, whose text comes from the reminder itself (`buildReminderPush`). |
 | `_lib/videoSessions.js`, `zoom.js` | Schedule a session (optionally create a Zoom meeting, roll back on failure). |
 
 ### 2.3 `supabase/`
 
-- `migrations/` — 41 files `20261115000100` … `20261115004200` (there is intentionally **no** `…001600`; a test asserts the removed per-coach AI settings migration does not exist). Full list in [section 8](#8-appendix-migrations-and-conventions).
-- `manual-setup.sql` — the 41 migrations concatenated in filename order with `-- ===== <file> =====` markers; idempotent; run once in the Supabase SQL Editor. **It is also what the tests load into PGlite**, so it must stay in sync with `migrations/`.
+- `migrations/` — 45 files `20261115000100` … `20261115004600` (there is intentionally **no** `…001600`; a test asserts the removed per-coach AI settings migration does not exist). Full list in [section 8](#8-appendix-migrations-and-conventions).
+- `manual-setup.sql` — the 45 migrations concatenated in filename order with `-- ===== <file> =====` markers; idempotent; run once in the Supabase SQL Editor. **It is also what the tests load into PGlite**, so it must stay in sync with `migrations/`.
 
 ### 2.4 `data/`
 
@@ -247,14 +251,14 @@ Expo Router app that talks to the same Supabase project. Uses `EXPO_PUBLIC_*` va
 
 ### 2.7 `tests/`
 
-61 files, **846 tests** (`npm test` = `node --test`, ~75 s). `tests/helpers/pgliteSupabase.js` boots PGlite, stubs Supabase's `auth`, `storage`, `realtime` schemas and roles (`anon`, `authenticated`, `service_role`), loads the real `supabase/manual-setup.sql`, and provides a supabase-js lookalike that runs each call as a chosen user — so RLS and function grants are really enforced.
+67 files, **925 tests** (`npm test` = `node --test`, ~90 s). `tests/helpers/pgliteSupabase.js` boots PGlite, stubs Supabase's `auth`, `storage`, `realtime` schemas and roles (`anon`, `authenticated`, `service_role`), loads the real `supabase/manual-setup.sql`, and provides a supabase-js lookalike that runs each call as a chosen user — so RLS and function grants are really enforced.
 
 | Group | Files |
 | --- | --- |
-| Database / RLS (real schema) | `workflowEngine`, `assessmentsContractsGroups`, `storeTeamVideo`, `liveRoom`, `wearablesNutrition`, `chat`, `checklist`, `accountability`, `paddle`, `directPayments`, `emailCampaigns`, `coachDashboard`, `customHabits`, `weeklyCheckins`, `mealPlans`, `progressionSuggestions`, `exerciseVideos`, `exerciseI18n`, `exerciseMedia`, `platformAiSettingsDatabase`, `nutritionReview`, `teamInvitations`, `voiceMessages` |
+| Database / RLS (real schema) | `workflowEngine`, `assessmentsContractsGroups`, `storeTeamVideo`, `liveRoom`, `wearablesNutrition`, `chat`, `checklist`, `accountability`, `paddle`, `directPayments`, `emailCampaigns`, `coachDashboard`, `customHabits`, `weeklyCheckins`, `mealPlans`, `progressionSuggestions`, `exerciseVideos`, `exerciseI18n`, `exerciseMedia`, `platformAiSettingsDatabase`, `nutritionReview`, `teamInvitations`, `voiceMessages`, `notifications`, `chatImagesTemplates`, `recipes`, `reminders` |
 | Jack / AI | `jackTools`, `jackAgent`, `jackAssistant`, `jackEngagementTools`, `jackGrowthTools`, `jackUtils`, `aiProviders`, `launchSystem` |
 | Server libs / API | `serverLib`, `foodSearch`, `ownerDiagnostics`, `webrtcRoom`, `paddle` (webhook), `emailCampaigns` |
-| Pure logic / UI contracts | `clientTrackingUtils`, `clientPriority2Utils`, `coachingUtils`, `communityUtils`, `engagementUtils`, `growthUtils`, `workflowUtils`, `checklistLogic`, `profileUtils`, `trialService`, `routes`, `i18n`, `publicPages`, `foodAndSidebarUx`, `exerciseCatalogUtils`, `preparedExerciseCatalog`, `healthImport` |
+| Pure logic / UI contracts | `clientTrackingUtils`, `clientPriority2Utils`, `coachingUtils`, `communityUtils`, `engagementUtils`, `growthUtils`, `workflowUtils`, `checklistLogic`, `profileUtils`, `trialService`, `routes`, `i18n`, `publicPages`, `foodAndSidebarUx`, `exerciseCatalogUtils`, `preparedExerciseCatalog`, `healthImport`, `theme` (appearance rules, token coverage, contrast of every light colour), `competitorParity2` (new migrations, texts in 5 languages, no new function) |
 | Guard rails | `noExternalIntegrations` (no Google Calendar/Fitbit/Garmin/Oura/Stripe leftovers in code, `.env.example`, `vercel.json`, README), `mobileApp` (mobile README keeps `apexfit://auth/callback`) |
 
 ---
@@ -283,10 +287,11 @@ Notation: **UI** = pages/components; **Svc** = `src/services/*`; **RPC** = Postg
 | **Program templates** | `/templates` | `ProgramTemplatesPage` | `workoutProgramService`, `workflowService` | `set_training_program_template`, `duplicate_training_program`, `assign_program_to_client` (records `program_assignments`, starts "plan assigned" workflows) |
 | **Exercise library** (876 exercises, 5 languages, filters, exact-count server pagination) | `/exercises` | `ExerciseLibraryPage`, `ExerciseCard`, `ExerciseMedia`, `ExerciseVideoPlayer`, `ExerciseVideoEditor` | `exerciseService`, `exerciseI18n`, `exerciseBundle`, `exerciseMedia`, `exerciseVideo`, `exerciseVideoService` | Table `exercises` (public read of published rows; `name_i18n`, `instructions_i18n`, `search_text`, `animation_url`, `image_frames`, `demo_video_url`), `normalize_search_text`, trigger `exercises_set_search_text`; coach's own video link → `set_exercise_video`, table `coach_exercise_videos` (a coach's link is shown only to their clients) |
 | **Meal plans** (1,204-food picker, alternatives, templates, assign to client) | `/meal-plans` | `MealPlansPage`, `MealPlanEditor`, `FoodPicker` | `mealPlanService`, `mealPlanUtils`, `localFoodSearch` | `save_meal_plan`, `assign_meal_plan` (copy owned by client), `delete_meal_plan`, `get_meal_plan`; tables `meal_plans`, `meal_plan_items`. Assistant trainers cannot manage plans |
+| **Recipes** (ingredients from the 1,204 foods, grams, servings, times, method; calories and macros calculated for the recipe and for one serving; insert into a meal plan) | `/recipes` | `RecipesPage`, `RecipeEditor`, `RecipeView`, `RecipePicker` (inside `MealPlanEditor`), `FoodPicker` | `recipeService`, `recipeUtils`, `mealPlanUtils`, `localFoodSearch` | `save_recipe`, `delete_recipe`, `list_my_recipes`, `get_recipe` (owner coach, or a client whose meal plan contains it); tables `recipes` (≤ 300/coach), `recipe_ingredients` (≤ 40/recipe); `meal_plan_items.recipe_id` (set null if the recipe is deleted); `save_meal_plan` / `assign_meal_plan` / `get_meal_plan` carry it |
 | **Automated workflows** | `/workflows` | `WorkflowsPage`, `WorkflowBuilder` | `workflowService`, `workflowUtils` | `save_workflow`, `set_workflow_active`, `delete_workflow`, `run_my_workflow_engine`, `run_workflow_engine` (cron); tables `workflows`, `workflow_steps`, `workflow_logs`; triggers `client_joined`, `plan_assigned`, scans `workout_missed`, `milestone_reached`; **API** `workflows` (cron) |
 | **Clients roster** (invite, status, detail tabs) | `/clients` | `ClientsPage` with tabs **Profile, Food, Habits, Check-ins, Progression, Jack**; `ClientCompliancePanel`, `ClientHealthPanel`, `ClientFoodReview`, `ClientHabitReview`, `ClientCheckinsReview`, `ProgressionSuggestions`, `ClientJackAssistant` | `coachClientService`, `assessmentService`, `foodReviewService`, `healthService`, `habitService`, `checkinService`, `progressionService`, `aiService` | `create_client_invite` (single-use code, valid 7 days), `set_client_status`; tables `coach_clients`, `client_invites`, `client_intake_forms`; read-only coach policies on food logs, habits, health, check-ins; `set_client_nutrition_targets`; `/clients?client=<id>` deep link |
 | **Weekly check-ins inbox** + photo comparison | `/checkins` | `CheckinInboxPage`, `CheckinReviewCard`, `PhotoCompare` | `checkinService`, `useSignedPhotos`, `useCheckinBadge` | `get_checkins_for_coach`, `review_weekly_checkin` (feedback + push); bucket `apexfit-checkin-photos` (signed URLs, 5 min) |
-| **Messages**: two-way chat (text + voice) and one-way **Broadcast** | `/messages` (`?with=<client id>`) | `MessagesPage`, `ChatWorkspace`, `ChatConversationList`, `ChatThread`, `VoiceRecorderBar`, `VoicePlayer` | `chatService`, `chatRealtime`, `voiceService`, `messageService`, `pushService` | See 3.7 |
+| **Messages**: two-way chat (text, voice, **photos**), one-way **Broadcast** and **Templates** | `/messages` (`?with=<client id>`) | `MessagesPage`, `ChatWorkspace`, `ChatConversationList`, `ChatThread`, `VoiceRecorderBar`, `VoicePlayer`, `ChatImage`, `ImageLightbox`, `MessageTemplatesPicker`, `MessageTemplatesManager` | `chatService`, `chatRealtime`, `voiceService`, `chatImageService`, `messageTemplateService`, `messageService`, `pushService` | See 3.7 |
 | **Email campaigns** | `/campaigns` | `CampaignsPage` | `campaignService`, `campaignTemplate` | `create_email_campaign`, `claim_email_campaign_batch`, `record_email_campaign_result`, `retry_failed_email_recipients`; tables `email_campaigns`, `email_campaign_recipients`; **API** `send-campaign`, `unsubscribe` |
 | **Accountability** (tasks, XP, completion rate, progress reports) | `/tasks` | `TasksPage`, `TaskList`, `ProgressReports` | `accountabilityService`, `accountabilityUtils` | `assign_client_task`, `delete_client_task`, `get_client_tasks`, `get_task_completion_rates`, `get_progress_stats`, `save_progress_report`, `list_progress_reports`, `share_progress_report`; tables `client_tasks`, `progress_reports`, `point_events` |
 | **Group coaching** | `/groups` | `GroupsPage` | `groupService`, `groupUtils` | `save_group`, `add_group_members`, `remove_group_member`, `assign_program_to_group`, `clear_group_program`, `post_group_announcement`; tables `coaching_groups` (≤ 25/coach, ≤ 100 members), `coaching_group_members`, `group_announcements` |
@@ -298,7 +303,8 @@ Notation: **UI** = pages/components; **Svc** = `src/services/*`; **RPC** = Postg
 | **Contracts / e-signatures** | `/contracts` | `ContractsPage`, `SignedContractView` | `contractService`, `contractUtils` | `save_contract`, `set_contract_archived`, `delete_contract`; tables `contracts`, `contract_signatures` (signed wording locked; signed contracts cannot be deleted) |
 | **Billing** (the $39/month plan) | `/billing` (reachable when trial expired) | `BillingPage` | `paddleService`, `billingUtils` | **API** `paddle` (`checkout`, `portal`) + `paddle-webhook`; `get_my_subscription`, tables `coach_subscriptions`, `billing_events`; Paddle.js overlay checkout |
 | **Community & leaderboard** | `/community`, `/leaderboard` (all roles) | `CommunityPage`, `CommunityFeed`, `PostComments`, `CommunityLeaderboard`, `CommunityAchievements`, `CommunityProfileForm` | `communityService`, `communityUtils` | See 3.9 |
-| **Settings** | `/settings` | `SettingsPage`, `ProfileSettings`, `LanguageToggle`, `EmailPreferences` (clients) | `profileService`, `campaignService`, `aiSettingsService` | `update_my_profile`, bucket `avatars`, `get_my_email_preferences`, `set_my_email_marketing_opt_out`; link to `/admin/ai` only for the platform owner |
+| **Reminders** (water, meal, workout, weekly check-in, custom; for yourself or, as a coach, for an active client) | `/reminders` (all roles) | `RemindersPage` | `reminderService`, `reminderUtils`, `pushService` | `save_reminder`, `delete_reminder`; table `custom_reminders` (≤ 40 per owner; time of day + ISO weekdays + the person's IANA time zone); due reminders become notifications (3.11) |
+| **Settings** | `/settings` | `SettingsPage`, `ProfileSettings`, `LanguageToggle`, `ThemeToggle`, `EmailPreferences` (clients) | `profileService`, `campaignService`, `aiSettingsService` | `update_my_profile`, bucket `avatars`, `get_my_email_preferences`, `set_my_email_marketing_opt_out`; link to `/admin/ai` only for the platform owner |
 
 ### 3.3 Client features (role `client`)
 
@@ -307,6 +313,7 @@ Notation: **UI** = pages/components; **Svc** = `src/services/*`; **RPC** = Postg
 | **Workouts** (assigned programs, set logging, target badges) | `/workouts` | `ClientPortalPage` → `ClientWorkoutLogger`, `ExerciseCard` | `clientWorkoutService`, `progressionService`, `exerciseService` | `save_client_workout` (transactional); tables `client_workout_sessions`, `client_workout_set_logs`, `client_exercise_targets`; awards points |
 | **Strength / 1RM** | `/strength` | `ClientOneRepMax`, `ProgressLineChart` | `clientStrengthService` | `get_my_one_rep_max_history()` (best Epley estimate per exercise/day from sets of 1–12 reps; no separate data entry) |
 | **Food** (log, search, meal plan, nutrition goals) | `/food` | `ClientFoodLogger`, `ClientMealPlan`, `FoodTargetProgress`, `NutritionTracker` | `clientFoodService`, `foodSearchService`, `localFoodSearch`, `foodReviewService`, `mealPlanService` | Table `client_food_logs`, `nutrition_targets`; search order = built-in **1,204 foods** (instant, offline) → **API** `food-search` (Open Food Facts, + USDA if key set); `get_my_meal_plan`, `log_meal_plan_items` ("Log in my day") |
+| **Recipe viewer** (ingredients, grams, calories/macros per serving, method as numbered steps) | `/food` (button "How to prepare" on a plan food that came from a recipe) | `ClientMealPlan`, `RecipeView` | `recipeService.getRecipe` | `get_recipe` (allowed only when one of the client's meal plans contains the recipe) |
 | **Habits** (sleep/water/steps defaults + custom) | `/habits` | `ClientHabitTracker`, `HabitModals`, `HabitWeekChart` | `habitService`, `habitUtils` | `ensure_my_default_habits`, `save_my_habit`, `set_my_habit_status`, `delete_my_habit`, `log_my_habit`; tables `client_custom_habits`, `client_custom_habit_logs`, `client_habit_settings`, `client_habit_logs` (≤ 30 habits) |
 | **Progress** (weight, measurements, private photos) | `/progress` | `ClientProgressTracking`, `ProgressLineChart` | `clientProgressService` | Table `client_body_metrics`; bucket `apexfit-progress-photos` (private, owner-only) |
 | **Weekly check-in** | `/weekly-checkin` | `WeeklyCheckinPage`, `RatingInput` | `checkinService`, `checkinUtils` | `submit_weekly_checkin` (editable until reviewed), `get_my_checkin_status`; table `weekly_checkins`; bucket `apexfit-checkin-photos` (≤ 5 MB, `<client id>/…`) |
@@ -320,6 +327,7 @@ Notation: **UI** = pages/components; **Svc** = `src/services/*`; **RPC** = Postg
 | **My groups** | `/my-groups` | `ClientGroupsPage` | `groupService` | `get_my_groups` (members never see each other's names) |
 | **My store** | `/my-store` | `MyStorePage`, `PaymentInstructions` | `storeService` | `get_my_store`, `begin_store_purchase`, `report_store_payment`, `cancel_store_order` |
 | **My contracts** | `/my-contracts` | `ClientContractsPage`, `SignaturePad` | `contractService` | `sign_contract` (typed name + drawn PNG + IP/user agent when available; one signature per contract) |
+| **Reminders** | `/reminders` | `RemindersPage` | `reminderService`, `pushService` | Same as the coach row in 3.2; reminders a coach set for the client are listed separately and cannot be edited by the client |
 | **Community** | `/community`, `/leaderboard` | see 3.9 | | |
 
 ### 3.4 Assistant trainer (team) workspace
@@ -339,6 +347,7 @@ Notation: **UI** = pages/components; **Svc** = `src/services/*`; **RPC** = Postg
 - **Built-in foods:** `src/data/common-foods.json` — 1,204 entries (Egyptian, Gulf, Levantine, Maghreb dishes, grills, seafood, grains, fruit, dairy, sweets/drinks, international, supplements). Structure: `{ id, name:{en,ar}, per100g:{calories,protein_g,carbs_g,fat_g}, serving_g, aliases:{ar,en} }`. Source of truth = `scripts/foods-parts/*.txt` → `node scripts/build-common-foods.mjs` (validates calories vs. macros, skips duplicates, fails below 1,000). Values are typical references, not lab data.
 - **Search:** `localFoodSearch` (up to 8 local results, Arabic/English normalization from `searchText.js`) → `/api/food-search` for packaged/barcode foods. Choosing a result only fills the form; every value stays editable.
 - **Meal plans:** foods come from the built-in list or are typed; grams drive calories/macros; up to 5 alternatives per food; day totals compared to `nutrition_targets`; saved as template or given to a client; client logs a whole meal or one food into `client_food_logs`.
+- **Recipes:** a coach builds a recipe from the same foods (grams per ingredient, servings 1–50, preparation/cooking minutes, method as one step per line). `recipe_json` returns totals and per-serving numbers computed in SQL; the editor shows the same numbers live. "Add recipe" in the plan builder inserts a portion (servings × per-serving numbers, grams scale later) as one plan food with `recipe_id`; the client opens "How to prepare" through `get_recipe`.
 - **Coach review:** read-only coach policy on client food logs; goals via `set_client_nutrition_targets`; 7/14/30-day views.
 
 ### 3.7 Chat, voice, video
@@ -347,6 +356,8 @@ Notation: **UI** = pages/components; **Svc** = `src/services/*`; **RPC** = Postg
 - Table `chat_messages (id, sender_id, receiver_id, message_text, created_at, is_read, client_ref, message_type, audio_path, audio_duration_seconds, audio_mime)`. RLS lets only sender and receiver read; **no direct insert/update/delete**.
 - RPCs: `send_chat_message` (≤ 2000 chars, 40 messages/min/sender, idempotent `client_ref`, requires linked active client and active coach plan), `send_chat_voice_message`, `get_chat_messages` (paging), `mark_chat_read`, `get_chat_conversations`, `get_chat_unread_count`.
 - Realtime: `chat_messages` is in the `supabase_realtime` publication; UI shows Live/Reconnecting, polls every 10 s while disconnected.
+- **Photos:** JPG / PNG / WebP up to 5 MB, both directions. Upload to the private bucket `apexfit-chat-images` at `<sender id>/<uuid>.<jpg｜png｜webp>`, then `send_chat_image_message` (checks the pair, the path pattern, that the file exists, a caption of ≤ 2000 characters, 40 messages/min, idempotent `client_ref`). A photo is a `chat_messages` row with `message_type = 'image'`, `image_path`, `image_mime`. Shown through 5-minute signed URLs renewed every 4 minutes (`ChatImage`), enlarged in `ImageLightbox` (Escape / backdrop closes); photos can also be pasted into the box. Push type `image`.
+- **Message templates (coach):** table `coach_message_templates` (title ≤ 60, body ≤ 2000, category `welcome｜encouragement｜checkin｜diet｜custom`, ≤ 50 per coach, unique name per coach) written through `save_message_template` / `delete_message_template`. The ⚡ button in the chat box lists them; choosing one puts the text in the box with `{client_name}` replaced by the client's name (text before `@` if only an e-mail is known). The Templates tab edits them and adds a starter set (welcome, encouragement, check-in reminder, diet change) in the current language.
 - **Voice:** `MediaRecorder` (≤ 120 s, preview before send; `audio/webm` or `audio/mp4`), upload to private bucket `apexfit-chat-audio` at `<sender id>/<uuid>.<ext>` (≤ 10 MB), playback through a 5-minute signed URL requested on play. After each text/voice message the app calls `/api/push` (`type: chat`).
 - Broadcast notes/videos (`send_coach_message`, table `coach_messages`, bucket `apexfit-coach-videos` ≤ 50 MB MP4/WebM/MOV) also appear in the client's conversation.
 - Mobile app: same RPCs + Realtime + voice (AAC/`audio/mp4`).
@@ -386,13 +397,21 @@ Notation: **UI** = pages/components; **Svc** = `src/services/*`; **RPC** = Postg
 | **Coach plan** ($39/month) | Paddle Billing | `/billing` → `POST /api/paddle {action:'checkout'|'portal'}`; Paddle → `POST /api/paddle-webhook` | Price and coach id are set server-side. Webhook verified with HMAC-SHA256 (`Paddle-Signature`, 5-minute tolerance, constant-time). `apply_subscription_event()` (service role only) updates `coach_subscriptions`; `billing_events` makes retries idempotent and ignores out-of-order events. |
 | **Client → coach** (packages, invoices, store orders) | None (direct) | `/invoicing`, `/store`, client `ClientBilling` / `/my-store` | Client taps *I have paid* (`report_invoice_payment` / `report_store_payment`); only the issuing coach can *Confirm payment* (idempotent; package invoices grant session credits, store orders deliver the program). ApexFit holds no money. |
 
+### 3.11 Notification center, reminders and appearance
+
+- **Notification center.** Table `notifications (user_id, type, payload, link, source_key, created_at, read_at, pushed_at)`, RLS select-own, **no** direct writes. Rows are created only by `create_notification` (service role / triggers) from triggers on `chat_messages` and `coach_messages` (`message`), `weekly_checkins` (`checkin_submitted` → coach, `checkin_reviewed` → client), `invoices` (`invoice_new`, `invoice_reported`, `invoice_paid`), `progression_suggestions` (`progression` → coach) and by reminders (`reminder`). A trigger failure only logs a warning, so it never blocks the action. Unread rows with the same `source_key` collapse into one with a `count`; the newest 200 per person are kept. The database stores the kind and the details; the words come from `notifTitle_<type>` / `notifBody_<type>` in the reader's language (`notificationUtils.describeNotification`). `link` must be an in-app path.
+- **RPCs:** `get_my_notifications(limit, before)` → `{unread_count, items}` (also fires the caller's due reminders), `get_my_unread_notification_count`, `mark_notification_read`, `mark_all_notifications_read`; `mark_chat_read` also clears the chat entry. Table is in the `supabase_realtime` publication.
+- **Bell (`NotificationBell`).** Top bar for coaches and clients: unread badge (`99+`), dropdown (logical CSS properties, so it opens towards the page's inner side in LTR and RTL; a fixed full-width sheet on phones), "Mark all as read", "Show older", Escape / outside click closes. Pressing an item marks it read and navigates to `link`. `useNotifications` refreshes on Realtime events, every 45 s, when the tab becomes visible and when chat or reminders change.
+- **Reminders.** `custom_reminders (owner_id, target_id, kind, title, message, time_of_day, days_of_week[ISO 1–7], timezone, is_active, last_fired_on)`. `fire_due_reminders(user, mark_pushed)` turns due reminders into notifications once per local day (reminders more than 12 h late are skipped for the day). It runs (1) for the signed-in person inside `get_my_notifications` / `get_my_unread_notification_count`, so reminders appear while the app is open, and (2) for everyone from `run_reminder_engine()` (service role only), called by `/api/workflows` right after the workflow engine; optional `pg_cron` runs `fire_due_reminders` every 15 min. `run_reminder_engine` returns each not-yet-pushed reminder notification once, and `deliverReminderPushes` sends it as Web Push (custom text, opens `link`). **Push timing follows how often `/api/workflows` is called**: daily on Vercel Hobby (see 7.3).
+- **Appearance.** `tokens.css` defines the colour tokens for dark (default, unchanged), light and the always-dark video rooms. `--ink` (`r, g, b`) drives translucent washes (`rgba(var(--ink), .05)`), `--tx-<hex>` are the text colours that used to be hard-coded for the dark background (light maps each to a readable slate or accent), and `--bg-chrome`, `--surface-*`, `--card-*` are the surfaces. A test fails if a light text colour is hard-coded again, if a variable is undefined, or if a light text token drops below 4.5:1 contrast on the light page and cards.
+
 ---
 
 ## 4. Database, RLS and storage
 
 ### 4.1 Inventory
 
-65 live tables in `public` (all with **RLS enabled**), ~120 policy statements (including `storage.objects` and `realtime.messages`), 200+ `security definer` functions. Authenticated app roles get `select` only (where needed); writes go through RPCs. Several tables additionally grant `all` to `service_role`.
+73 live tables in `public` (all with **RLS enabled**), ~136 policy statements (including `storage.objects` and `realtime.messages`), 220+ `security definer` functions. Authenticated app roles get `select` only (where needed); writes go through RPCs. Several tables additionally grant `all` to `service_role`.
 
 | Domain | Tables |
 | --- | --- |
@@ -406,13 +425,15 @@ Notation: **UI** = pages/components; **Svc** = `src/services/*`; **RPC** = Postg
 | Assessments / contracts / groups | `client_assessments`, `contracts`, `contract_signatures`, `coaching_groups`, `coaching_group_members`, `group_announcements` |
 | Store / team / video | `store_products`, `store_orders`, `coach_team_members`, `client_trainer_assignments`, `video_sessions` |
 | Health / nutrition | `wearable_connections`, `wearable_daily_metrics`, `nutrition_daily_logs`, `nutrition_targets` |
-| Chat | `chat_messages` |
+| Chat | `chat_messages` (text, voice, image), `coach_message_templates` |
 | AI | `platform_ai_settings`, `jack_conversations`, `jack_messages` |
 | Checklist | `checklist_templates`, `checklist_entries` |
 | Accountability | `client_tasks`, `progress_reports` |
 | Email | `email_campaigns`, `email_campaign_recipients` |
 | Check-ins | `weekly_checkins` |
-| Meal plans | `meal_plans`, `meal_plan_items` |
+| Meal plans | `meal_plans`, `meal_plan_items` (`recipe_id`) |
+| Recipes | `recipes`, `recipe_ingredients` |
+| Notifications / reminders | `notifications`, `custom_reminders` |
 
 Tables/functions from removed integrations (Google Calendar, Fitbit/Garmin/Oura, platform integration keys, Stripe-era connected accounts) are dropped by migrations `…001900`, `…002500`; nothing in code references them.
 
@@ -467,9 +488,10 @@ erDiagram
 | `apexfit-progress-photos` | no | 10 MB; JPEG/PNG/WebP | `<client id>/…` | The client only (policy also requires `role = 'client'`) | Signed URL |
 | `apexfit-checkin-photos` | no | 5 MB; JPEG/PNG/WebP | `<client id>/…` | The client, and the coach side where `task_coach_for(client)` is not null (the client's own active coach, or an assistant trainer who has `manage_programs` and is assigned to that client) | Signed URL, **5 minutes**, via `useSignedPhotos` |
 | `apexfit-chat-audio` | no | 10 MB; `audio/webm`, `audio/mp4`, `audio/ogg` | `<sender id>/<uuid>.<ext>` | The two chat participants (policy joins `chat_messages.audio_path`); only the sender uploads/deletes | Signed URL, 5 minutes, on play |
+| `apexfit-chat-images` | no | 5 MB; `image/jpeg`, `image/png`, `image/webp` | `<sender id>/<uuid>.<jpg｜png｜webp>` | The two chat participants (policy joins `chat_messages.image_path`); only the sender uploads/deletes | Signed URL, 5 minutes, renewed every 4 minutes while visible |
 | `apexfit-coach-videos` | no | 50 MB; MP4/WebM/QuickTime | `<coach id>/…` | The coach; recipients through a policy joining `coach_messages.video_path` | Short-lived signed URL |
 
-RPCs that attach files (`send_chat_voice_message`, `submit_weekly_checkin`) verify that the path is the caller's own and that the object exists before saving.
+RPCs that attach files (`send_chat_voice_message`, `send_chat_image_message`, `submit_weekly_checkin`) verify that the path is the caller's own and that the object exists before saving.
 
 ### 4.6 Realtime policies
 
@@ -505,11 +527,11 @@ Common behavior (`api/_lib/http.js`): wrong method → 405 + `Allow`; `ConfigErr
 | `/api/jack-assistant` | POST | JWT + **active coach** (`requireRole('coach')`, 402 if plan lapsed) | `{action: 'generate_plan'｜'analyze_client'｜'progress_report', client_id?, days?, language?, …plan inputs}` | Result JSON with `source: 'ai'｜'rules'` | 10/min/user; `maxDuration` 60 s; AI failure → rules fallback (502 only for provider errors in the AI path) |
 | `/api/paddle` | POST | JWT + coach (not trainer) | `{action: 'checkout'｜'portal'}` | `checkout` → `{transactionId, clientToken, environment, email}`; `portal` → Paddle portal links | 409 if already active; 404 if nothing to manage; needs `PADDLE_*` |
 | `/api/paddle-webhook` | POST | **Paddle-Signature** HMAC-SHA256 over `timestamp:rawBody` with `PADDLE_WEBHOOK_SECRET`, ≤ 5 min old; body parser disabled | Raw Paddle event (`subscription.*`, `transaction.completed`) | JSON status; 400 on bad/missing signature; 500 on DB failure so Paddle retries | Uses service role → `apply_subscription_event` |
-| `/api/push` | GET, POST | GET: none (returns the **public** VAPID key). POST: JWT | `{action:'notify', type, id}`; `type` ∈ `message｜session｜invoice｜video｜checkin` (coach or trainer, recipients resolved through RLS) or `chat` (sender of that message only; delivers `chat` or `voice`) | `{recipients, sent}` | Same item can notify once per 60 s (in-memory, 429 after); expired endpoints (404/410) are deleted; texts localized per recipient (5 languages); needs `VAPID_*` |
+| `/api/push` | GET, POST | GET: none (returns the **public** VAPID key). POST: JWT | `{action:'notify', type, id}`; `type` ∈ `message｜session｜invoice｜video｜checkin` (coach or trainer, recipients resolved through RLS) or `chat` (sender of that message only; delivers `chat`, `voice` or `image`) | `{recipients, sent}` | Same item can notify once per 60 s (in-memory, 429 after); expired endpoints (404/410) are deleted; texts localized per recipient (5 languages); needs `VAPID_*` |
 | `/api/send-campaign` | POST | JWT + active coach | `{action:'status'}` → `{configured}`; `{action:'send', campaignId}` | Batch result (sent/failed counts, remaining) | 30/min/user; `maxDuration` 30 s; claims 10 recipients per call via `claim_email_campaign_batch`, sends 2 at a time through Resend, 8 s timeout, 1 retry; records each result; reply-to = coach login email |
 | `/api/unsubscribe` | GET, POST | Signed token `u` (client id) + `t` (HMAC with `EMAIL_UNSUBSCRIBE_SECRET`, falls back to `TOKEN_ENCRYPTION_KEY`), `l` (language) | Query/form | HTML page (5 languages, RTL for Arabic); `GET` shows a confirm button, `POST` sets `profiles.email_marketing_opt_out` (also used for List-Unsubscribe one-click) | Service role; 400 on invalid token; imports `src/services/campaignTemplate.js` |
 | `/api/video-sessions` | POST | JWT + active coach | `{action:'config'}` → `{zoom}`; `{action:'schedule', …session fields}` | Saved session (Zoom meeting created when configured and link empty) | Zoom meeting deleted if saving fails; no explicit rate limit |
-| `/api/workflows` | GET, POST | `Authorization: Bearer <CRON_SECRET>` (constant-time) | none | Result of `run_workflow_engine()` | Called daily at 06:00 UTC by Vercel Cron (`vercel.json`); optional hourly `pg_cron` job is scheduled by the migration when the extension exists |
+| `/api/workflows` | GET, POST | `Authorization: Bearer <CRON_SECRET>` (constant-time) | none | Result of `run_workflow_engine()` plus `reminders: {due, sent}` (custom reminders turned into notifications by `run_reminder_engine()` and sent as Web Push; a reminder problem is reported there and never fails the workflow run) | Called daily at 06:00 UTC by Vercel Cron (`vercel.json`); optional hourly `pg_cron` job is scheduled by the migration when the extension exists. Call it more often (Pro plan cron or an external scheduler with the same `Authorization` header) for timely reminder pushes |
 
 Other server details:
 - **AI provider resolution** (`resolveJackModel`): saved owner setting in `platform_ai_settings` (decrypted) → else environment (`JACK_PROVIDER` or first complete of bedrock → azure_foundry → openai → gemini). `jack-assistant` additionally falls back to `ANTHROPIC_API_KEY`, then to rules.
@@ -566,7 +588,7 @@ Copy `.env.example` to `.env.local` for local work. Names only — never commit 
 | `npm run dev` | Vite dev server (+ dev `/api/food-search`). Use `vercel dev` to exercise other `/api/*` |
 | `npm run build` | Production build to `dist/` |
 | `npm run preview` | Serves the build |
-| `npm test` | `node --test` — 61 files / 846 tests (PGlite, no network, no secrets needed) |
+| `npm test` | `node --test` — 67 files / 925 tests (PGlite, no network, no secrets needed) |
 | `npm run prepare:exercise-catalog` | Regenerate `data/free-exercise-db-apexfit.json` from the pinned upstream commit |
 | `npm run import:exercises -- .\data\free-exercise-db-apexfit.json` | Upsert catalog (+ translations, optional `exercise-media.json`) into Supabase (service role) |
 | `npm run translate:exercises -- <ar｜de｜fr｜es｜all>` | AI-translate steps for newly added exercises |
@@ -593,7 +615,8 @@ Copy `.env.example` to `.env.local` for local work. Names only — never commit 
 - Client: workouts, 1RM, food logger with the **built-in 1,204 foods**, meal plans, custom habits, progress and photos, weekly check-ins, checklist, Apple Health/MyFitnessPal imports, PAR-Q, contracts, store, sessions.
 - **Two-way chat with text and voice messages** (live updates, read receipts, unread badges), broadcast notes/videos, native WebRTC live rooms.
 - Jack works with rule-based output for the coach work screens even with **no AI key**; the chat assistant itself needs an AI provider.
-- Test suite green: 846/846 (run on 2026-11-27).
+- **In-app notification center** (bell, unread count, mark all read), **Dark / Light / System** appearance, **photos in the chat** with a lightbox, **coach message templates**, **recipes** inserted into meal plans, and **custom reminders**.
+- Test suite green: 925/925 (run on 2026-11-27).
 
 ### 7.2 Needs external or optional setup
 
@@ -606,7 +629,7 @@ Copy `.env.example` to `.env.local` for local work. Names only — never commit 
 | USDA food results | Optional | `USDA_API_KEY` (built-in foods + Open Food Facts work without it) |
 | Paddle checkout | Needs Paddle account, price id, webhook | Test in the sandbox first; flow was tested against mocks, not a live Paddle account |
 | Email campaigns | Needs Resend + verified domain | `RESEND_API_KEY`, `EMAIL_FROM`, `APP_URL`, signing secret |
-| Push notifications (web) | Needs VAPID keys | iPhone requires "Add to Home Screen" first |
+| Push notifications (web) | Needs VAPID keys | iPhone requires "Add to Home Screen" first. Reminders are pushed by the `/api/workflows` cron job: set `CRON_SECRET` and, for timely pushes, call it more often than once a day |
 | Zoom auto-links | Optional | `ZOOM_*`; otherwise paste a link |
 | Workflow automation schedule | Daily Vercel cron needs `CRON_SECRET`; or enable `pg_cron` before running the migration (hourly) | |
 | TURN relay | Optional | Needed for some mobile/corporate networks (`VITE_TURN_*`) |
@@ -614,8 +637,10 @@ Copy `.env.example` to `.env.local` for local work. Names only — never commit 
 
 ### 7.3 Known limitations
 
-- **Mobile app:** no push to the phone (it triggers web push for the other person only), no progress photos or food search, no program builder/invoicing/campaigns (those stay web-only); Arabic RTL layout applies after an app restart.
-- **Chat:** no typing indicators, other attachments, or editing/deleting sent messages.
+- **Mobile app:** no push to the phone (it triggers web push for the other person only), no progress photos or food search, no program builder/invoicing/campaigns (those stay web-only); chat photos sent from the web appear as "📷" with the caption only; no notification bell, recipes or reminders screens; Arabic RTL layout applies after an app restart.
+- **Chat:** no typing indicators, attachments other than photos and voice, or editing/deleting sent messages. Photos are not resized in the browser (5 MB limit).
+- **Reminders:** in-app reminders appear when the app is open (polled every 45 s) or at the next open; Web Push for them is only as timely as the `/api/workflows` schedule (daily on Vercel Hobby). Browsers offer no scheduled push without a server.
+- **Appearance:** applies to the web app only; the Expo mobile app keeps its own theme. `system` follows the device while the app is open.
 - **Live room:** STUN-only by default (some networks need TURN); full mesh degrades beyond 3–4 people (cap 6); screen share unavailable on most phones.
 - **Community:** no automated moderation, image upload or report flow.
 - **Store:** refund handling not built; direct payments are manual-confirm by design.
@@ -673,6 +698,10 @@ Copy `.env.example` to `.env.local` for local work. Names only — never commit 
 | 4000 | `calorie_calculator` | `client_body_profiles`, `get_client_calculator_data`, `save_client_calculator_profile` |
 | 4100 | `ramadan_meals` | `pre_iftar` / `iftar` / `suhoor` in `client_food_logs` and `meal_plan_items`; `save_meal_plan` / `get_meal_plan` updated |
 | 4200 | `client_tags` | `client_tags`, `client_tag_assignments`, `save_client_tag`, `delete_client_tag`, `set_client_tags` |
+| 4300 | `notifications` | `notifications` (RLS select-own, Realtime), `create_notification`, triggers on chat / broadcast / check-ins / invoices / progression suggestions, `get_my_notifications`, `get_my_unread_notification_count`, `mark_notification_read`, `mark_all_notifications_read`, `mark_chat_read` (also clears the bell) |
+| 4400 | `chat_images_templates` | `chat_messages.image_path/image_mime` + `message_type = 'image'`, bucket `apexfit-chat-images`, `send_chat_image_message`, `get_chat_messages` with image fields, `coach_message_templates`, `save_message_template`, `delete_message_template` |
+| 4500 | `recipes` | `recipes`, `recipe_ingredients`, `save_recipe`, `delete_recipe`, `list_my_recipes`, `get_recipe`, `meal_plan_items.recipe_id`, `save_meal_plan` / `assign_meal_plan` / `get_meal_plan` updated |
+| 4600 | `custom_reminders` | `custom_reminders`, `save_reminder`, `delete_reminder`, `fire_due_reminders`, `run_reminder_engine`, `get_my_notifications` / `get_my_unread_notification_count` fire the caller's due reminders, optional `pg_cron` job |
 
 (All filenames are prefixed `2026111500`.)
 
@@ -680,4 +709,5 @@ Copy `.env.example` to `.env.local` for local work. Names only — never commit 
 - Add a new migration file with the next number, make it idempotent (`create … if not exists`, `drop policy if exists`, `create or replace function`), keep `security definer` functions on `set search_path = public, pg_temp`, `revoke`/`grant` explicitly, enable RLS on every new table, then append it to `supabase/manual-setup.sql` (same `-- ===== name =====` marker format) — tests load that file.
 - New page: add it to `PAGES` in `src/routes.js` (path, `titleKey`, `access`) and to the role's navigation; register the route in `src/App.jsx`; add translation keys for all five locales (a test fails on missing keys).
 - New server capability: prefer an `action` on an existing function (function-count limit), authenticate with the user's JWT, rate-limit, and add tests.
+- **Styling:** never hard-code a colour for text or a wash in `app.css`: use `var(--text)`, `var(--muted)`, `var(--subtle)`, `rgba(var(--ink), .05)`, the surface tokens, or a `--tx-*` token, and add the light value in `tokens.css`; check the result in both Dark and Light. Use logical properties (`inset-inline-end`, `margin-inline-start`) so the screen works in RTL.
 - Never add secrets to source, `.env.example` values, docs, or `VITE_`/`EXPO_PUBLIC_` variables.

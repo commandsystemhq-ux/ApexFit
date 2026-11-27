@@ -74,5 +74,7 @@ export function canRecordVoice(env = globalThis) {
 }
 
 export function describeLastMessage(item) {
-  return item.last_type === 'voice' ? { voice: true, text: '' } : { voice: false, text: item.last_text || '' };
+  if (item.last_type === 'voice') return { voice: true, image: false, text: '' };
+  if (item.last_type === 'image') return { voice: false, image: true, text: item.last_text || '' };
+  return { voice: false, image: false, text: item.last_text || '' };
 }

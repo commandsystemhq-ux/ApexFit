@@ -18,7 +18,9 @@ export default function ChatConversationList({ conversations, selectedId, myId, 
         {visible.map((item) => {
           const unread = Number(item.unread_count) || 0;
           const last = describeLastMessage(item);
-          const lastBody = last.voice ? `🎤 ${t('voiceMessage')}` : last.text;
+          let lastBody = last.text;
+          if (last.voice) lastBody = `🎤 ${t('voiceMessage')}`;
+          else if (last.image) lastBody = `📷 ${last.text || t('chatImageMessage')}`;
           const preview = lastBody
             ? `${item.last_sender_id === myId ? `${t('chatYou')}: ` : ''}${lastBody}`
             : t('chatNoMessagesYet');

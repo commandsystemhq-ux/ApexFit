@@ -163,8 +163,8 @@ test('microphone problems map to clear messages and unsupported browsers are det
   assert.equal(microphoneErrorKey(new Error('x')), 'voiceErrUnsupported');
   assert.equal(canRecordVoice({ navigator: {} }), false);
   assert.equal(canRecordVoice({ navigator: { mediaDevices: { getUserMedia() {} } }, MediaRecorder: class {} }), true);
-  assert.deepEqual(describeLastMessage({ last_type: 'voice', last_text: '' }), { voice: true, text: '' });
-  assert.deepEqual(describeLastMessage({ last_type: 'text', last_text: 'hi' }), { voice: false, text: 'hi' });
+  assert.deepEqual(describeLastMessage({ last_type: 'voice', last_text: '' }), { voice: true, image: false, text: '' });
+  assert.deepEqual(describeLastMessage({ last_type: 'text', last_text: 'hi' }), { voice: false, image: false, text: 'hi' });
 });
 
 test('every language has the voice texts and the chat push messages', () => {

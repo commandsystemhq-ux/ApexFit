@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import BrandMark from '../components/BrandMark.jsx';
+import ThemeToggle from '../components/ThemeToggle.jsx';
 import LanguageToggle from '../components/LanguageToggle.jsx';
 import PublicFooter from '../components/PublicFooter.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
@@ -15,6 +16,7 @@ export default function LandingPage() {
           <a href="#features">{t('landingPlatform')}</a><a href="#pricing">{t('landingPricing')}</a>
         </nav>
         <div className="landing-actions">
+          <ThemeToggle compact />
           <LanguageToggle />
           <Link className="button button-secondary button-small" to="/login">{t('loginLink')}</Link>
           <Link className="button button-primary button-small" to="/signup">{t('signupLink')}</Link>

@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App.jsx';
 import { AuthProvider } from './contexts/AuthContext.jsx';
 import { LocaleProvider } from './contexts/LocaleContext.jsx';
+import { ThemeProvider } from './contexts/ThemeContext.jsx';
 import { ToastProvider } from './contexts/ToastContext.jsx';
 import './styles/tokens.css';
 import './styles/app.css';
@@ -11,13 +12,15 @@ import './styles/app.css';
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
-      <LocaleProvider>
-        <ToastProvider>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
-        </ToastProvider>
-      </LocaleProvider>
+      <ThemeProvider>
+        <LocaleProvider>
+          <ToastProvider>
+            <AuthProvider>
+              <App />
+            </AuthProvider>
+          </ToastProvider>
+        </LocaleProvider>
+      </ThemeProvider>
     </BrowserRouter>
   </React.StrictMode>,
 );

@@ -91,6 +91,7 @@ export function hydratePlan(plan) {
       key: newKey(),
       meal_type: item.meal_type,
       notes: item.notes || '',
+      recipe_id: item.recipe_id || null,
       alternatives: (item.alternatives || []).map((alt) => ({ ...hydrateFood(alt), key: newKey() })),
     })),
   };
@@ -133,6 +134,7 @@ export function toItemsPayload(items) {
     ...pickFood(item),
     meal_type: item.meal_type,
     notes: String(item.notes || '').trim(),
+    recipe_id: item.recipe_id || null,
     alternatives: (item.alternatives || []).map(pickFood),
   }));
 }

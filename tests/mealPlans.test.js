@@ -249,7 +249,7 @@ test('a plan is checked before it is saved and sent in the shape the database ex
   const good = validatePlan({ title: ' Cut ', notes: '', is_template: true, client_id: null, items });
   assert.equal(good.valid, true);
   assert.equal(good.payload.title, 'Cut');
-  assert.deepEqual(Object.keys(good.payload.items[0]).sort(), ['alternatives', 'calories', 'carbs_g', 'fat_g', 'food_name', 'food_ref', 'grams', 'meal_type', 'notes', 'protein_g']);
+  assert.deepEqual(Object.keys(good.payload.items[0]).sort(), ['alternatives', 'calories', 'carbs_g', 'fat_g', 'food_name', 'food_ref', 'grams', 'meal_type', 'notes', 'protein_g', 'recipe_id']);
   assert.deepEqual(toItemsPayload(items)[0].alternatives[0], { food_name: 'Whole wheat bread', food_ref: null, grams: 90, calories: 220, protein_g: 9, carbs_g: 38, fat_g: 3 });
   assert.equal(validatePlan({ ...emptyPlan(), title: '', items }).errors.title, 'mpErr_title');
   assert.equal(validatePlan({ ...emptyPlan(), title: 'x', items: [] }).errors.items, 'mpErr_noFoods');

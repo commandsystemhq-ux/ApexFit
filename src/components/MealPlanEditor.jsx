@@ -3,6 +3,7 @@ import Button from './Button.jsx';
 import FoodPicker from './FoodPicker.jsx';
 import FoodTargetProgress from './FoodTargetProgress.jsx';
 import RamadanToggle from './RamadanToggle.jsx';
+import RecipePicker from './RecipePicker.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
 import { useRamadanMode } from '../hooks/useRamadanMode.js';
 import { mealTypesFor } from '../services/clientPriority2Utils.js';
@@ -136,6 +137,7 @@ export default function MealPlanEditor({ initial, clients, onSaved, onCancel }) 
               <article className="meal-plan-food" key={item.key}>
                 <div className="meal-plan-food-main">
                   <strong dir="auto">{item.food_name}</strong>
+                  {item.recipe_id && <span className="soft-badge badge-cyan">{t('rcBadge')}</span>}
                   <label className="meal-plan-grams"><span className="visually-hidden">{t('mpGrams')}</span>
                     <input className="field" type="number" inputMode="decimal" min="1" max="5000" step="1" value={item.grams} onChange={(event) => updateItem(item.key, withGrams(item, event.target.value))} aria-label={`${item.food_name} ${t('mpGrams')}`} /> <span>{t('mpGramsShort')}</span>
                   </label>
@@ -162,8 +164,15 @@ export default function MealPlanEditor({ initial, clients, onSaved, onCancel }) 
               </article>
             ))}
             {picker && picker.meal === meal && !picker.itemKey
-              ? <FoodPicker onPick={(food) => addFood(meal, food)} onClose={() => setPicker(null)} />
-              : <Button variant="secondary" size="small" type="button" onClick={() => setPicker({ meal, itemKey: null })} disabled={plan.items.length >= MAX_PLAN_FOODS}>+ {t('mpAddFood')}</Button>}
+              ? (picker.recipe
+                ? <RecipePicker onPick={(food) => addFood(meal, food)} onClose={() => setPicker(null)} />
+                : <FoodPicker onPick={(food) => addFood(meal, food)} onClose={() => setPicker(null)} />)
+              : (
+                <div className="meal-plan-add-row">
+                  <Button variant="secondary" size="small" type="button" onClick={() => setPicker({ meal, itemKey: null })} disabled={plan.items.length >= MAX_PLAN_FOODS}>+ {t('mpAddFood')}</Button>
+                  <Button variant="secondary" size="small" type="button" onClick={() => setPicker({ meal, itemKey: null, recipe: true })} disabled={plan.items.length >= MAX_PLAN_FOODS}>+ {t('rcAddRecipe')}</Button>
+                </div>
+              )}
           </section>
         );
       })}

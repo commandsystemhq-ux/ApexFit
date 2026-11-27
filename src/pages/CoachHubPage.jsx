@@ -18,8 +18,10 @@ const SECTIONS = [
 export default function CoachHubPage() {
   const { t } = useLocale();
   const { user, profile } = useAuth();
-  const hasCheckoutResult = new URLSearchParams(window.location.search).has('checkout');
-  const [active, setActive] = useState(hasCheckoutResult ? 'billing' : 'inbox');
+  const query = new URLSearchParams(window.location.search);
+  const requestedTab = query.get('tab');
+  const openBilling = query.has('checkout') || requestedTab === 'billing';
+  const [active, setActive] = useState(openBilling ? 'billing' : SECTIONS.some((item) => item.id === requestedTab) ? requestedTab : 'inbox');
   const [linked, setLinked] = useState(null);
   const isClient = profile?.role === 'client';
 

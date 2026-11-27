@@ -4,6 +4,19 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#07090d" />
+    <script>
+      /* Sets the saved appearance before the first paint (same rules as src/services/themeUtils.js). */
+      (function () {
+        try {
+          var mode = window.localStorage.getItem('apexfit.theme');
+          if (mode !== 'light' && mode !== 'system') mode = 'dark';
+          var light = mode === 'light' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: light)').matches);
+          var root = document.documentElement;
+          root.setAttribute('data-theme', light ? 'light' : 'dark');
+          root.setAttribute('data-theme-mode', mode);
+        } catch (error) { /* the default dark appearance stays */ }
+      })();
+    </script>
     <meta name="description" content="ApexFit — a focused workspace for fitness coaches and their clients." />
     <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />

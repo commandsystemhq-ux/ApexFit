@@ -6,6 +6,7 @@ export const PAGES = {
   programTemplates: { path: '/templates', titleKey: 'programTemplates', icon: '❖', access: 'coach' },
   exerciseLibrary: { path: '/exercises', titleKey: 'exerciseLibrary', icon: '⌕', access: 'coach' },
   mealPlans: { path: '/meal-plans', titleKey: 'navMealPlans', icon: '\u2615', access: 'coach' },
+  recipes: { path: '/recipes', titleKey: 'navRecipes', icon: '\uD83C\uDF73', access: 'coach' },
   workflows: { path: '/workflows', titleKey: 'workflows', icon: '↻', access: 'coach' },
   messages: { path: '/messages', titleKey: 'messages', icon: '◌', access: 'coach' },
   campaigns: { path: '/campaigns', titleKey: 'navCampaigns', icon: '\u2709', access: 'coach' },
@@ -39,6 +40,7 @@ export const PAGES = {
   coachHub: { path: '/coach-hub', titleKey: 'coachHub', icon: '✉', access: 'client' },
   community: { path: '/community', titleKey: 'community', icon: '★', access: 'any' },
   leaderboard: { path: '/leaderboard', titleKey: 'leaderboardPage', icon: '♛', access: 'any' },
+  reminders: { path: '/reminders', titleKey: 'navReminders', icon: '\u23F0', access: 'any' },
   settings: { path: '/settings', titleKey: 'settings', icon: '⚙', access: 'any' },
 };
 
@@ -52,17 +54,17 @@ export const ADMIN_PATHS = { ai: '/admin/ai' };
 
 // Each group's group is the translation key of its heading.
 const COACH_NAVIGATION = [
-  { group: 'navGrpTraining', items: ['dashboard', 'generator', 'workoutBuilder', 'programTemplates', 'mealPlans', 'exerciseLibrary', 'workflows'] },
+  { group: 'navGrpTraining', items: ['dashboard', 'generator', 'workoutBuilder', 'programTemplates', 'mealPlans', 'recipes', 'exerciseLibrary', 'workflows'] },
   { group: 'navGrpClients', items: ['clients', 'checkins', 'messages', 'campaigns', 'tasks', 'groups', 'sessions', 'schedule', 'team', 'community', 'leaderboard'] },
   { group: 'navGrpBusiness', items: ['store', 'invoicing', 'contracts', 'billing'] },
-  { group: 'navGrpAccount', items: ['settings'] },
+  { group: 'navGrpAccount', items: ['reminders', 'settings'] },
 ];
 
 const CLIENT_NAVIGATION = [
   { group: 'navGrpTrainNutrition', items: ['workouts', 'strength', 'food', 'habits'] },
   { group: 'navGrpTracking', items: ['progress', 'weeklyCheckin', 'myTasks', 'checklist', 'integrations', 'intake', 'assessments'] },
   { group: 'navGrpSocial', items: ['coachHub', 'mySessions', 'myGroups', 'myStore', 'myContracts', 'community', 'leaderboard'] },
-  { group: 'navGrpAccount', items: ['settings'] },
+  { group: 'navGrpAccount', items: ['reminders', 'settings'] },
 ];
 
 // Assistant trainers work inside the head coach's team and only see their own workspace.
@@ -72,7 +74,7 @@ const TRAINER_NAVIGATION = [
 ];
 
 // Pages that wear a "New" badge in the sidebar until the person opens them once.
-export const NEW_PAGE_IDS = ['campaigns'];
+export const NEW_PAGE_IDS = ['campaigns', 'recipes', 'reminders'];
 // 'trainer' is an assistant on a head coach's team (role 'coach' with access_state 'trainer').
 export function roleOf(profile) {
   if (profile?.role === 'client') return 'client';

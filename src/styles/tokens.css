@@ -1,10 +1,21 @@
-:root {
+/*
+  Design tokens. Three appearances share one set of variable names:
+    dark   the original look (default)
+    light  the daytime look
+    system follows prefers-color-scheme; src/services/themeUtils.js resolves it to light or dark and writes it to
+           <html data-theme>, with the saved choice in <html data-theme-mode>.
+  --ink is the colour of foreground details (borders, hover washes) as "r, g, b", used as rgba(var(--ink), .05).
+  --tx-<hex> are text colours that were chosen for the dark background; the light theme maps them to readable ones.
+*/
+:root,
+:root[data-theme='dark'] {
   font-family: 'DM Sans', sans-serif;
   color-scheme: dark;
   --bg: #07090d;
   --bg-raised: #0b0e14;
   --surface: #10151e;
   --surface-raised: #141a25;
+  --ink: 255, 255, 255;
   --line: rgba(255, 255, 255, .075);
   --line-strong: rgba(255, 255, 255, .12);
   --text: #f4f7fb;
@@ -16,12 +27,169 @@
   --amber: #f0b54c;
   --red: #f26a76;
   --purple: #a68aff;
+  --on-green: #04130d;
   --gradient: linear-gradient(115deg, #498dff 3%, #37b9f1 54%, #2fe0bf 100%);
   --gradient-blue: linear-gradient(135deg, #377ef6, #18c6cb);
+  --bg-chrome: #080a0f;
+  --surface-modal: #0c1119;
+  --surface-toast: #121b29;
+  --surface-pop: #0d1626;
+  --surface-phone: #090c12;
+  --card-a: rgba(18, 24, 34, .94);
+  --card-b: rgba(13, 17, 25, .97);
+  --nav-glass: rgba(7, 9, 13, .86);
+  --inset-bg: rgba(0, 0, 0, .18);
   --radius: 14px;
   --radius-lg: 20px;
   --sidebar-width: 248px;
   --font-display: 'Space Grotesk', sans-serif;
+  --tx-51d2bd: #51d2bd;
+  --tx-57a9ff: #57a9ff;
+  --tx-5e6a7c: #5e6a7c;
+  --tx-5e6e82: #5e6e82;
+  --tx-5eeaeb: #5eeaeb;
+  --tx-5fd7a6: #5fd7a6;
+  --tx-667286: #667286;
+  --tx-687589: #687589;
+  --tx-68aaff: #68aaff;
+  --tx-69d7dc: #69d7dc;
+  --tx-6cb0ff: #6cb0ff;
+  --tx-6edfe1: #6edfe1;
+  --tx-70afff: #70afff;
+  --tx-72b3ff: #72b3ff;
+  --tx-72b5ff: #72b5ff;
+  --tx-72d6ff: #72d6ff;
+  --tx-74839a: #74839a;
+  --tx-7ab7ff: #7ab7ff;
+  --tx-7be3bc: #7be3bc;
+  --tx-80b8f5: #80b8f5;
+  --tx-81bcff: #81bcff;
+  --tx-8390a3: #8390a3;
+  --tx-87cfd1: #87cfd1;
+  --tx-8cc0ff: #8cc0ff;
+  --tx-8fc0ff: #8fc0ff;
+  --tx-909bae: #909bae;
+  --tx-91bdf0: #91bdf0;
+  --tx-9ba8b9: #9ba8b9;
+  --tx-9da8b9: #9da8b9;
+  --tx-9fb0c6: #9fb0c6;
+  --tx-9fc7f5: #9fc7f5;
+  --tx-a8b2c1: #a8b2c1;
+  --tx-aab5c5: #aab5c5;
+  --tx-b4bfce: #b4bfce;
+  --tx-b6c0cd: #b6c0cd;
+  --tx-b6c1d0: #b6c1d0;
+  --tx-bac5d2: #bac5d2;
+  --tx-bdc8d7: #bdc8d7;
+  --tx-c4cedb: #c4cedb;
+  --tx-c4cfdb: #c4cfdb;
+  --tx-d3dbe6: #d3dbe6;
+  --tx-d6e8ff: #d6e8ff;
+  --tx-d8e0ea: #d8e0ea;
+  --tx-dbe3ee: #dbe3ee;
+  --tx-f0a24b: #f0a24b;
+  --tx-f0b44c: #f0b44c;
+  --tx-f39aa2: #f39aa2;
+  --tx-f3c978: #f3c978;
+  --tx-ff8a94: #ff8a94;
+  --tx-ff9aa2: #ff9aa2;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #eef1f6;
+  --bg-raised: #f7f9fc;
+  --surface: #ffffff;
+  --surface-raised: #f5f7fb;
+  --ink: 15, 23, 42;
+  --line: rgba(15, 23, 42, .1);
+  --line-strong: rgba(15, 23, 42, .18);
+  --text: #0f172a;
+  --muted: #475569;
+  --subtle: #5b6b80;
+  --blue: #1f6fe5;
+  --cyan: #08767a;
+  --green: #087a52;
+  --amber: #a15c00;
+  --red: #c8283a;
+  --purple: #6b4fd8;
+  --on-green: #ffffff;
+  --bg-chrome: #ffffff;
+  --surface-modal: #ffffff;
+  --surface-toast: #ffffff;
+  --surface-pop: #ffffff;
+  --surface-phone: #f8fafc;
+  --card-a: #ffffff;
+  --card-b: #fbfcfe;
+  --nav-glass: rgba(255, 255, 255, .88);
+  --inset-bg: rgba(15, 23, 42, .04);
+  --tx-51d2bd: #0a7076;
+  --tx-57a9ff: #1d5fc7;
+  --tx-5e6a7c: #5b6b82;
+  --tx-5e6e82: #5b6b82;
+  --tx-5eeaeb: #0a7076;
+  --tx-5fd7a6: #0b7a55;
+  --tx-667286: #5b6b82;
+  --tx-687589: #5b6b82;
+  --tx-68aaff: #1d5fc7;
+  --tx-69d7dc: #0a7076;
+  --tx-6cb0ff: #1d5fc7;
+  --tx-6edfe1: #0a7076;
+  --tx-70afff: #1d5fc7;
+  --tx-72b3ff: #1d5fc7;
+  --tx-72b5ff: #1d5fc7;
+  --tx-72d6ff: #0a7076;
+  --tx-74839a: #475569;
+  --tx-7ab7ff: #1d5fc7;
+  --tx-7be3bc: #0b7a55;
+  --tx-80b8f5: #1d5fc7;
+  --tx-81bcff: #1d5fc7;
+  --tx-8390a3: #475569;
+  --tx-87cfd1: #0a7076;
+  --tx-8cc0ff: #1d5fc7;
+  --tx-8fc0ff: #1d5fc7;
+  --tx-909bae: #334155;
+  --tx-91bdf0: #1d5fc7;
+  --tx-9ba8b9: #334155;
+  --tx-9da8b9: #334155;
+  --tx-9fb0c6: #334155;
+  --tx-9fc7f5: #1d5fc7;
+  --tx-a8b2c1: #334155;
+  --tx-aab5c5: #1e293b;
+  --tx-b4bfce: #1e293b;
+  --tx-b6c0cd: #1e293b;
+  --tx-b6c1d0: #1e293b;
+  --tx-bac5d2: #1e293b;
+  --tx-bdc8d7: #1e293b;
+  --tx-c4cedb: #1e293b;
+  --tx-c4cfdb: #1e293b;
+  --tx-d3dbe6: #1e293b;
+  --tx-d6e8ff: #1e293b;
+  --tx-d8e0ea: #1e293b;
+  --tx-dbe3ee: #1e293b;
+  --tx-f0a24b: #8f5b00;
+  --tx-f0b44c: #8f5b00;
+  --tx-f39aa2: #c42b3a;
+  --tx-f3c978: #8f5b00;
+  --tx-ff8a94: #c42b3a;
+  --tx-ff9aa2: #c42b3a;
+}
+
+/* Full-screen video rooms stay dark in every appearance. */
+.live-room,
+.native-room {
+  color-scheme: dark;
+  --ink: 255, 255, 255;
+  --line: rgba(255, 255, 255, .075);
+  --line-strong: rgba(255, 255, 255, .12);
+  --text: #f4f7fb;
+  --muted: #8a96a8;
+  --subtle: #586477;
+  --surface: #10151e;
+  --surface-raised: #141a25;
+  --bg: #07090d;
+  --bg-raised: #0b0e14;
+  --bg-chrome: #080a0f;
 }
 
 * { box-sizing: border-box; }
@@ -32,4 +200,4 @@ button { color: inherit; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
 ::selection { color: white; background: rgba(50, 138, 255, .45); }
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, .14); border-radius: 8px; }
+::-webkit-scrollbar-thumb { background: rgba(var(--ink), .14); border-radius: 8px; }

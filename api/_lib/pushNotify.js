@@ -2,7 +2,7 @@ import { sendNotification } from 'web-push';
 import { adminClient, requireRole } from './auth.js';
 import { env } from './config.js';
 import { HttpError } from './http.js';
-import { buildPushMessage } from './pushText.js';
+import { buildPushMessage, buildReminderPush } from './pushText.js';
 
 const recentlySent = new Map();
 const RESEND_WINDOW_MS = 60_000;
@@ -53,7 +53,8 @@ export async function notifyRecipients({ user, userClient }, type, id) {
 }
 
 // Sends one push message to every device of the given people, in each person's language.
-async function deliverPush(userIds, type, urlFor = () => undefined) {
+// `custom` replaces the built-in text of the type (used by reminders, which carry their own text).
+async function deliverPush(userIds, type, urlFor = () => undefined, custom = null) {
   const admin = adminClient();
   const [{ data: profiles, error: profileError }, { data: subscriptions, error: subscriptionError }] = await Promise.all([
     admin.from('profiles').select('id,locale,role').in('id', userIds),
@@ -73,7 +74,7 @@ async function deliverPush(userIds, type, urlFor = () => undefined) {
 
   await Promise.all((subscriptions || []).map(async (subscription) => {
     const profile = profileById.get(subscription.user_id);
-    const message = buildPushMessage(type, profile?.locale);
+    const message = custom || buildPushMessage(type, profile?.locale);
     const url = urlFor(profile);
     try {
       await sendNotification(
@@ -107,5 +108,22 @@ export async function notifyChatMessage({ user, userClient }, messageId) {
     .maybeSingle();
   if (error) throw error;
   if (!data) throw new HttpError(404, 'Nothing to notify for this item.');
-  return deliverPush([data.receiver_id], data.message_type === 'voice' ? 'voice' : 'chat', (profile) => (profile?.role === 'coach' ? '/messages' : '/coach-hub'));
+  const pushType = data.message_type === 'voice' || data.message_type === 'image' ? data.message_type : 'chat';
+  return deliverPush([data.receiver_id], pushType, (profile) => (profile?.role === 'coach' ? '/messages' : '/coach-hub'));
+}
+
+// Sends the reminders that came due (the result of run_reminder_engine: [{ user_id, title, message, link }]) to the
+// devices of the people they are for. Called by the scheduled job, not by a browser. Never throws: a push problem must
+// not stop the other scheduled work.
+export async function deliverReminderPushes(reminders) {
+  let sent = 0;
+  for (const reminder of reminders || []) {
+    try {
+      const result = await deliverPush([reminder.user_id], 'reminder', () => reminder.link || '/reminders', buildReminderPush(reminder));
+      sent += result.sent;
+    } catch {
+      // This person's devices are skipped; the reminder is still in their notification center.
+    }
+  }
+  return { due: (reminders || []).length, sent };
 }

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import ChatAvatar from './ChatAvatar.jsx';
+import ChatImage from './ChatImage.jsx';
+import MessageTemplatesPicker from './MessageTemplatesPicker.jsx';
 import VoicePlayer from './VoicePlayer.jsx';
 import VoiceRecorderBar from './VoiceRecorderBar.jsx';
 import useVoiceRecorder from '../hooks/useVoiceRecorder.js';
@@ -9,6 +11,9 @@ import {
   messageStatus, upsertMessage, validateChatText,
 } from '../services/chatUtils.js';
 import { announceChatChanged, getChatMessages, markChatRead, sendChatMessage } from '../services/chatService.js';
+import { sendImageMessage } from '../services/chatImageService.js';
+import { CHAT_IMAGE_ACCEPT, baseImageMime, validateChatImage } from '../services/chatImageUtils.js';
+import { insertIntoDraft } from '../services/messageTemplateUtils.js';
 import { getMessageVideoUrl, listInboxMessages, listSentMessages, markMessagesRead } from '../services/messageService.js';
 import { notifyChatReceiver } from '../services/pushService.js';
 import { getVoiceUrl, sendVoiceMessage } from '../services/voiceService.js';
@@ -24,6 +29,7 @@ function Bubble({ item, locale, t, onRetry, onDiscard, videoUrls, loadingVideo, 
     <div className={`chat-row ${item.fromMe ? 'is-mine' : 'is-theirs'}`}>
       <div className={`chat-bubble ${item.type !== 'chat' ? 'is-note' : ''} ${status === 'failed' ? 'is-failed' : ''}`}>
         {item.type !== 'chat' && <span className="chat-note-label">{t(item.type === 'video' ? 'chatBroadcastVideo' : 'chatBroadcastNote')}</span>}
+        {message?.message_type === 'image' && <ChatImage path={message.image_path || ''} localUrl={message.localUrl || ''} />}
         {item.text && <p className="chat-text" dir="auto">{item.text}</p>}
         {message?.message_type === 'voice' && (
           <VoicePlayer
@@ -66,10 +72,13 @@ export default function ChatThread({ partner, myId, events, connection, onBack, 
   const [loadingVideo, setLoadingVideo] = useState('');
   const recorder = useVoiceRecorder();
   const voiceFiles = useRef(new Map()); // client_ref -> { blob, url } for voice messages still being sent
+  const imageFiles = useRef(new Map()); // client_ref -> { file, url } for photos still being sent
+  const [pendingImage, setPendingImage] = useState(null); // { file, url } chosen but not sent yet
   const voiceSupported = useMemo(() => canRecordVoice(), []);
 
   const listRef = useRef(null);
   const inputRef = useRef(null);
+  const fileInputRef = useRef(null);
   const scrollPlan = useRef('bottom'); // 'bottom' | 'keep' | { height } | null
   const activityRef = useRef(onActivity);
   activityRef.current = onActivity;
@@ -115,6 +124,10 @@ export default function ChatThread({ partner, myId, events, connection, onBack, 
     setNotes([]);
     setDraft('');
     setDraftError('');
+    setPendingImage((current) => {
+      if (current) URL.revokeObjectURL(current.url);
+      return null;
+    });
     recorder.reset();
     scrollPlan.current = 'bottom';
     getChatMessages(partnerId)
@@ -215,6 +228,10 @@ export default function ChatThread({ partner, myId, events, connection, onBack, 
         saved = await sendVoiceMessage({
           senderId: myId, receiverId: partnerId, blob: file.blob, seconds: message.audio_duration_seconds, mime: message.audio_mime, clientRef: message.client_ref,
         });
+      } else if (message.message_type === 'image') {
+        const file = imageFiles.current.get(message.client_ref);
+        if (!file) throw new Error(t('chatImgErrUpload'));
+        saved = await sendImageMessage({ senderId: myId, receiverId: partnerId, file: file.file, caption: message.message_text, clientRef: message.client_ref });
       } else {
         saved = await sendChatMessage(partnerId, message.message_text, message.client_ref);
       }
@@ -251,16 +268,85 @@ export default function ChatThread({ partner, myId, events, connection, onBack, 
     deliver(message);
   }
 
-  // Local copies of recordings are released when the conversation closes.
+  // Local copies of recordings and photos are released when the conversation closes.
   useEffect(() => {
-    const files = voiceFiles.current;
+    const files = [voiceFiles.current, imageFiles.current];
     return () => {
-      files.forEach((file) => URL.revokeObjectURL(file.url));
-      files.clear();
+      files.forEach((map) => {
+        map.forEach((file) => URL.revokeObjectURL(file.url));
+        map.clear();
+      });
     };
   }, [partnerId]);
 
+  function chooseImage(file) {
+    if (!file) return;
+    const problem = validateChatImage({ size: file.size, type: file.type });
+    if (problem) {
+      setDraftError(t(problem));
+      return;
+    }
+    setDraftError('');
+    setPendingImage((current) => {
+      if (current) URL.revokeObjectURL(current.url);
+      return { file, url: URL.createObjectURL(file) };
+    });
+    inputRef.current?.focus();
+  }
+
+  function onFileChosen(event) {
+    chooseImage(event.target.files?.[0]);
+    event.target.value = '';
+  }
+
+  function onPaste(event) {
+    const file = [...(event.clipboardData?.files || [])].find((item) => item.type.startsWith('image/'));
+    if (!file) return;
+    event.preventDefault();
+    chooseImage(file);
+  }
+
+  function removePendingImage() {
+    setPendingImage((current) => {
+      if (current) URL.revokeObjectURL(current.url);
+      return null;
+    });
+  }
+
+  function sendImage() {
+    const { file, url } = pendingImage;
+    const problem = validateChatImage({ size: file.size, type: file.type });
+    if (problem) {
+      setDraftError(t(problem));
+      return;
+    }
+    const caption = validateChatText(draft);
+    if (caption.error === 'chatErrTooLong') {
+      setDraftError(t(caption.error));
+      return;
+    }
+    setDraftError('');
+    const clientRef = crypto.randomUUID();
+    imageFiles.current.set(clientRef, { file, url });
+    const message = {
+      ...makePendingMessage({ senderId: myId, receiverId: partnerId, text: caption.text, clientRef }),
+      message_type: 'image',
+      image_mime: baseImageMime(file.type),
+      localUrl: url,
+    };
+    scrollPlan.current = 'bottom';
+    setChat((current) => upsertMessage(current, message));
+    setPendingImage(null);
+    setDraft('');
+    if (inputRef.current) inputRef.current.style.height = '';
+    deliver(message);
+  }
+
   function send() {
+    if (pendingImage) {
+      sendImage();
+      return;
+    }
     const result = validateChatText(draft);
     if (!result.valid) {
       if (result.error === 'chatErrTooLong') setDraftError(t(result.error));
@@ -283,9 +369,11 @@ export default function ChatThread({ partner, myId, events, connection, onBack, 
   }
 
   const discard = (message) => {
-    const file = voiceFiles.current.get(message.client_ref);
-    if (file) URL.revokeObjectURL(file.url);
-    voiceFiles.current.delete(message.client_ref);
+    [voiceFiles.current, imageFiles.current].forEach((map) => {
+      const file = map.get(message.client_ref);
+      if (file) URL.revokeObjectURL(file.url);
+      map.delete(message.client_ref);
+    });
     setChat((current) => current.filter((item) => item.client_ref !== message.client_ref));
   };
 
@@ -350,26 +438,39 @@ export default function ChatThread({ partner, myId, events, connection, onBack, 
 
       {canSend ? (
         <form className="chat-composer" onSubmit={(event) => { event.preventDefault(); if (recorder.state === 'idle') send(); }}>
+          {pendingImage && recorder.state === 'idle' && (
+            <div className="chat-image-preview">
+              <img src={pendingImage.url} alt={t('chatImagePreview')} />
+              <span dir="auto">{pendingImage.file.name}</span>
+              <button className="icon-button" type="button" onClick={removePendingImage} aria-label={t('chatImageRemove')} title={t('chatImageRemove')}>{'\u2715'}</button>
+            </div>
+          )}
           {recorder.state !== 'idle' ? <VoiceRecorderBar recorder={recorder} onSend={sendVoice} /> : (
           <>
+          <input ref={fileInputRef} className="sr-only" type="file" accept={CHAT_IMAGE_ACCEPT} tabIndex={-1} onChange={onFileChosen} aria-hidden="true" />
+          <button className="chat-tool" type="button" onClick={() => fileInputRef.current?.click()} aria-label={t('chatImageAttach')} title={t('chatImageAttach')}>
+            <span aria-hidden="true">📎</span>
+          </button>
+          {!isClient && <MessageTemplatesPicker clientName={partner.name} onPick={(text) => { setDraft((current) => insertIntoDraft(current, text)); setDraftError(''); window.setTimeout(() => { const box = inputRef.current; if (box) { box.focus(); box.style.height = 'auto'; box.style.height = `${Math.min(box.scrollHeight, 140)}px`; } }, 0); }} />}
           <textarea
             ref={inputRef}
             className="chat-input"
             rows={1}
             value={draft}
             maxLength={CHAT_MAX_LENGTH}
-            placeholder={t('chatPlaceholder')}
-            aria-label={t('chatPlaceholder')}
+            placeholder={t(pendingImage ? 'chatImageCaption' : 'chatPlaceholder')}
+            aria-label={t(pendingImage ? 'chatImageCaption' : 'chatPlaceholder')}
             dir="auto"
             onChange={onInput}
             onKeyDown={onKeyDown}
+            onPaste={onPaste}
           />
-          {voiceSupported && !draft.trim() ? (
+          {voiceSupported && !draft.trim() && !pendingImage ? (
             <button className="chat-send chat-mic" type="button" onClick={recorder.start} aria-label={t('voiceRecord')} title={t('voiceRecord')}>
               <span aria-hidden="true">🎤</span>
             </button>
           ) : (
-            <button className="chat-send" type="submit" disabled={!draft.trim()} aria-label={t('chatSend')} title={t('chatSend')}>
+            <button className="chat-send" type="submit" disabled={!draft.trim() && !pendingImage} aria-label={t('chatSend')} title={t('chatSend')}>
               <span aria-hidden="true">➤</span>
             </button>
           )}

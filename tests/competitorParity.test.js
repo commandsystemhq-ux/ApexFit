@@ -10,6 +10,10 @@ const NEW_MIGRATIONS = [
   '20261115004000_calorie_calculator.sql',
   '20261115004100_ramadan_meals.sql',
   '20261115004200_client_tags.sql',
+  '20261115004300_notifications.sql',
+  '20261115004400_chat_images_templates.sql',
+  '20261115004500_recipes.sql',
+  '20261115004600_custom_reminders.sql',
 ];
 
 test('the new migrations are appended to manual-setup.sql in order, byte for byte', () => {

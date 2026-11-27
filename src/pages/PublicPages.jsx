@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import BrandMark from '../components/BrandMark.jsx';
+import ThemeToggle from '../components/ThemeToggle.jsx';
 import LanguageToggle from '../components/LanguageToggle.jsx';
 import PublicFooter from '../components/PublicFooter.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
@@ -13,6 +14,7 @@ function PublicLayout({ content, children }) {
     <div className="auth-page public-page">
       <header className="auth-header">
         <Link className="landing-brand" to={AUTH_PATHS.home} aria-label={`ApexFit ${t('home')}`}><BrandMark /></Link>
+        <ThemeToggle compact />
         <LanguageToggle />
       </header>
       {/* Pages without a translation for the chosen language are shown in English, with the matching language and direction. */}
