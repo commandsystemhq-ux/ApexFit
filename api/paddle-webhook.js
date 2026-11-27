@@ -1,6 +1,6 @@
 import { adminClient } from './_lib/auth.js';
 import { HttpError, handler, readRawBody } from './_lib/http.js';
-import { configuredPriceId, processPaddleWebhook, webhookSecret } from './_lib/paddle.js';
+import { configuredPriceIds, processPaddleWebhook, webhookSecret } from './_lib/paddle.js';
 
 // Paddle signs the exact raw payload, so Vercel's body parser must stay disabled.
 export const config = { api: { bodyParser: false } };
@@ -15,7 +15,7 @@ export default handler(['POST'], async (req, res) => {
     signatureHeader,
     secret: webhookSecret(),
     admin: adminClient(),
-    priceId: configuredPriceId(),
+    priceId: configuredPriceIds(),
   });
   res.status(result.status).json(result.body);
 });

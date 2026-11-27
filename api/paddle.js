@@ -1,10 +1,11 @@
 import { adminClient, authenticate } from './_lib/auth.js';
 import { HttpError, handler, readJson } from './_lib/http.js';
-import { createCheckoutTransaction, createPortalLinks, paddleConfig } from './_lib/paddle.js';
+import { createCheckoutTransaction, createPortalLinks, paddleConfig, priceIdForCountry, pricingFromRequest } from './_lib/paddle.js';
 
-// Coach subscription with Paddle. Both actions are for the signed-in coach only.
-//   checkout  creates the checkout on the server and returns what Paddle.js needs to open it inside the app
-//   portal    returns Paddle's customer-portal links (update the card, invoices, cancel)
+// Coach subscription with Paddle.
+//   pricing   (public, GET or POST) the plan price for the visitor's country, read from the Vercel IP header (a VPN changes it)
+//   checkout  (signed-in coach) creates the checkout on the server, with that country's price, and returns what Paddle.js needs
+//   portal    (signed-in coach) returns Paddle's customer-portal links (update the card, invoices, cancel)
 
 async function coachAccess(userClient) {
   const { data, error } = await userClient.rpc('get_my_access_status');
@@ -14,7 +15,7 @@ async function coachAccess(userClient) {
   return data;
 }
 
-async function checkout({ user, userClient }) {
+async function checkout({ user, userClient }, req) {
   const access = await coachAccess(userClient);
   if (access.access_state === 'active') throw new HttpError(409, 'Your subscription is already active.');
   const config = paddleConfig();
@@ -28,8 +29,14 @@ async function checkout({ user, userClient }) {
   if (error) throw error;
   const customerId = existing?.provider === 'paddle' ? existing.provider_customer_id : null;
 
-  const transactionId = await createCheckoutTransaction({ userId: user.id, customerId, config });
-  return { transactionId, clientToken: config.clientToken, environment: config.environment, email: user.email || null };
+  // The price is chosen here from the request's country, never taken from the browser.
+  const pricing = pricingFromRequest(req);
+  const priceId = priceIdForCountry(pricing.country);
+  const transactionId = await createCheckoutTransaction({ userId: user.id, customerId, config, priceId });
+  return {
+    transactionId, clientToken: config.clientToken, environment: config.environment, email: user.email || null,
+    country: pricing.localized ? pricing.country : null, usd: pricing.usd,
+  };
 }
 
 async function portal({ user, userClient }) {
@@ -45,10 +52,22 @@ async function portal({ user, userClient }) {
   return createPortalLinks({ customerId: data.provider_customer_id, subscriptionId: data.provider_subscription_id, config });
 }
 
-export default handler(['POST'], async (req, res) => {
-  const context = await authenticate(req);
+// Public: only the price and the country it was chosen for.
+function sendPricing(req, res) {
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.status(200).json(pricingFromRequest(req));
+}
+
+export default handler(['GET', 'POST'], async (req, res) => {
+  if (req.method === 'GET') {
+    const action = new URL(req.url || '', 'http://localhost').searchParams.get('action') || 'pricing';
+    if (action !== 'pricing') throw new HttpError(400, 'Unknown action.');
+    return sendPricing(req, res);
+  }
   const body = await readJson(req);
-  const actions = { checkout: () => checkout(context), portal: () => portal(context) };
+  if (body.action === 'pricing') return sendPricing(req, res);
+  const context = await authenticate(req);
+  const actions = { checkout: () => checkout(context, req), portal: () => portal(context) };
   const action = actions[body.action];
   if (!action) throw new HttpError(400, 'Unknown action.');
   res.status(200).json(await action());

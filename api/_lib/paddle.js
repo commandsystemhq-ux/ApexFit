@@ -77,6 +77,8 @@ const validDate = (value) => {
 
 // Turns a Paddle notification into the arguments of apply_subscription_event, or null for events we do not act on.
 export function mapPaddleEvent(event, { priceId = '' } = {}) {
+  // `priceId` is one id or a list: the main price plus the per-country prices (see configuredPriceIds).
+  const knownPrices = [priceId].flat().filter(Boolean);
   if (!event || typeof event !== 'object' || typeof event.event_id !== 'string' || typeof event.event_type !== 'string') return null;
   const data = event.data;
   if (!data || typeof data !== 'object') return null;
@@ -87,7 +89,7 @@ export function mapPaddleEvent(event, { priceId = '' } = {}) {
   const userId = typeof data.custom_data?.user_id === 'string' && UUID.test(data.custom_data.user_id) ? data.custom_data.user_id.toLowerCase() : null;
   const base = { provider: PROVIDER, eventId: event.event_id, eventType: event.event_type, occurredAt, userId };
   const itemPrice = data.items?.[0]?.price?.id || data.items?.[0]?.price_id || null;
-  const plan = itemPrice && priceId && itemPrice !== priceId ? 'other' : DEFAULT_PLAN;
+  const plan = itemPrice && knownPrices.length && !knownPrices.includes(itemPrice) ? 'other' : DEFAULT_PLAN;
 
   if (SUBSCRIPTION_EVENTS.has(event.event_type)) {
     const status = STATUS[data.status];
@@ -198,9 +200,10 @@ export async function paddleRequest(path, { method = 'GET', body, config, fetchI
 }
 
 // Creates the checkout on our server so the price and the coach it belongs to cannot be changed in the browser.
-export async function createCheckoutTransaction({ userId, customerId, config, fetchImpl }) {
+// `priceId` is the price chosen for the visitor's country; without it the main price of the coach plan is used.
+export async function createCheckoutTransaction({ userId, customerId, config, fetchImpl, priceId }) {
   const body = {
-    items: [{ price_id: config.priceId, quantity: 1 }],
+    items: [{ price_id: priceId || config.priceId, quantity: 1 }],
     custom_data: { user_id: userId },
     collection_mode: 'automatic',
     ...(customerId ? { customer_id: customerId } : {}),
@@ -234,4 +237,89 @@ export function webhookSecret() {
 
 export function configuredPriceId() {
   return optionalEnv('PADDLE_PRICE_ID', '').trim();
+}
+
+// ------------------------------------------------------------------ price by country (IP / VPN)
+//
+// Vercel adds the visitor's country to every request (x-vercel-ip-country), so a VPN exit country changes the price too.
+// Each priced country has a USD price that Paddle really charges (Paddle cannot charge in EGP, SAR or AED here) and an
+// approximate local amount that is only shown. Everything can be changed in the server settings:
+//   PRICING_GLOBAL_USD         price for every other country (default 39)
+//   PRICING_<CC>_USD           what Paddle charges in USD for EG, SA or AE (defaults 15, 25, 25)
+//   PRICING_<CC>_LOCAL         the approximate amount shown in the local currency (defaults 750 EGP, 94 SAR, 92 AED)
+//   PADDLE_PRICE_ID_<CC>       a Paddle price made for that country. Without it PADDLE_PRICE_ID is used, so put the
+//                              country's "unit price override" on that price in the Paddle dashboard instead.
+// ?country=EG|SA|AE|US is honoured only outside production (local and preview deployments), to test every price.
+
+export const GLOBAL_USD = 39;
+export const TRIAL_DAYS = 14;
+
+export const PRICED_COUNTRIES = {
+  EG: { currency: 'EGP', usd: 15, local: 750 },
+  SA: { currency: 'SAR', usd: 25, local: 94 },
+  AE: { currency: 'AED', usd: 25, local: 92 },
+};
+
+const countryCode = (value) => {
+  const code = String(Array.isArray(value) ? value[0] : value ?? '').trim().toUpperCase();
+  return /^[A-Z]{2}$/.test(code) ? code : null;
+};
+
+const positiveNumber = (value, fallback) => {
+  const number = Number(String(value ?? '').trim());
+  return Number.isFinite(number) && number > 0 ? number : fallback;
+};
+
+// Where the visitor is. Anything unknown (no header, "XX", Tor's "T1") counts as no country and gets the world price.
+export function resolveCountry(req, environment = process.env) {
+  const allowTestParameter = environment.VERCEL_ENV !== 'production';
+  if (allowTestParameter) {
+    let requested = null;
+    try {
+      requested = new URL(req?.url || '', 'http://localhost').searchParams.get('country');
+    } catch {
+      requested = null;
+    }
+    const code = countryCode(requested ?? req?.query?.country);
+    if (code) return { country: code, source: 'query' };
+  }
+  const code = countryCode(req?.headers?.['x-vercel-ip-country']);
+  if (code && !['XX', 'T1'].includes(code)) return { country: code, source: 'ip' };
+  return { country: null, source: 'fallback' };
+}
+
+// What the page shows for a country. `usd` is what is charged; `local` (when there is one) is only an estimate.
+export function pricingForCountry(country, environment = process.env) {
+  const code = countryCode(country);
+  const globalUsd = positiveNumber(environment.PRICING_GLOBAL_USD, GLOBAL_USD);
+  const base = { trialDays: TRIAL_DAYS, globalUsd };
+  const preset = code ? PRICED_COUNTRIES[code] : null;
+  if (!preset) return { ...base, country: code, region: 'GLOBAL', localized: false, usd: globalUsd, local: null };
+  return {
+    ...base,
+    country: code,
+    region: code,
+    localized: true,
+    usd: positiveNumber(environment[`PRICING_${code}_USD`], preset.usd),
+    local: { currency: preset.currency, amount: positiveNumber(environment[`PRICING_${code}_LOCAL`], preset.local), approximate: true },
+  };
+}
+
+export function pricingFromRequest(req, environment = process.env) {
+  const { country, source } = resolveCountry(req, environment);
+  return { ...pricingForCountry(country, environment), source };
+}
+
+// The Paddle price to check out with. A country price when one is set, otherwise the main one (which can carry the
+// country's override inside Paddle).
+export function priceIdForCountry(country, environment = process.env) {
+  const code = countryCode(country);
+  const specific = code && PRICED_COUNTRIES[code] ? String(environment[`PADDLE_PRICE_ID_${code}`] || '').trim() : '';
+  return specific || String(environment.PADDLE_PRICE_ID || '').trim();
+}
+
+// Every price the coach plan can be bought with, so a subscription bought at a country price is still the coach plan.
+export function configuredPriceIds(environment = process.env) {
+  const ids = [environment.PADDLE_PRICE_ID, ...Object.keys(PRICED_COUNTRIES).map((code) => environment[`PADDLE_PRICE_ID_${code}`])];
+  return [...new Set(ids.map((id) => String(id || '').trim()).filter(Boolean))];
 }

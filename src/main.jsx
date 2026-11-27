@@ -8,6 +8,7 @@ import { ThemeProvider } from './contexts/ThemeContext.jsx';
 import { ToastProvider } from './contexts/ToastContext.jsx';
 import './styles/tokens.css';
 import './styles/app.css';
+import './styles/marketing.css';
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>

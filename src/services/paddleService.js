@@ -1,5 +1,6 @@
 import { requireSupabase } from './supabaseClient.js';
 import { checkoutOptions, interpretPaddleEvent } from './billingUtils.js';
+import { testCountry } from './pricingUtils.js';
 
 const PADDLE_SCRIPT = 'https://cdn.paddle.com/paddle/v2/paddle.js';
 
@@ -18,7 +19,9 @@ async function call(action) {
   const { data } = await requireSupabase().auth.getSession();
   const token = data.session?.access_token;
   if (!token) throw new BillingError('Authentication is required.', 401);
-  const response = await fetch('/api/paddle', {
+  // A preview can try another country with ?country=EG on the page address; the server ignores it in production.
+  const country = testCountry(window.location.search);
+  const response = await fetch(country ? `/api/paddle?country=${country}` : '/api/paddle', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ action }),
@@ -65,7 +68,7 @@ export async function openSubscriptionCheckout({ locale, onEvent }) {
     paddle.Initialize({ token: session.clientToken, eventCallback: (event) => { const kind = interpretPaddleEvent(event); if (kind) listener(kind, event); } });
     initializedWith = key;
   }
-  paddle.Checkout.open(checkoutOptions({ transactionId: session.transactionId, locale, email: session.email }));
+  paddle.Checkout.open(checkoutOptions({ transactionId: session.transactionId, locale, email: session.email, countryCode: session.country }));
 }
 
 export async function getBillingPortalLinks() {

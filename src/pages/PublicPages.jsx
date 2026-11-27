@@ -3,8 +3,11 @@ import BrandMark from '../components/BrandMark.jsx';
 import ThemeToggle from '../components/ThemeToggle.jsx';
 import LanguageToggle from '../components/LanguageToggle.jsx';
 import PublicFooter from '../components/PublicFooter.jsx';
+import ComparisonTable from '../components/marketing/ComparisonTable.jsx';
+import PlanCard from '../components/marketing/PlanCard.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
+import { usePricing } from '../hooks/usePricing.js';
 import { PUBLIC_CONTENT_UPDATED, publicContentFor } from '../i18n/publicPagesContent.js';
 import { AUTH_PATHS, PAGES } from '../routes.js';
 
@@ -27,38 +30,31 @@ function PublicLayout({ content, children }) {
 export function PricingPage() {
   const { locale, t } = useLocale();
   const { profile } = useAuth();
-  const content = publicContentFor(locale);
-  const page = content.pricing;
+  const { pricing } = usePricing();
   const isCoach = profile?.role === 'coach';
 
   return (
-    <PublicLayout content={content}>
-      <article className="public-article">
-        <header className="public-heading"><h1>{page.title}</h1><p>{page.intro}</p></header>
-        <section className="pricing-card public-plan" aria-label={page.planName}>
-          <span className="pricing-tag">{page.planName}</span>
-          <div className="price"><strong>{page.price}</strong><span>{page.period}</span></div>
-          <p>{page.trial}</p>
-          <div className="public-plan-actions">
-            {isCoach && <Link className="button button-primary button-large" to={PAGES.billing.path}>{t('pricingPageManage')}</Link>}
-            {!profile && <>
-              <Link className="button button-primary button-large" to={AUTH_PATHS.signup}>{page.signup} <span aria-hidden="true">→</span></Link>
-              <Link className="button button-secondary button-large" to={AUTH_PATHS.login}>{page.login}</Link>
-            </>}
-          </div>
-        </section>
-        <section className="public-section">
-          <h2>{page.featuresHeading}</h2>
-          <div className="public-feature-grid">
-            {page.features.map(([title, text]) => <div className="public-feature" key={title}><h3>{title}</h3><p>{text}</p></div>)}
-          </div>
-          <p className="public-note">{page.note}</p>
+    <PublicLayout content={{ locale }}>
+      <article className="mk-pricing-page">
+        <header className="mk-heading">
+          <h1>{t('mkPricingPageTitle')}</h1>
+          <p>{t('mkPricingPageIntro')}</p>
+        </header>
+        <PlanCard pricing={pricing}>
+          {isCoach && <Link className="button button-primary button-large" to={PAGES.billing.path}>{t('pricingPageManage')}</Link>}
+          {!profile && <>
+            <Link className="button button-primary button-large" to={AUTH_PATHS.signup}>{t('mkCtaTrial')} <span className="mk-arrow" aria-hidden="true">{'\u2192'}</span></Link>
+            <Link className="button button-secondary button-large" to={AUTH_PATHS.login}>{t('loginLink')}</Link>
+          </>}
+        </PlanCard>
+        <section className="mk-pricing-compare" aria-labelledby="mk-cmp-title">
+          <div className="mk-heading"><h2 id="mk-cmp-title">{t('mkCmpTitle')}</h2><p>{t('mkCmpSub')}</p></div>
+          <ComparisonTable />
         </section>
       </article>
     </PublicLayout>
   );
 }
-
 function LegalPage({ pageKey }) {
   const { locale, t } = useLocale();
   const content = publicContentFor(locale);

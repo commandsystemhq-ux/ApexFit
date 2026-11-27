@@ -7,10 +7,12 @@ export function paddleLocale(locale) {
 }
 
 // What Paddle.js is asked to open: the overlay (inside our page, no redirect) for a transaction our server created.
-export function checkoutOptions({ transactionId, locale, email }) {
+// countryCode is sent for the countries that have their own price, so Paddle applies that country's price override.
+export function checkoutOptions({ transactionId, locale, email, countryCode }) {
+  const customer = { ...(email ? { email } : {}), ...(countryCode ? { address: { countryCode } } : {}) };
   return {
     transactionId,
-    ...(email ? { customer: { email } } : {}),
+    ...(Object.keys(customer).length ? { customer } : {}),
     settings: { displayMode: 'overlay', theme: 'dark', locale: paddleLocale(locale), allowLogout: false },
   };
 }

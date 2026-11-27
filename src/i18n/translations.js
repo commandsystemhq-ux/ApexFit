@@ -20,6 +20,7 @@ import { jackAssistantTranslations } from './jackAssistantTranslations.js';
 import { jackTranslations } from './jackTranslations.js';
 import { launchTranslations } from './launchTranslations.js';
 import { liveRoomTranslations } from './liveRoomTranslations.js';
+import { marketingTranslations } from './marketingTranslations.js';
 import { marketplaceTranslations } from './marketplaceTranslations.js';
 import { mealPlanTranslations } from './mealPlanTranslations.js';
 import { notificationTranslations } from './notificationTranslations.js';
@@ -669,4 +670,5 @@ for (const locale of supportedLocales) {
   Object.assign(translations[locale], recipeTranslations[locale]);
   Object.assign(translations[locale], reminderTranslations[locale]);
   Object.assign(translations[locale], marketplaceTranslations[locale]);
+  Object.assign(translations[locale], marketingTranslations[locale]);
 }

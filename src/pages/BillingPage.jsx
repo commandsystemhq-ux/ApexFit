@@ -3,8 +3,10 @@ import Button from '../components/Button.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useLocale } from '../contexts/LocaleContext.jsx';
+import { usePricing } from '../hooks/usePricing.js';
 import { describeBilling, waitForActive } from '../services/billingUtils.js';
 import { getBillingPortalLinks, getMySubscription, openSubscriptionCheckout } from '../services/paddleService.js';
+import { chargedPrice, currencyLabel, fill, formatLocal, headlinePrice, isApproximate, isolate } from '../services/pricingUtils.js';
 
 function formatDate(value, locale) {
   if (!value) return '\u2014';
@@ -16,6 +18,8 @@ const TONE = { good: 'badge-green', warn: 'badge-amber', bad: 'badge-red' };
 export default function BillingPage({ profile, onNotify }) {
   const { locale, t } = useLocale();
   const { refreshProfile } = useAuth();
+  const { pricing } = usePricing();
+  const price = headlinePrice(pricing, locale);
   const [subscription, setSubscription] = useState(null);
   const [phase, setPhase] = useState('idle');
   const [error, setError] = useState('');
@@ -87,11 +91,14 @@ export default function BillingPage({ profile, onNotify }) {
 
   return (
     <>
-      <PageHeader eyebrow="APEXFIT" title={t('billingTitle')} description={t('billingDescription')} />
+      <PageHeader eyebrow="APEXFIT" title={t('billingTitle')} description={fill(t('mkTrialLine'), { days: pricing.trialDays, price: isApproximate(pricing) ? `${t('mkApproxTag')} ${price}` : price })} />
       <section className="panel subscription-panel">
         <div>
           <span className="eyebrow">{t('plan')}</span>
-          <h3>$39 / {t('month')} <span className={`soft-badge ${TONE[view.tone] || 'badge-muted'}`}>{t(view.statusKey)}</span></h3>
+          <h3>{price} / {t('month')} <span className={`soft-badge ${TONE[view.tone] || 'badge-muted'}`}>{t(view.statusKey)}</span></h3>
+          {isApproximate(pricing) && (
+            <p>{fill(t('mkApproxNote'), { price: formatLocal(pricing.local, locale), usd: isolate(chargedPrice(pricing)), currency: currencyLabel(pricing.local.currency, locale) })}</p>
+          )}
           <p>{t('billingPaddleNotice')}</p>
         </div>
         <div className="subscription-details">
@@ -104,7 +111,7 @@ export default function BillingPage({ profile, onNotify }) {
         {error && <div className="notice notice-error" role="alert">{error}</div>}
         {(view.canSubscribe || view.canManage) && (
           <div className="billing-actions">
-            {view.canSubscribe && <Button variant="primary" onClick={subscribe} disabled={busy}>{phase === 'opening' ? t('billingOpening') : t('subscribe')}</Button>}
+            {view.canSubscribe && <Button variant="primary" onClick={subscribe} disabled={busy}>{phase === 'opening' ? t('billingOpening') : fill(t('mkSubscribeFor'), { price })}</Button>}
             {view.canManage && <Button variant="secondary" onClick={manage} disabled={busy}>{t('billingManage')}</Button>}
             {links?.cancel && view.canManage && <a className="text-action" href={links.cancel} target="_blank" rel="noopener noreferrer">{t('billingCancel')}</a>}
           </div>
