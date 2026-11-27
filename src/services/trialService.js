@@ -1,4 +1,4 @@
-export const TRIAL_DURATION_DAYS = 3;
+export const TRIAL_DURATION_DAYS = 14;
 
 export function createTrialWindow(startedAt = new Date()) {
   const start = new Date(startedAt);

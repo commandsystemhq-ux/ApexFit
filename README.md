@@ -1,12 +1,12 @@
 # ApexFit
 
-A React + Vite application foundation for ApexFit coaching workspaces.
+ApexFit is a coaching platform for fitness coaches and their clients: a React + Vite web app (PWA), a native Expo app, Vercel serverless functions and a Supabase (PostgreSQL, Auth, Storage, Realtime) backend. The full technical reference (folders, features, database, security, API, environment, status) is in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Run locally
 
 ```powershell
 npm install
-npm run dev
+npm run dev          # web app only; /api/food-search also works. Use "vercel dev" to run the other /api functions
 npm test
 npm run build
 ```
@@ -21,7 +21,7 @@ In Supabase:
 2. Add the local and production app URLs to the Supabase redirect URL allow-list and Google OAuth authorized redirect URIs.
 3. Apply the migrations in `supabase/migrations/` using the Supabase CLI (`supabase db push`) or the SQL editor, in filename order. For a one-time SQL Editor setup, copy and run `supabase/manual-setup.sql`.
 
-Google sign-in records whether the user is entering as a coach or client before redirecting. On the first authenticated return, `provision_my_profile` creates the account profile. New coach accounts receive a database-generated 72-hour trial; the role and trial dates cannot be edited by the browser. `get_my_access_status` calculates access using database time and an active subscription record, and the app refreshes status on focus and at trial expiration.
+Google sign-in records whether the user is entering as a coach or client before redirecting. On the first authenticated return, `provision_my_profile` creates the account profile. New coach accounts receive a database-generated 14-day trial (336 hours; accounts created earlier keep their 72-hour window); the role and trial dates cannot be edited by the browser. `get_my_access_status` calculates access using database time and an active subscription record, and the app refreshes status on focus and at trial expiration.
 
 The exercise catalog is not seeded with fabricated entries. The prepared `data/free-exercise-db-apexfit.json` is transformed from the public-domain [free-exercise-db](https://github.com/yuhonas/free-exercise-db) dataset (876 records at the pinned upstream revision); its source has exercise instructions and image thumbnails, but no demo videos. Categories are `strength`, `cardio`, `mobility`, `plyometrics`, or `warmup`; difficulty is `beginner`, `intermediate`, or `advanced`. Equipment and muscle tags use lowercase snake case and the supported localized filters. Regenerate the file with `npm run prepare:exercise-catalog`; import it locally after applying the migrations:
 
@@ -33,16 +33,18 @@ npm run import:exercises -- .\data\free-exercise-db-apexfit.json
 
 The source contains 876 records, not 1,000; a second verified source is required to meet the earlier 1,000-exercise target. The importer validates every record, upserts by slug, and publishes the imported rows. Keep the service-role key only in the local environment or a trusted server; never put it in a `VITE_` variable, source file, or browser. The exercise library uses exact-count, server-side pagination and search/filters. Demo videos are only embedded from HTTPS YouTube/Vimeo URLs or played as HTTPS MP4/WebM files.
 
-Coach-owned program tables enforce owner, coach role, and active-trial/subscription access with RLS; program saves use a transactional RPC. UI route checks are not a security boundary. Subscription rows are read-only to authenticated users and should only be written by a trusted billing webhook/service role. Configure a payment provider and webhook before enabling paid checkout; the $39/month plan is displayed, but checkout is intentionally not simulated.
+Coach-owned program tables enforce owner, coach role, and active-trial/subscription access with RLS; program saves use a transactional RPC. UI route checks are not a security boundary. Subscription rows are read-only to authenticated users and should only be written by a trusted billing webhook/service role. The $39/month coach plan is sold through Paddle Billing (see **Coach subscriptions with Paddle**): the server creates the checkout and a verified webhook writes the subscription.
 
 ## Routing, auth pages, and profile settings
 
 The app uses path routing (`react-router-dom`). `src/routes.js` is the single source for paths, navigation, and role access:
 
 - Public: `/` (landing), `/login`, `/signup`. Signed-in users are redirected away from these to their workspace.
-- Coach: `/dashboard`, `/generator`, `/workout-builder`, `/templates`, `/exercises`, `/messages`, `/clients`, `/schedule`, `/invoicing`, `/billing`.
-- Client: `/workouts`, `/progress`, `/strength`, `/food`, `/habits`, `/intake`, `/coach-hub`.
-- Shared: `/community`, `/leaderboard`, `/settings`.
+- Public pages: `/pricing`, `/terms`, `/privacy`, `/refunds`, and a coach's program store window at `/shop/<coach id>`.
+- Coach: `/dashboard`, `/generator`, `/workout-builder`, `/templates`, `/exercises`, `/meal-plans`, `/workflows`, `/clients`, `/checkins`, `/messages`, `/campaigns`, `/tasks`, `/groups`, `/sessions` (and the live room at `/sessions/<id>/room`), `/schedule`, `/team`, `/store`, `/invoicing`, `/contracts`, `/billing`.
+- Assistant trainer (a coach account on a head coach's team): `/team-clients`, `/settings`.
+- Client: `/workouts`, `/strength`, `/food`, `/habits`, `/progress`, `/weekly-checkin`, `/my-tasks`, `/checklist`, `/integrations`, `/intake`, `/assessments`, `/coach-hub`, `/my-sessions`, `/my-groups`, `/my-store`, `/my-contracts`.
+- Shared: `/community`, `/leaderboard`, `/settings`. Platform owner only (no menu entry): `/admin/ai`.
 
 Unauthenticated visits to any protected path redirect to `/login` and return to the requested page after login. Coaches opening client pages (and clients opening coach pages) are redirected to their own home; a coach whose trial has ended can only open billing and settings. Old `/#coachHub`-style links are redirected. Static hosting must serve `index.html` for unknown paths; `vercel.json` does this for Vercel, and Vite's dev/preview servers do it by default.
 
@@ -52,24 +54,29 @@ Settings includes a profile section (all roles: photo, name, email; coaches also
 
 ## Project structure
 
+- `api/` — the 11 Vercel functions (`ai`, `food-search`, `jack`, `jack-assistant`, `paddle`, `paddle-webhook`, `push`, `send-campaign`, `unsubscribe`, `video-sessions`, `workflows`) and shared server code in `api/_lib/`
+- `apps/mobile/` — the native Expo app (own `package.json`, not part of the Vercel build)
+- `tests/` — `node --test` suites; database tests run the real `supabase/manual-setup.sql` in an in-process Postgres
 - `src/components/` — app shell, language selector, brand, and reusable UI
 - `src/contexts/` and `src/i18n/` — persisted English, Arabic, German, French, and Spanish preferences with automatic RTL for Arabic
 - `src/routes.js` — route table, navigation, and role access
-- `src/pages/` — landing, login/signup, coach workspace, manual workout builder, exercise library, client portal, settings, and subscription/trial screens
-- `src/services/` — Supabase client, Google OAuth/account provisioning, exercise search, program persistence, client workout/progress/habit data, trial helpers, and AI backend boundary
-- `supabase/migrations/` — PostgreSQL accounts, trials, exercise/program tables, client tracking tables, storage bucket, and RLS
+- `src/pages/` — one file per screen: public pages, login/signup, the coach workspace, the client workspace, the trainer workspace, settings, billing and the owner's AI screen
+- `src/services/` — Supabase and `/api` access (`*Service.js`) and pure, tested rules (`*Utils.js`) for every feature
+- `src/data/common-foods.json` — the built-in list of 1,204 foods (built from `scripts/foods-parts/` with `node scripts/build-common-foods.mjs`)
+- `supabase/migrations/` — 35 PostgreSQL migrations: tables, row-level security, RPC functions, storage buckets and realtime policies
 - `supabase/manual-setup.sql` — combined SQL for the Supabase SQL Editor
 - `data/` — prepared exercise JSON and its source/license notes
 - `scripts/import-exercise-catalog.mjs` — local, service-role-only import for a verified exercise catalog JSON file
 - `scripts/prepare-free-exercise-db.mjs` — downloads the pinned public-domain source and prepares the normalized catalog
+- `scripts/` also holds the food-list builder, the essential-exercise list builder, the exercise-video seeding tool, the exercise translation tool and the dev-only food-search plugin (see [ARCHITECTURE.md](ARCHITECTURE.md))
 - `public/apexfit-logo.png` — supplied ApexFit logo used throughout the app
 
-Client workout logs, body measurements/photos, and habit logs are private to each authenticated client. Client roster, billing, and message screens use empty states until their real APIs are connected. The exercise catalog remains empty in Supabase until the prepared data is imported; no sample records or fabricated business metrics are included.
+Client workout logs, body measurements/photos, and habit logs are private to each authenticated client. The exercise catalog remains empty in Supabase until the prepared data is imported; no sample records or fabricated business metrics are included.
 
 ## Priority 2 features
 
 - **Program templates:** coaches mark programs as templates (is_template) and use them to create an editable copy through the duplicate_training_program RPC. Only the owning, active coach can copy or flag a program.
-- **Onboarding form:** a client completes one private client_intake_forms record (goal, experience, schedule, equipment, height, injuries, health, diet). Coach-side viewing and coach-defined custom questions need a coach-client relationship (invites/roster), which is not built yet.
+- **Onboarding form:** a client completes one private client_intake_forms record (goal, experience, schedule, equipment, height, injuries, health, diet). Coaches read a linked client's answers on the **Clients** page.
 - **1RM tracking:** get_my_one_rep_max_history() derives the best Epley estimate per exercise and day from the client's logged weighted sets of 1-12 reps. No separate data entry is required.
 - **Food logger:** clients log meals, calories, optional macros, and ingredients in client_food_logs; values can always be entered manually. The page also searches the free [Open Food Facts](https://world.openfoodfacts.org) database by name (Arabic or English) or barcode through `/api/food-search`: signed-in clients only, no API key needed, 400 ms debounce in the browser, a 5 second timeout and a 10 minute in-memory cache on the server, and 40 searches per minute per user. Choosing a result fills the calories and macros for the amount in grams, and they recalculate when the amount changes (and stay editable). Common foods come first and instantly from a built-in list of 1,200+ foods (Egyptian, Gulf, Levantine and Maghreb dishes, grills, seafood, grains, fruit, dairy, sweets and drinks, international and fast food, sports nutrition; `src/data/common-foods.json`, typical values per 100 g, names in Arabic and English, no network needed). The list is built from the text files in `scripts/foods-parts/` with `node scripts/build-common-foods.mjs` (it checks every line, for example that calories agree with the macros, skips duplicates and fails below 1000 foods); edit a part file and run it again to add foods. The values are typical reference values, not laboratory figures: recipes, brands and restaurants differ. `/api/food-search` searches Open Food Facts (its current search service, with `langs=ar,en` for Arabic users and Arabic-named products first) and, when `USDA_API_KEY` is set (free key from fdc.nal.usda.gov), USDA FoodData Central for generic English foods, both at the same time with a 5 second limit each and a 10 minute cache; if one is down the other still answers. `npm run dev` answers `/api/food-search` itself through a dev-only Vite plugin (`scripts/vite-dev-food-search.mjs`), so the search works locally too (put `USDA_API_KEY` in `.env` to include USDA). Whatever is typed can be added with the **Add "…" as a new meal** button, picking a result only fills the form (name, grams, calories, macros, notes; every value stays editable), and saved meals have an **Edit** button. The sidebar has named sections per role, collapses to an icon bar with tooltips (the choice is saved in `localStorage`), shows unread and "New" badges, supports RTL, and is a drawer on phones. If the search is slow, empty or down, the manual fields keep working; the table, its RLS policies and the saved columns are unchanged.
 
@@ -80,7 +87,7 @@ Apply supabase/migrations/20261115000400_priority2_templates_intake_strength_foo
 Migration `20261115000500_coaching_business.sql` (also in `supabase/manual-setup.sql`) adds the coach-client link and everything that depends on it. Server-side work lives in `api/` as Vercel Functions; the browser never sees a secret.
 
 - **Coach-client link:** a coach creates a single-use invite code (valid 7 days) and the client enters it under *My coach -> Coach*. Coaches then see their roster and each client's onboarding answers. Row-level security scopes all data to the linked pair.
-- **Messaging:** coaches send notes and videos (MP4/WebM/MOV, 50 MB) to one, some, or all active clients (`send_coach_message`). Videos live in the private `apexfit-coach-videos` bucket and are served to recipients through short-lived signed URLs. Messages are one-way; clients cannot reply yet.
+- **Messaging:** coaches send notes and videos (MP4/WebM/MOV, 50 MB) to one, some, or all active clients (`send_coach_message`). Videos live in the private `apexfit-coach-videos` bucket and are served to recipients through short-lived signed URLs. These notes are one-way broadcasts; two-way text and voice conversations are the **Real-time chat** below.
 - **Packages and invoices:** coaches define packages (for example 10 sessions) and issue invoices; clients can also buy an active package. Amounts and currency come from the database, never the browser. Clients pay the coach directly (see **Direct payments** below); the coach confirms the payment, which is idempotent and grants session credits for a package.
 - **Sessions:** coaches schedule sessions; completing one consumes a credit from the client's oldest paid package, and reopening or canceling it restores the credit.
 - **Push notifications:** Web Push (VAPID) through `public/sw.js`. Clients opt in under *My coach -> Coach*. Delivery is best effort and runs when a coach sends a message, schedules or cancels a session, or issues an invoice. On iPhone, ApexFit must first be added to the Home Screen.
@@ -93,7 +100,7 @@ Set the server variables from `.env.example` in Vercel. Then:
 2. **Secrets:** `TOKEN_ENCRYPTION_KEY` = `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`. VAPID keys = `npx web-push generate-vapid-keys`.
 3. **APP_URL** must be the public origin, for example `https://apexfit.vercel.app` (trailing slashes and quotes are ignored).
 
-`npm run dev` serves only the front end; use `vercel dev` to exercise the `/api` functions locally. The $39 coach subscription checkout is still not implemented.
+`npm run dev` serves only the front end; use `vercel dev` to exercise the `/api` functions locally. The $39 coach subscription checkout uses Paddle (see **Coach subscriptions with Paddle**).
 
 ## Community and gamification
 
@@ -195,14 +202,14 @@ Clients pay their coach directly; ApexFit does not hold, process or take a cut o
 - **Flow.** The coach issues an invoice or the client buys a package (an invoice is created). On an open invoice the client taps **How to pay**: the bank details (with copy buttons) or the agreed method, and the invoice number to quote as reference. After paying they tap **I have paid** (`report_invoice_payment`); the coach sees "Client says paid" and presses **Confirm payment**, choosing how it was paid and an optional reference (`confirm_invoice_payment`). For a package invoice this also gives the client their sessions. Only the coach who issued the invoice can confirm it, only while it is open.
 - **Migration.** `20261115002400_manual_invoice_payments.sql` (included in `manual-setup.sql`; run it again to apply). 
 - **The store uses the same details.** Migration `20261115002500_store_direct_payments.sql` (included in `manual-setup.sql`) gives `store_orders` the same report-and-confirm steps (see **Store**) and the coach's Store page shows the same payment-details panel.
-- **No Stripe anywhere.** There is no Stripe code, package, webhook, setting or screen text left: `api/store.js`, `api/stripe.js`, `api/stripe-webhook.js`, `STRIPE_*` and `STORE_DEMO_MODE` are gone, and the project needs only ten serverless functions (Vercel Hobby allows twelve). The migration above also drops the connected-account table and the payment ids on orders and invoices of a project that used Stripe before; orders and invoices already paid stay paid and keep their dates (they show as paid by card). Only payments to ApexFit itself (the coach subscription) go through Paddle.
+- **No Stripe anywhere.** There is no Stripe code, package, webhook, setting or screen text left: `api/store.js`, `api/stripe.js`, `api/stripe-webhook.js`, `STRIPE_*` and `STORE_DEMO_MODE` are gone, and the project uses eleven serverless functions (Vercel Hobby allows twelve, so add new behavior as an `action` of an existing function). The migration above also drops the connected-account table and the payment ids on orders and invoices of a project that used Stripe before; orders and invoices already paid stay paid and keep their dates (they show as paid by card). Only payments to ApexFit itself (the coach subscription) go through Paddle.
 - **Tests.** `tests/directPayments.test.js`: IBAN checks (browser and database agree), the form rules, who can read and write the payment details, the report-and-confirm flow, package credits, and the translations.
 
 ## Coach subscriptions with Paddle
 
-The $39/month coach plan is sold through **Paddle Billing** (Merchant of Record): Paddle takes the payment, handles VAT and sales tax worldwide, and invoices the coach, so ApexFit never sees a card. Money that clients pay their own coach never goes through Paddle (it does not pay out to third-party sellers): see **Direct payments** below.
+The $39/month coach plan is sold through **Paddle Billing** (Merchant of Record): Paddle takes the payment, handles VAT and sales tax worldwide, and invoices the coach, so ApexFit never sees a card. Money that clients pay their own coach never goes through Paddle (it does not pay out to third-party sellers): see **Direct payments** above.
 
-- **Database.** Migration `20261115002300_paddle_subscriptions.sql` (included in `manual-setup.sql`; run it again to apply) keeps `coach_subscriptions` independent of the gateway: one row per coach with `provider`, `provider_customer_id`, `provider_subscription_id`, `plan`, `status` (`active`, `past_due`, `paused`, `canceled`), `current_period_end`, `cancel_at_period_end`, `started_at`, `canceled_at`. Gateways report through `apply_subscription_event()`, which only the service role can call; the browser can read its own row (`get_my_subscription`) and cannot write it. `billing_events` records each message once (the event id makes a retry harmless), ignores a message older than one already applied, and refuses a second live subscription for the same coach. Access = a subscription that is active, or past due, within its paid period plus 3 days (a late renewal message never locks a paying coach out), otherwise the 72-hour trial.
+- **Database.** Migration `20261115002300_paddle_subscriptions.sql` (included in `manual-setup.sql`; run it again to apply) keeps `coach_subscriptions` independent of the gateway: one row per coach with `provider`, `provider_customer_id`, `provider_subscription_id`, `plan`, `status` (`active`, `past_due`, `paused`, `canceled`), `current_period_end`, `cancel_at_period_end`, `started_at`, `canceled_at`. Gateways report through `apply_subscription_event()`, which only the service role can call; the browser can read its own row (`get_my_subscription`) and cannot write it. `billing_events` records each message once (the event id makes a retry harmless), ignores a message older than one already applied, and refuses a second live subscription for the same coach. Access = a subscription that is active, or past due, within its paid period plus 3 days (a late renewal message never locks a paying coach out), otherwise the 14-day trial.
 - **Checkout.** On `/billing`, *Continue for $39/month* calls `/api/paddle`, which creates the Paddle transaction on the server (price and the coach's id are set there, not by the browser) and returns its id. Paddle.js then opens the checkout as an **overlay on the page**, with no redirect, dark theme and the interface language. After payment the page asks for the account status until the webhook has activated the plan (a few seconds). *Manage subscription* opens Paddle's customer portal (update the card, invoices, cancel).
 - **Webhook.** In Paddle, Developer tools > Notifications, add a destination `https://<your app>/api/paddle-webhook` for `subscription.created`, `.activated`, `.updated`, `.past_due`, `.paused`, `.resumed`, `.canceled`, `.trialing` and `transaction.completed`. Every request is verified with the `Paddle-Signature` header (HMAC-SHA256 of `timestamp:body`, compared in constant time, rejected when older than 5 minutes); anything else gets 400. A database failure returns 500 so that Paddle retries.
 - **Settings** (server, Vercel): `PADDLE_ENVIRONMENT` (`sandbox` by default, `production` when live), `PADDLE_API_KEY`, `PADDLE_CLIENT_TOKEN` (or `NEXT_PUBLIC_PADDLE_CLIENT_TOKEN`), `PADDLE_PRICE_ID`, `PADDLE_WEBHOOK_SECRET`. Without them the Subscribe button names the setting that is missing. Vercel applies new variables only to a new deployment, so redeploy after adding them. Test the whole flow in the Paddle sandbox before going live; I could not run it against a real Paddle account.
@@ -269,7 +276,7 @@ A coach with an active plan or trial writes one email at **Email campaigns** (`/
 
 ## Mobile app
 
-A native iPhone and Android app (Expo / React Native) lives in [apps/mobile](apps/mobile/README.md). It uses the same Supabase project, has its own package.json, and is excluded from the Vercel deployment by .vercelignore, so the web build is unchanged. Setup, device and store builds, and the pexfit://auth/callback deep-link settings are in its README.
+A native iPhone and Android app (Expo / React Native) lives in [apps/mobile](apps/mobile/README.md). It uses the same Supabase project, has its own package.json, and is excluded from the Vercel deployment by .vercelignore, so the web build is unchanged. Setup, device and store builds, and the `apexfit://auth/callback` deep-link settings are in its README. The app has two-way chat with live updates and voice messages, the coach's client list and programs, and the client's plan and weight log.
 
 ## Nutrition review and daily goals
 
@@ -302,7 +309,7 @@ Migration `20261115003000_custom_habits.sql` (also in `supabase/manual-setup.sql
 - **Database.** `client_custom_habits` (name, type, unit, daily goal, quick-add amount, color, order, `active`/`archived`), `client_custom_habit_logs` (one value per habit per day) and `client_habit_settings` (so deleted starting habits stay deleted). A client reads only their own rows and writes only through the functions `ensure_my_default_habits`, `save_my_habit`, `set_my_habit_status`, `delete_my_habit` and `log_my_habit`, which check who is asking; direct inserts, updates and deletes are refused. An active coach can read, never change, the habits and values of their active clients (select-only policies, including on `client_habit_logs`); on **Clients** each client has a **Habits** tab.
 ## Joining a team
 
-Migration `20261115003100_team_invitation_rules.sql` (also in `supabase/manual-setup.sql`; run it again to apply) sets who can accept an invitation from another coach (`accept_team_invitation`). A new coach on the free 72-hour trial, with no clients, no paid subscription and no team of their own, can accept: the trial alone never blocks it. An account is refused only when it already runs its own practice: it has (or had) clients, or a subscription that is in force (active, or past due within its paid period), or it has its own team. A canceled or ended subscription does not block.
+Migration `20261115003100_team_invitation_rules.sql` (also in `supabase/manual-setup.sql`; run it again to apply) sets who can accept an invitation from another coach (`accept_team_invitation`). A new coach on the free 14-day trial, with no clients, no paid subscription and no team of their own, can accept: the trial alone never blocks it. An account is refused only when it already runs its own practice: it has (or had) clients, or a subscription that is in force (active, or past due within its paid period), or it has its own team. A canceled or ended subscription does not block.
 
 Every refusal of the team functions is translated: `src/services/teamErrors.js` maps each database sentence to a key in `src/i18n/teamErrorTranslations.js` (all five languages), and the team screens show the translated text; an unknown error is shown as the database wrote it.
 ## Weekly check-ins

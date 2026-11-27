@@ -45,7 +45,7 @@ export async function addUser(db, { id, email, role, fullName = null, brandName 
   const trial = role === 'coach';
   await db.query(
     `insert into public.profiles (id, role, locale, full_name, brand_name, trial_started_at, trial_ends_at)
-     values ($1, $2, $3, $4, $5, ${trial ? 'now()' : 'null'}, ${trial ? "now() + interval '72 hours'" : 'null'})`,
+     values ($1, $2, $3, $4, $5, ${trial ? 'now()' : 'null'}, ${trial ? "now() + interval '336 hours'" : 'null'})`,
     [id, role, locale, fullName, brandName],
   );
 }

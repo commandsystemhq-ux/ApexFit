@@ -9,7 +9,7 @@ export const publicPagesContent = {
       planName: 'Coach plan',
       price: '$39',
       period: '/ month',
-      trial: '3-day free trial, then $39 per month. Cancel any time before the next renewal date.',
+      trial: '14-day free trial, then $39 per month. Cancel any time before the next renewal date.',
       featuresHeading: 'What the coach plan includes',
       features: [
         ['Client management', 'Invite clients, keep their intake, progress, workouts, nutrition and messages in one place.'],
@@ -19,7 +19,7 @@ export const publicPagesContent = {
         ['Direct payment confirmation', 'Clients pay you directly; you confirm each payment in ApexFit so your records stay accurate.'],
         ['Your branding and team', 'Show your own brand to clients and add assistant trainers to your team.'],
       ],
-      signup: 'Start 3-day free trial',
+      signup: 'Start 14-day free trial',
       login: 'Log in',
       note: 'The subscription is for coaches. Clients join free through their coach’s invitation. See our Refund & Cancellation policy for billing details.',
     },
@@ -35,7 +35,7 @@ export const publicPagesContent = {
           'You must provide accurate information, keep your login details confidential, and be old enough to enter a binding contract where you live. You are responsible for activity under your account.',
         ]],
         ['3. Coach subscription', [
-          'Coach accounts start with a 3-day free trial. After the trial, access continues with a paid subscription of $39 per month that renews monthly until cancelled.',
+          'Coach accounts start with a 14-day free trial. After the trial, access continues with a paid subscription of $39 per month that renews monthly until cancelled.',
           'Cancellation and refunds are described in the Refund & Cancellation policy.',
         ]],
         ['4. Coach responsibilities', [
@@ -108,10 +108,10 @@ export const publicPagesContent = {
     },
     refunds: {
       title: 'Refund & Cancellation Policy',
-      intro: 'This policy covers the ApexFit coach subscription: a 3-day free trial, then $39 per month.',
+      intro: 'This policy covers the ApexFit coach subscription: a 14-day free trial, then $39 per month.',
       sections: [
         ['1. Free trial', [
-          'New coach accounts get a 3-day free trial. You are not charged for the trial period. If you do not subscribe, your access ends when the trial ends.',
+          'New coach accounts get a 14-day free trial. You are not charged for the trial period. If you do not subscribe, your access ends when the trial ends.',
         ]],
         ['2. Cancel any time', [
           'You can cancel the monthly renewal at any time from the Billing page in your account. Cancel before your next renewal date and you will not be charged again.',
@@ -140,7 +140,7 @@ export const publicPagesContent = {
       planName: 'خطة المدرب',
       price: '$39',
       period: '/ شهرياً',
-      trial: 'تجربة مجانية لمدة 3 أيام، ثم 39 دولاراً شهرياً. يمكنك الإلغاء في أي وقت قبل موعد التجديد التالي.',
+      trial: 'تجربة مجانية لمدة 14 يوماً، ثم 39 دولاراً شهرياً. يمكنك الإلغاء في أي وقت قبل موعد التجديد التالي.',
       featuresHeading: 'ماذا تشمل خطة المدرب',
       features: [
         ['إدارة المتدربين', 'ادعُ عملاءك واحتفظ ببيانات التقييم والتقدم والتمارين والتغذية والرسائل في مكان واحد.'],
@@ -150,7 +150,7 @@ export const publicPagesContent = {
         ['تأكيد الدفع المباشر', 'يدفع العملاء لك مباشرة، وتؤكد أنت كل دفعة داخل ApexFit لتبقى سجلاتك دقيقة.'],
         ['علامتك التجارية وفريقك', 'اعرض علامتك التجارية لعملائك وأضف مدربين مساعدين إلى فريقك.'],
       ],
-      signup: 'ابدأ تجربة مجانية لمدة 3 أيام',
+      signup: 'ابدأ تجربة مجانية لمدة 14 يوماً',
       login: 'تسجيل الدخول',
       note: 'الاشتراك خاص بالمدربين. ينضم العملاء مجاناً عبر دعوة مدربهم. راجع سياسة الاسترجاع والإلغاء لتفاصيل الفوترة.',
     },
@@ -166,7 +166,7 @@ export const publicPagesContent = {
           'يجب أن تقدّم معلومات صحيحة، وأن تحافظ على سرية بيانات الدخول، وأن تكون بالسن القانوني لإبرام عقد ملزم في بلدك. أنت مسؤول عن النشاط الذي يتم عبر حسابك.',
         ]],
         ['3. اشتراك المدرب', [
-          'تبدأ حسابات المدربين بتجربة مجانية لمدة 3 أيام. بعد التجربة يستمر الوصول باشتراك مدفوع قيمته 39 دولاراً شهرياً يتجدد شهرياً حتى يتم إلغاؤه.',
+          'تبدأ حسابات المدربين بتجربة مجانية لمدة 14 يوماً. بعد التجربة يستمر الوصول باشتراك مدفوع قيمته 39 دولاراً شهرياً يتجدد شهرياً حتى يتم إلغاؤه.',
           'يوضّح سياسة الاسترجاع والإلغاء كيفية الإلغاء وشروط الاسترداد.',
         ]],
         ['4. مسؤوليات المدرب', [
@@ -239,10 +239,10 @@ export const publicPagesContent = {
     },
     refunds: {
       title: 'سياسة الاسترجاع والإلغاء',
-      intro: 'تغطي هذه السياسة اشتراك مدرب ApexFit: تجربة مجانية لمدة 3 أيام، ثم 39 دولاراً شهرياً.',
+      intro: 'تغطي هذه السياسة اشتراك مدرب ApexFit: تجربة مجانية لمدة 14 يوماً، ثم 39 دولاراً شهرياً.',
       sections: [
         ['1. التجربة المجانية', [
-          'تحصل حسابات المدربين الجديدة على تجربة مجانية لمدة 3 أيام ولا يتم خصم أي مبلغ خلالها. إن لم تشترك ينتهي وصولك بانتهاء التجربة.',
+          'تحصل حسابات المدربين الجديدة على تجربة مجانية لمدة 14 يوماً ولا يتم خصم أي مبلغ خلالها. إن لم تشترك ينتهي وصولك بانتهاء التجربة.',
         ]],
         ['2. الإلغاء في أي وقت', [
           'يمكنك إلغاء التجديد الشهري في أي وقت من صفحة الفوترة في حسابك. إذا ألغيت قبل موعد التجديد التالي فلن يتم خصم أي مبلغ مرة أخرى.',
